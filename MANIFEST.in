@@ -1,3 +1,2 @@
 # https://pypi.python.org/pypi/check-manifest
-include versioneer.py
-include pyscenic/_version.py
+

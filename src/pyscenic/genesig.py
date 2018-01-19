@@ -1,12 +1,14 @@
 # -*- coding: utf-8 -*-
 
-import attr
 import re
-from typing import Mapping, List
-from frozendict import frozendict
+import os
 from collections.abc import Iterable, Mapping
 from itertools import repeat
+from typing import Mapping, List
+
+import attr
 from cytoolz import merge_with, dissoc, keyfilter, first, second
+from frozendict import frozendict
 
 
 def convert(genes):
@@ -28,15 +30,18 @@ class GeneSignature:
     """
 
     @classmethod
-    def from_gmt(cls, fname: str, nomenclature: str, field_separator: str =';', gene_separator=';') -> List['GeneSignature']:
+    def from_gmt(cls, fname: str, nomenclature: str, field_separator: str =',', gene_separator=',') -> List['GeneSignature']:
         """
+        Load gene signatures from a GMT file.
 
-        :param fname:
-        :param field_separator:
-        :param gene_separator:
-        :return:
+        :param fname: The filename.
+        :param nomenclature: The nomenclature of the genes.
+        :param field_separator: The separator that separates fields in a line.
+        :param gene_separator: The separator that separates the genes.
+        :return: A list of signatures.
         """
         # https://software.broadinstitute.org/cancer/software/gsea/wiki/index.php/Data_formats
+        assert os.path.exists(fname), "{} does not exist.".format(fname)
 
         def signatures():
             with open(fname, "r") as file:
@@ -49,16 +54,48 @@ class GeneSignature:
         return list(signatures())
 
     @classmethod
-    def from_grp(cls, fname) -> 'GeneSignature':
+    def from_grp(cls, fname, name: str, nomenclature: str) -> 'GeneSignature':
         """
+        Load gene signature from GRP file.
 
-        :param fname:
-        :return:
+        :param fname: The filename.
+        :param name: The name of the resulting signature.
+        :param nomenclature: The nomenclature of the genes.
+        :return: A signature.
         """
-
         # https://software.broadinstitute.org/cancer/software/gsea/wiki/index.php/Data_formats
-        #TODO
-        pass
+        assert os.path.exists(fname), "{} does not exist.".format(fname)
+        with open(fname, "r") as file:
+            return GeneSignature(name=name,
+                             nomenclature=nomenclature,
+                             genes=[line.rstrip() for line in file if not line.startswith("#") and line.strip()])
+
+    @classmethod
+    def from_rnk(cls, fname: str, name: str, nomenclature: str, field_separator=",") -> 'GeneSignature':
+        """
+        Reads in a signature from an RNK file. This format associates weights with the genes part of the signature.
+
+        :param fname: The filename.
+        :param name: The name of the resulting signature.
+        :param nomenclature: The nomenclature of the genes.
+        :param field_separator: The separator that separates fields in a line.
+        :return: A signature.
+        """
+        # https://software.broadinstitute.org/cancer/software/gsea/wiki/index.php/Data_formats
+        assert os.path.exists(fname), "{} does not exist.".format(fname)
+
+        def columns():
+            with open(fname, "r") as file:
+                for line in file:
+                    if line.startswith("#") or not line.strip():
+                        continue
+                    columns = tuple(map(str.rstrip, re.split(field_separator, line)))
+                    assert len(columns) == 2, "Invalid file format."
+                    yield columns
+
+        return GeneSignature(name=name,
+                             nomenclature=nomenclature,
+                             genes=list(columns()))
 
     name: str = attr.ib()
     nomenclature: str = attr.ib(default="HGNC")
@@ -100,6 +137,8 @@ class GeneSignature:
         Creates a new :class:`GeneSignature` instance which is the union of this signature and the other supplied
         signature.
 
+        The weight associated with the genes in the intersection is the maximum of the weights in the composing signatures.
+
         :param other: The other :class:`GeneSignature`.
         :return: the new :class:`GeneSignature` instance.
         """
@@ -113,6 +152,8 @@ class GeneSignature:
         Creates a new :class:`GeneSignature` instance which is the difference of this signature and the supplied other
         signature.
 
+        The weight associated with the genes in the difference are taken from this gene signature.
+
         :param other: The other :class:`GeneSignature`.
         :return: the new :class:`GeneSignature` instance.
         """
@@ -125,6 +166,8 @@ class GeneSignature:
         """
         Creates a new :class:`GeneSignature` instance which is the intersection of this signature and the supplied other
         signature.
+
+        The weight associated with the genes in the intersection is the maximum of the weights in the composing signatures.
 
         :param other: The other :class:`GeneSignature`.
         :return: the new :class:`GeneSignature` instance.
@@ -141,6 +184,12 @@ class GeneSignature:
         The number of genes in this signature.
         """
         return len(self.genes)
+
+    def __contains__(self, item):
+        """
+        Checks if a gene is part of this signature.
+        """
+        return item in self.gene2weights.keys()
 
 
 @attr.s(frozen=True)

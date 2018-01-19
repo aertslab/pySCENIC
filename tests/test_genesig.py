@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-from pyscenic.genesig import GeneSignature
+from ..pyscenic.genesig import GeneSignature
 
 def test_init():
 
