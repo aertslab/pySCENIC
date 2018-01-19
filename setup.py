@@ -43,6 +43,11 @@ def read(*names, **kwargs):
         return fd.read()
 
 
+def read_requirements(fname):
+    with open(fname, 'r', encoding='utf-8') as file:
+        return [line.rstrip() for line in file]
+
+
 version = '0.1.1'
 
 
@@ -72,21 +77,6 @@ setuptools.setup(
     packages=setuptools.find_packages('src'),
     package_dir={'': 'src'},
     py_modules=[os.path.splitext(os.path.basename(path))[0] for path in glob.glob('src/*.py')],
-
     include_package_data=True,
-    zip_safe=False,
-
-    install_requires=[
-        'dask',
-    ],
-
-    setup_requires=[
-        'pytest-runner'
-    ],
-
-    tests_require=[
-        'flake8',
-        'pytest',
-        'mypy',
-    ]
+    install_requires=read_requirements('requirements.txt')
 )

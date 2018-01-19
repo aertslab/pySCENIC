@@ -1,2 +1,2 @@
 # https://pypi.python.org/pypi/check-manifest
-
+include requirements.txt

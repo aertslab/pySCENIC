@@ -98,7 +98,7 @@ class GeneSignature:
                              genes=list(columns()))
 
     name: str = attr.ib()
-    nomenclature: str = attr.ib(default="HGNC")
+    nomenclature: str = attr.ib()
     gene2weights: Mapping[str, float] = attr.ib(converter=convert)
 
     @name.validator
@@ -130,7 +130,7 @@ class GeneSignature:
         :param name: The new name.
         :return: the new :class:`GeneSignature` instance.
         """
-        return GeneSignature(name=name, nomenclature=self.nomenclature, genes=self.genes)
+        return GeneSignature(name=name, nomenclature=self.nomenclature, gene2weights=self.gene2weights)
 
     def union(self, other: 'GeneSignature') -> 'GeneSignature':
         """
@@ -145,7 +145,7 @@ class GeneSignature:
         assert self.nomenclature == other.nomenclature, "Union of gene signatures is only possible when both signatures use same nomenclature for genes."
         return GeneSignature(name="({} | {})".format(self.name, other.name),
                              nomenclature=self.nomenclature,
-                             genes=frozendict(merge_with(max, self.gene2weights, other.gene2weights)))
+                             gene2weights=frozendict(merge_with(max, self.gene2weights, other.gene2weights)))
 
     def difference(self, other: 'GeneSignature') -> 'GeneSignature':
         """
@@ -160,7 +160,7 @@ class GeneSignature:
         assert self.nomenclature == other.nomenclature, "Difference of gene signatures is only possible when both signatures use same nomenclature for genes."
         return GeneSignature(name="({} - {})".format(self.name, other.name),
                          nomenclature=self.nomenclature,
-                         genes=frozendict(dissoc(self.gene2weights, other.gene2weights.keys())))
+                         gene2weights=frozendict(dissoc(dict(self.gene2weights), *other.genes)))
 
     def intersection(self, other: 'GeneSignature') -> 'GeneSignature':
         """
@@ -176,7 +176,7 @@ class GeneSignature:
         genes = set(self.gene2weights.keys()).intersection(set(other.gene2weights.keys()))
         return GeneSignature(name="({} & {})".format(self.name, other.name),
                              nomenclature=self.nomenclature,
-                             genes=frozenset(keyfilter(lambda k: k in genes,
+                             gene2weights=frozendict(keyfilter(lambda k: k in genes,
                                                        merge_with(max, self.gene2weights, other.gene2weights))))
 
     def __len__(self):
@@ -190,6 +190,12 @@ class GeneSignature:
         Checks if a gene is part of this signature.
         """
         return item in self.gene2weights.keys()
+
+    def __getitem__(self, item):
+        """
+        Return the weight associated with a gene.
+        """
+        return self.gene2weights[item]
 
 
 @attr.s(frozen=True)
