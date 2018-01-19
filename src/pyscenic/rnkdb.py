@@ -81,13 +81,20 @@ class RankingDatabase:
         return self._nomenclature
 
     @property
+    def total_genes(self) -> int:
+        """
+        The total number of genes ranked.
+        """
+        return self._gene_count
+
+    @property
     def features(self) -> Tuple[str]:
         """
         List of regulatory features for which whole genome rankings are available in this database.
         """
         return self._features
 
-    def load(self, gs: GeneSignature) -> (np.ndarray,np.ndarray,np.ndarray):
+    def load(self, gs: GeneSignature) -> (np.ndarray,np.ndarray,np.ndarray,np.ndarray):
         """
         Load the ranking of the genes in the supplied signature for all features in this database.
 
@@ -110,10 +117,12 @@ class RankingDatabase:
             cursor.execute(RANKINGS_QUERY.format(quoted_csv(gs.genes)))
             row_idx = 0
             genes = []
+            weights = []
             for gene, ranking in cursor:
                 rankings[row_idx, :] = np.frombuffer(ranking, dtype=self._dtype)
                 genes.append(gene)
+                weights.append(gs[gene])
                 row_idx += 1
             cursor.close()
 
-        return np.array(self._features, dtype='|S255'), np.array(genes, dtype='|S255'), rankings
+        return np.array(self._features, dtype='|S255'), np.array(genes, dtype='|S255'), np.asarray(weights), rankings

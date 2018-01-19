@@ -1,4 +1,5 @@
 *.iml
 .*
 src/*.egg-info
-
+dist/
+build/

@@ -1,3 +1,7 @@
 cytoolz
 attr
 frozendict
+numpy
+pandas
+dask
+numba
