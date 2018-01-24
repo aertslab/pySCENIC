@@ -99,6 +99,12 @@ class RankingDatabase:
         """
         return self._features
 
+    def __str__(self):
+        return "RankingDatabase(name=\"{}\",n_features={})".format(self.name, len(self.features))
+
+    def __repr__(self):
+        return str(self)
+
     @property
     @memoize
     def genes(self) -> Tuple[str]:
