@@ -5,6 +5,7 @@ from operator import itemgetter
 import numpy as np
 from typing import Tuple
 from .genesig import GeneSignature
+from cytoolz import memoize
 
 # SQL query to get the total number of genes in the database.
 GENE_ID_COUNT_QUERY = r"SELECT COUNT(*) FROM rankings;"
@@ -12,6 +13,10 @@ GENE_ID_COUNT_QUERY = r"SELECT COUNT(*) FROM rankings;"
 RANKINGS_QUERY = r"SELECT geneID, ranking FROM rankings WHERE geneID IN ({0:s}) ORDER BY geneID;"
 # SQL query that retrieves the ordered list of features in the database.
 FEATURE_IDS_QUERY = r"SELECT motifName FROM motifs ORDER BY idx;"
+# SQL query for retrieving the full list of genes scored in this database.
+ALL_GENE_IDS_QUERY = r"SELECT geneID FROM rankings ORDER BY geneID;"
+# SQL query for retrieving the the whole database.
+ALL_RANKINGS_QUERY = r"SELECT geneID, ranking FROM rankings ORDER BY geneID;"
 
 
 class RankingDatabase:
@@ -53,7 +58,7 @@ class RankingDatabase:
                 count = cursor.execute(GENE_ID_COUNT_QUERY).fetchone()
                 cursor.close()
             return count
-        self._gene_count = fetch_gene_count()
+        self._gene_count = fetch_gene_count()[0]
 
         # Because of problems on same architectures use of unsigned integers is avoided.
         def derive_dtype(n):
@@ -94,6 +99,35 @@ class RankingDatabase:
         """
         return self._features
 
+    @property
+    @memoize
+    def genes(self) -> Tuple[str]:
+        """
+        List of genes ranked according to the regulatory features in this database.
+        """
+        with sqlite3.connect(self._uri, uri=True) as db:
+            cursor = db.cursor()
+            genes = tuple(map(itemgetter(0), cursor.execute(ALL_GENE_IDS_QUERY).fetchall()))
+            cursor.close()
+        return genes
+
+    def load_full(self) -> (np.ndarray,np.ndarray,np.ndarray):
+        """
+        Load the whole database into memory.
+
+        :return: A tuple of numpy ndarrays: the vector of features, the vector of genes and the (n_features, n_genes)
+                 matrix containing the actual rankings of these genes for each regulatory feature in the database.
+        """
+        # Pre-allocate the matrix.
+        rankings = np.empty(shape=(len(self.features), len(self.genes)), dtype=self._dtype)
+        with sqlite3.connect(self._uri, uri=True) as db:
+            cursor = db.cursor()
+            for idx, (_, ranking) in enumerate(cursor.execute(ALL_RANKINGS_QUERY)):
+                rankings[:, idx] = np.frombuffer(ranking, dtype=self._dtype)
+            cursor.close()
+
+        return np.array(self.features, dtype='|S255'), np.array(self.genes, dtype='|S255'), rankings
+
     def load(self, gs: GeneSignature) -> (np.ndarray,np.ndarray,np.ndarray,np.ndarray):
         """
         Load the ranking of the genes in the supplied signature for all features in this database.
@@ -111,18 +145,13 @@ class RankingDatabase:
             return ','.join(map(quote, values))
 
         # Pre-allocate the matrix.
-        rankings = np.empty(shape=(len(self._features), len(gs)), dtype=self._dtype)
+        rankings = np.empty(shape=(len(self.features), len(gs)), dtype=self._dtype)
         with sqlite3.connect(self._uri, uri=True) as db:
             cursor = db.cursor()
-            cursor.execute(RANKINGS_QUERY.format(quoted_csv(gs.genes)))
-            row_idx = 0
             genes = []
-            weights = []
-            for gene, ranking in cursor:
-                rankings[row_idx, :] = np.frombuffer(ranking, dtype=self._dtype)
+            for idx, (gene, ranking) in enumerate(cursor.execute(RANKINGS_QUERY.format(quoted_csv(gs.genes)))):
+                rankings[:, idx] = np.frombuffer(ranking, dtype=self._dtype)
                 genes.append(gene)
-                weights.append(gs[gene])
-                row_idx += 1
             cursor.close()
 
-        return np.array(self._features, dtype='|S255'), np.array(genes, dtype='|S255'), np.asarray(weights), rankings
+        return np.array(self._features, dtype='|S255'), np.array(genes, dtype='|S255'), rankings

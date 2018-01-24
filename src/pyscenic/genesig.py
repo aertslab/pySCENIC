@@ -50,7 +50,7 @@ class GeneSignature:
                         continue
                     columns = re.split(field_separator, line.rstrip())
                     genes = columns[2:] if field_separator == gene_separator else columns[2].split(gene_separator)
-                    yield GeneSignature(name=columns[0], nomenclature=nomenclature, genes=genes)
+                    yield GeneSignature(name=columns[0], nomenclature=nomenclature, gene2weights=genes)
         return list(signatures())
 
     @classmethod
@@ -68,7 +68,7 @@ class GeneSignature:
         with open(fname, "r") as file:
             return GeneSignature(name=name,
                              nomenclature=nomenclature,
-                             genes=[line.rstrip() for line in file if not line.startswith("#") and line.strip()])
+                             gene2weights=[line.rstrip() for line in file if not line.startswith("#") and line.strip()])
 
     @classmethod
     def from_rnk(cls, fname: str, name: str, nomenclature: str, field_separator=",") -> 'GeneSignature':
@@ -95,7 +95,7 @@ class GeneSignature:
 
         return GeneSignature(name=name,
                              nomenclature=nomenclature,
-                             genes=list(columns()))
+                             gene2weights=list(columns()))
 
     name: str = attr.ib()
     nomenclature: str = attr.ib()

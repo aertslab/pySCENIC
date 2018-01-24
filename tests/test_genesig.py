@@ -1,8 +1,19 @@
 # -*- coding: utf-8 -*-
 
 from pyscenic.genesig import GeneSignature, Regulome
+from configparser import ConfigParser
+import os
 import pytest
 import attr
+
+
+TEST_SIGNATURE = "msigdb_cancer_c6"
+
+
+def load_info(section):
+    config = ConfigParser()
+    config.read(os.path.join(os.path.dirname(__file__), 'test_genesig.ini'))
+    return config[section]
 
 
 def test_init1():
@@ -158,3 +169,13 @@ def test_intersection3():
 def test_regulome():
     reg = Regulome(name='TP53 regulome', gene2weights={'TP53': 0.8, 'SOX4': 0.75}, nomenclature="HGNC", transcription_factor="TP53")
     assert reg.transcription_factor == "TP53"
+
+
+def test_load_gmt():
+    gss = GeneSignature.from_gmt(field_separator='\t', gene_separator='\t', **load_info(TEST_SIGNATURE))
+    # http://software.broadinstitute.org/gsea/msigdb/collections.jsp#C6
+    assert len(gss) == 189
+    assert gss[0].name == "GLI1_UP.V1_DN"
+    assert "COPZ1" in gss[0]
+    assert len(gss[0]) == 29
+
