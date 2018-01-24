@@ -29,7 +29,8 @@ def enrichment(rnkdb: RankingDatabase, gs: GeneSignature, rank_threshold: int = 
             "Please increase the rank threshold or decrease the AUC threshold.".format(auc_threshold, rank_cutoff)
 
     # Load rank of genes from database.
-    features, genes, weights, rankings = rnkdb.load(gs)
+    features, genes, rankings = rnkdb.load(gs)
+    weights = numpy.asarray([gs[gene] for gene in genes] + [0.0])
 
     # Calculate recovery curves.
     def calc_rcc(ranking, weights, total_genes, rank_threshold):
@@ -43,24 +44,30 @@ def enrichment(rnkdb: RankingDatabase, gs: GeneSignature, rank_threshold: int = 
     aucs = rccs[:, :rank_cutoff].sum(axis=1) / maxauc
     ness = (aucs - aucs.mean()) / aucs.std()
 
-    # Calculate average recovery curve.
-    #avgrcc = numpy.average(rccs, axis=1)
-    #stdrcc = numpy.std(rccs, axis=1)
-    #avg2stdrcc = avgrcc + 2.0 * stdrcc
-
-    df_nes = pd.DataFrame(index=features, columns=[("Enrichment", "AUC"), ("Enrichment", "NES")], data=[aucs, ness])
-    df_rnks = pd.DataFrame(index=features, columns=list(zip(repeat("Ranking"), genes)), data=rankings)
-    df_rccs = pd.DataFrame(index=features, columns=list(zip(repeat("Recovery"), numpy.arange(rank_threshold))), data=rccs)
+    df_nes = pd.DataFrame(index=features,
+                          data={("Enrichment", "AUC"): aucs, ("Enrichment", "NES"): ness})
+    df_rnks = pd.DataFrame(index=features,
+                           columns=list(zip(repeat("Ranking"), genes)),
+                           data=rankings)
+    df_rccs = pd.DataFrame(index=features,
+                           columns=list(zip(repeat("Recovery"), numpy.arange(rank_threshold))),
+                           data=rccs)
     return pd.concat([df_nes, df_rccs, df_rnks], axis=1)
 
 
-def leading_edge(row, avg2stdrcc):
+def leading_edge(row, avg2stdrcc, genes, nomenclature):
+    """
+    Calculate the leading edge for  . Use partial function application to make this function really appliable to the rows of a dataframe.
 
-    ranking = row["Ranking"]
-    genes =
-    rcc = row[""]
-    #TODO:
-    # Use partial function application to make this function really appliable to the rows of a dataframe.
+    :param row: The data
+    :param genes: The list of 
+    :param nomenclature: The nomenclature of the genes.
+    :return:
+    """
+    ranking = row['Ranking'].as_matrix()
+    rcc = row['Recovery'].as_matrix()
+    tf = row.name
+
     def critical_point(rcc, avg2stdrcc, rank_threshold):
         """ Returns (x,y). """
         x_values = numpy.arange(1, rank_threshold + 1)
@@ -74,8 +81,8 @@ def leading_edge(row, avg2stdrcc):
         ranking = ranking[sorted_idx]
         gene_ids = genes[sorted_idx]
         filtered_idx = ranking < rank
-        return zip(ranking[filtered_idx] + 1, gene_ids[filtered_idx])
+        return list(zip(gene_ids[filtered_idx], ranking[filtered_idx]))
 
-    rank_threshold = ranking.shape
+    rank_threshold = len(rcc)
     rank, n_recovered_genes = critical_point(rcc, avg2stdrcc, rank_threshold)
     return get_genes(genes, ranking, rank)

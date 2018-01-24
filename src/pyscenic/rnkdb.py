@@ -126,7 +126,7 @@ class RankingDatabase:
                 rankings[:, idx] = np.frombuffer(ranking, dtype=self._dtype)
             cursor.close()
 
-        return np.array(self.features, dtype='|S255'), np.array(self.genes, dtype='|S255'), rankings
+        return np.array(self.features, dtype='U'), np.array(self.genes, dtype='U'), rankings
 
     def load(self, gs: GeneSignature) -> (np.ndarray,np.ndarray,np.ndarray,np.ndarray):
         """
@@ -154,4 +154,4 @@ class RankingDatabase:
                 genes.append(gene)
             cursor.close()
 
-        return np.array(self._features, dtype='|S255'), np.array(genes, dtype='|S255'), rankings
+        return np.array(self._features, dtype='U'), np.array(genes, dtype='U'), rankings
