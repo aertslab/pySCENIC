@@ -5,3 +5,4 @@ numpy
 pandas
 dask
 numba
+sphinx_rtd_theme
