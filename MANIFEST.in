@@ -1,3 +1,5 @@
 # https://pypi.python.org/pypi/check-manifest
 include requirements.txt
 include tests/*.ini
+include versioneer.py
+include src/pyscenic/_version.py

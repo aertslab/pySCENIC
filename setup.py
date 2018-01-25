@@ -13,6 +13,7 @@ import glob
 import io
 import os
 import setuptools
+import versioneer
 
 
 def read(*names, **kwargs):
@@ -53,7 +54,8 @@ version = '0.1.1'
 
 setuptools.setup(
     name='pyscenic',
-    version=version,
+    version=versioneer.get_version(),
+    cmdclass=versioneer.get_cmdclass(),
     description="Python implementation of the SCENIC pipeline.",
     long_description=read('README.rst'),
     classifiers=[
