@@ -100,10 +100,19 @@ class RankingDatabase:
         return self._features
 
     def __str__(self):
-        return "RankingDatabase(name=\"{}\",n_features={})".format(self.name, len(self.features))
+        """
+        Returns a readable string representation.
+        """
+        return self.name
 
     def __repr__(self):
-        return str(self)
+        """
+        Returns a unambiguous string representation.
+        """
+        return "{}(name=\"{}\",n_features={})".format(
+            self.__class__.__name__,
+            self.name,
+            len(self.features))
 
     @property
     @memoize

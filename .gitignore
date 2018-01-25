@@ -6,4 +6,5 @@
 src/*.egg-info
 dist/
 build/
-**/__pycache__/
+__pycache__/
+.DS_Store

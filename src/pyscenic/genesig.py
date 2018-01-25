@@ -197,6 +197,23 @@ class GeneSignature:
         """
         return self.gene2weights[item]
 
+    def __str__(self):
+        """
+        Returns a readable string representation.
+        """
+        return "[]".format(",".join(self.genes))
+
+    def __repr__(self):
+        """
+        Returns a unambiguous string representation.
+        """
+        return "{}(name=\"{}\",nomenclature={},n={},genes=[{}])".format(
+            self.__class__.__name__,
+            self.name,
+            self.nomenclature,
+            len(self.genes),
+            ",".join(map("\"{}\"".format,self.genes)))
+
 
 @attr.s(frozen=True)
 class Regulome(GeneSignature):
