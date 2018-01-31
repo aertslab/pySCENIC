@@ -3,6 +3,7 @@
 .eggs/
 .idea/
 .tox/
+.pytest_cache/
 src/*.egg-info
 dist/
 build/

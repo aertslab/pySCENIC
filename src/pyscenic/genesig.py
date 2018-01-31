@@ -221,6 +221,7 @@ class Regulome(GeneSignature):
     A regulome is a gene signature that defines the target genes of a transcription factor.
     """
     transcription_factor: str = attr.ib()
+    score: float = attr.ib(default=0.0)
 
     @transcription_factor.validator
     def non_empty(self, attribute, value):

@@ -3,7 +3,7 @@ import sqlite3
 import os
 from operator import itemgetter
 import numpy as np
-from typing import Tuple
+from typing import Tuple, Set
 from .genesig import GeneSignature
 from cytoolz import memoize
 
@@ -126,6 +126,14 @@ class RankingDatabase:
             cursor.close()
         return genes
 
+    @property
+    @memoize
+    def geneset(self) -> Set[str]:
+        """
+        Set of genes ranked according to the regulatory features in this database.
+        """
+        return set(self.genes)
+
     def load_full(self) -> (np.ndarray,np.ndarray,np.ndarray):
         """
         Load the whole database into memory.
@@ -159,12 +167,14 @@ class RankingDatabase:
                 return "'" + value.replace("'", "''") + "'"
             return ','.join(map(quote, values))
 
+        # For some genes in the signature there might not be a rank available in the database.
+        gene_set = self.geneset.intersection(set(gs.genes))
         # Pre-allocate the matrix.
-        rankings = np.empty(shape=(len(self.features), len(gs)), dtype=self._dtype)
+        rankings = np.empty(shape=(len(self.features), len(gene_set)), dtype=self._dtype)
         with sqlite3.connect(self._uri, uri=True) as db:
             cursor = db.cursor()
             genes = []
-            for idx, (gene, ranking) in enumerate(cursor.execute(RANKINGS_QUERY.format(quoted_csv(gs.genes)))):
+            for idx, (gene, ranking) in enumerate(cursor.execute(RANKINGS_QUERY.format(quoted_csv(gene_set)))):
                 rankings[:, idx] = np.frombuffer(ranking, dtype=self._dtype)
                 genes.append(gene)
             cursor.close()
