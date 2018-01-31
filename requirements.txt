@@ -1,8 +1,5 @@
 cytoolz
-attr
+attrs
 frozendict
 numpy
 pandas
-dask
-numba
-sphinx_rtd_theme

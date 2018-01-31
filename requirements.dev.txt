@@ -1,0 +1,10 @@
+cytoolz
+attrs
+frozendict
+numpy
+pandas
+sphinx
+sphinx_rtd_theme
+tox
+versioneer
+pytest
