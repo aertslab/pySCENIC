@@ -84,12 +84,13 @@ def add_targetome(df_features: pd.DataFrame, avg2stdrcc: pd.Series) -> pd.DataFr
     """
     Add targetome for enriched regulatory features.
     """
-    df_features[('Enrichment', 'LE')] = df_features[['Recovery', 'Ranking']].apply(
-        partial(leading_edge,
+    if len(df_features) > 0:
+        df_features[('Enrichment', 'LE')] = df_features[['Recovery', 'Ranking']].apply(
+            partial(leading_edge,
                 avg2stdrcc=avg2stdrcc,
                 genes=df_features['Ranking'].columns.values),
-        axis=1)
-    del df_features['Ranking']
+            axis=1)
+        del df_features['Ranking']
     return df_features
 
 
@@ -105,7 +106,8 @@ def add_regulome_score(df_features: pd.DataFrame) -> pd.DataFrame:
         score = nes * -math.log(motif_similarity_qval)/MAX_VALUE if not math.isnan(motif_similarity_qval) else nes
         return score if math.isnan(orthologuous_identity) else score * orthologuous_identity
 
-    df_features[('Enrichment', 'Score')] = df_features.apply(score4row, axis=1)
+    if len(df_features) > 0:
+        df_features[('Enrichment', 'Score')] = df_features.apply(score4row, axis=1)
     return df_features
 
 
@@ -118,7 +120,7 @@ def create_regulomes(df_features, nomenclature="MGI"):
                                                        ('Metadata', 'Database'),
                                                        ('Metadata', 'Factor')]):
             tf_name = metadata[2]
-            regulome_name = "Regulome for {}".format(metadata[0], metadata[1])
+            regulome_name = "Regulome for {}".format(tf_name)
             signature = combine_leading_edges(group[('Enrichment', 'LE')].values)
             name =  metadata[0]
             context = (metadata[1], name[name.find("(")+1:-2])
@@ -160,7 +162,7 @@ def cistargetome(dbs, modules, fname, rank_threshold, nes_threshold, num_workers
     features = [dsk_generate_features(db, gs, rank_threshold=rank_threshold) for db in dbs for gs in modules]
     rccs = [ dsk_generate_recovery_curves(f) for f in features ]
     annot_features = [dsk_annotate_features(f, motif2tf, nes_threshold) for f in features]
-    targetomes = [dsk_add_targetome(af, rcc) for af, rcc in zip(annot_features, rccs) ]
+    targetomes = [dsk_add_targetome(af, rcc['avg2std']) for af, rcc in zip(annot_features, rccs) ]
     regulomes = dsk_derive_regulomes(targetomes)
 
     return regulomes.compute(get=get, num_workers=num_workers)
