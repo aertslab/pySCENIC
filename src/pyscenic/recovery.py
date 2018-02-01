@@ -3,12 +3,13 @@
 import numpy
 import pandas as pd
 from itertools import repeat
+from typing import Type
 
 from .rnkdb import RankingDatabase
 from .genesig import GeneSignature
 
 
-def enrichment(rnkdb: RankingDatabase, gs: GeneSignature, rank_threshold: int = 5000, auc_threshold: float = 0.05) -> pd.DataFrame:
+def enrichment(rnkdb: RankingDatabase, gs: Type[GeneSignature], rank_threshold: int = 5000, auc_threshold: float = 0.05) -> pd.DataFrame:
     """
     Calculate AUC and NES for all regulatory features in the supplied database using the genes of the give signature.
 
@@ -55,18 +56,16 @@ def enrichment(rnkdb: RankingDatabase, gs: GeneSignature, rank_threshold: int = 
     return pd.concat([df_nes, df_rccs, df_rnks], axis=1)
 
 
-def leading_edge(row, avg2stdrcc, genes, nomenclature):
+def leading_edge(row, avg2stdrcc, genes):
     """
     Calculate the leading edge for  . Use partial function application to make this function really appliable to the rows of a dataframe.
 
     :param row: The data
-    :param genes: The list of 
-    :param nomenclature: The nomenclature of the genes.
+    :param genes: The list of
     :return:
     """
     ranking = row['Ranking'].as_matrix()
     rcc = row['Recovery'].as_matrix()
-    tf = row.name
 
     def critical_point(rcc, avg2stdrcc, rank_threshold):
         """ Returns (x,y). """

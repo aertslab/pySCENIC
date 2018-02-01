@@ -4,7 +4,7 @@ import re
 import os
 from collections.abc import Iterable, Mapping
 from itertools import repeat
-from typing import Mapping, List
+from typing import Mapping, List, Tuple
 
 import attr
 from cytoolz import merge_with, dissoc, keyfilter, first, second
@@ -221,6 +221,7 @@ class Regulome(GeneSignature):
     A regulome is a gene signature that defines the target genes of a transcription factor.
     """
     transcription_factor: str = attr.ib()
+    context: Tuple[str] = attr.ib(default=())
     score: float = attr.ib(default=0.0)
 
     @transcription_factor.validator
