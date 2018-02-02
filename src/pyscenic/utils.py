@@ -23,8 +23,9 @@ def regulome4thr(adjacencies, threshold, nomenclature="MGI"):
         regulome = target_genes[target_genes[COLUMN_NAME_WEIGHT] >= threshold]
         if len(regulome) > 0:
             yield Regulome(
-                name="Regulome for {} (target weight >= {})".format(tf_name, threshold),
+                name="Regulome for {}".format(tf_name),
                 nomenclature=nomenclature,
+                context=("target weight >= {}".format(threshold)),
                 transcription_factor=tf_name,
                 gene2weights=list(zip(regulome[COLUMN_NAME_TARGET].values, regulome[COLUMN_NAME_WEIGHT].values)))
 
@@ -41,8 +42,9 @@ def regulome4top_targets(adjacencies, n, nomenclature="MGI"):
         regulome = target_genes.sort_values(by=COLUMN_NAME_WEIGHT, ascending=False).head(n)
         if len(regulome) > 0:
             yield Regulome(
-                name="Regulome for {} (target in top {})".format(tf_name, n),
+                name="Regulome for {}".format(tf_name),
                 nomenclature=nomenclature,
+                context=("target in top {}".format(n)),
                 transcription_factor=tf_name,
                 gene2weights=list(zip(regulome[COLUMN_NAME_TARGET].values, regulome[COLUMN_NAME_WEIGHT].values)))
 
@@ -63,8 +65,9 @@ def regulome4top_factors(adjacencies, n, nomenclature="MGI"):
 
     for tf_name, target2weight in tf2target2weight.items():
         yield Regulome(
-            name="Regulome for {} (factor in top {})".format(tf_name, n),
+            name="Regulome for {}".format(tf_name),
             nomenclature=nomenclature,
+            context=("factor in top {}".format(n)),
             transcription_factor=tf_name,
             gene2weights=target2weight)
 
