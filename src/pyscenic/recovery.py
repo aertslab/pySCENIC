@@ -5,7 +5,7 @@ import pandas as pd
 from itertools import repeat
 from typing import Type
 
-from .sqlitedb import RankingDatabase
+from .rnkdb import RankingDatabase
 from .genesig import GeneSignature, Regulome
 
 

@@ -4,6 +4,9 @@ frozendict
 numpy
 pandas
 feather-format
+dask
+graphviz
+bokeh
 sphinx
 sphinx_rtd_theme
 tox

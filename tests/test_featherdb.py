@@ -3,8 +3,8 @@
 import pytest
 import os
 from configparser import ConfigParser
-from pyscenic.featherdb import FeatherRankingDatabase as RankingDatabase
-from pyscenic.genesig import GeneSignature, Regulome
+from pyscenic.rnkdb import FeatherRankingDatabase as RankingDatabase
+from pyscenic.genesig import GeneSignature
 
 
 TEST_DATABASE = "hg19-500bp-upstream-10species"

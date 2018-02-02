@@ -4,7 +4,7 @@ from pyscenic.recovery import enrichment4features as enrichment
 
 import os
 from configparser import ConfigParser
-from pyscenic.sqlitedb import SQLiteRankingDatabase as RankingDatabase
+from pyscenic.rnkdb import SQLiteRankingDatabase as RankingDatabase
 from pyscenic.genesig import GeneSignature
 
 

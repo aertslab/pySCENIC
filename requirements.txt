@@ -3,4 +3,5 @@ attrs
 frozendict
 numpy
 pandas
+dask
 feather-format
