@@ -33,9 +33,7 @@ def convert2feather(fname: str, out_folder: str, name: str, nomenclature: str, e
     # Caveat: the original storage format of whole genome rankings does not store the metadata, i.e. name and gene
     # nomenclature.
     db = SQLiteRankingDatabase(fname=fname, name=name, nomenclature=nomenclature)
-    features, genes, rankings = db.load_full()
-    # Genes must be columns because feather is a column-oriented format.
-    df = pd.DataFrame(index=features, columns=genes, data=rankings)
+    df = db.load_full()
     # Nomenclature is stored as the name of the column-index of the dataframe.
     df.columns.name = nomenclature
     # The name of the database of rankings is stored as the name of the index of the dataframe.
