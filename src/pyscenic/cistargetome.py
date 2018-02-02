@@ -1,14 +1,13 @@
 # -*- coding: utf-8 -*-
 
-from .recovery import enrichment, leading_edge
+from .recovery import enrichment4features as enrichment, leading_edge
 from .genesig import Regulome
 
 import pandas as pd
 from functools import partial
-from itertools import repeat
 from typing import Type
 from .genesig import GeneSignature
-from .sqlitedb import RankingDatabase
+from .rnkdb import RankingDatabase
 import math
 from operator import itemgetter
 from itertools import chain
@@ -16,20 +15,6 @@ from dask.multiprocessing import get
 from dask import delayed
 import multiprocessing
 
-# TODO: Strategy to make it faster in dask:
-# TODO: make one method (db, mod) => [regulomes] as one dask task - avoidance of to much data exchange between processes!
-
-
-def load_motif2tf_snapshot(fname: str) -> pd.DataFrame:
-    """
-    Load a motif2TF snapshot.
-    """
-    COLUMN_NAMES = ['gene_name', 'motif_similarity_qvalue', 'orthologous_identity', 'description']
-
-    motif2tf = pd.read_csv(fname, sep='\t', index_col=0)
-    motif2tf = motif2tf[COLUMN_NAMES]
-    motif2tf.columns = pd.MultiIndex.from_tuples(list(map(tuple, zip(repeat('Motif2TF'), COLUMN_NAMES))))
-    return motif2tf
 
 
 def generate_features(db: RankingDatabase, gs: Type[GeneSignature], rank_threshold: int =1500) -> pd.DataFrame:
