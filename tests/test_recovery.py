@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-from pyscenic.recovery import enrichment
+from pyscenic.recovery import enrichment4features as enrichment
 
 import os
 from configparser import ConfigParser
