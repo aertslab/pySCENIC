@@ -1,75 +1,61 @@
 # -*- coding: utf-8 -*-
-import sqlite3
+
+import abc
 import os
-from operator import itemgetter
-import numpy as np
-from typing import Tuple, Set
+import pandas as pd
 from .genesig import GeneSignature
+from typing import Tuple, Set, Type
 from cytoolz import memoize
-
-# SQL query to get the total number of genes in the database.
-GENE_ID_COUNT_QUERY = r"SELECT COUNT(*) FROM rankings;"
-# SQL query for retrieving the rankings for a particular set of genes.
-RANKINGS_QUERY = r"SELECT geneID, ranking FROM rankings WHERE geneID IN ({0:s}) ORDER BY geneID;"
-# SQL query that retrieves the ordered list of features in the database.
-FEATURE_IDS_QUERY = r"SELECT motifName FROM motifs ORDER BY idx;"
-# SQL query for retrieving the full list of genes scored in this database.
-ALL_GENE_IDS_QUERY = r"SELECT geneID FROM rankings ORDER BY geneID;"
-# SQL query for retrieving the the whole database.
-ALL_RANKINGS_QUERY = r"SELECT geneID, ranking FROM rankings ORDER BY geneID;"
+from abc import ABCMeta, abstractmethod
 
 
-class RankingDatabase:
+class RankingDatabase(metaclass=ABCMeta):
     """
     A class of a database of whole genome rankings. The whole genome is ranked for regulatory features of interest, e.g.
     motifs for a transcription factor.
     """
 
+    @classmethod
+    def create(cls, fname: str, name: str, nomenclature: str) -> Type['RankingDatabase']:
+        """
+        Create a ranking database.
+
+        :param fname: The filename of the database.
+        :param name: The name of the database.
+        :param nomenclature: The nomenclature used for the genes that are being ranked.
+        :return: A ranking database.
+        """
+        assert os.path.isfile(fname), "{} does not exist.".format(fname)
+        assert name, "A database should be given a proper name."
+        assert nomenclature, "Nomenclature for the genes in a database should be given."
+
+        extension = os.path.splitext(fname)[1]
+        from .featherdb import FeatherRankingDatabase
+        from .sqlitedb import SQLiteRankingDatabase
+        if extension == "feather":
+            # noinspection PyTypeChecker
+            return FeatherRankingDatabase(fname, name=name, nomenclature=nomenclature)
+        elif extension in ("db", "sqlite", "sqlite3"):
+            # noinspection PyTypeChecker
+            return SQLiteRankingDatabase(fname, name=name, nomenclature=nomenclature)
+        else:
+            raise ValueError("{} is an unknown extension.".format(extension))
+
     def __init__(self, fname: str, name: str, nomenclature: str):
         """
         Create a new instance.
 
-        :param fname: The name of the SQLite database file.
+        :param fname: The name of the database file.
         :param nomenclature: The gene nomenclature.
         :param name: The name of the database.
         """
-        assert os.path.exists(fname), "Database {0:s} doesn't exist.".format(fname)
+        assert os.path.isfile(fname), "Database {0:s} doesn't exist.".format(fname)
         assert name, "Name must be specified."
         assert nomenclature, "Nomenclature must be specified."
 
         self._fname = fname
         self._name = name
         self._nomenclature = nomenclature
-
-        # Read-only view on SQLite database.
-        self._uri = 'file:{}?mode=ro'.format(os.path.abspath(fname))
-
-        def fetch_features():
-            with sqlite3.connect(self._uri, uri=True) as db:
-                cursor = db.cursor()
-                features = tuple(map(itemgetter(0), cursor.execute(FEATURE_IDS_QUERY).fetchall()))
-                cursor.close()
-            return features
-        self._features = fetch_features()
-
-        def fetch_gene_count():
-            with sqlite3.connect(self._uri, uri=True) as db:
-                cursor = db.cursor()
-                count = cursor.execute(GENE_ID_COUNT_QUERY).fetchone()
-                cursor.close()
-            return count
-        self._gene_count = fetch_gene_count()[0]
-
-        # Because of problems on same architectures use of unsigned integers is avoided.
-        def derive_dtype(n):
-            """ Derive datatype for storing 0-based rankings for a given set length. """
-            if n <= 2**15:
-                # Range int16: -2^15 (= -32768) to 2^15 - 1 (= 32767).
-                return np.int16
-            else:
-                # Range int32: -2^31 (= -2147483648) to 2^31 - 1 (= 2147483647).
-                return np.int32
-        self._dtype = derive_dtype(self._gene_count)
 
     @property
     def name(self) -> str:
@@ -86,18 +72,47 @@ class RankingDatabase:
         return self._nomenclature
 
     @property
+    @abstractmethod
     def total_genes(self) -> int:
         """
         The total number of genes ranked.
         """
-        return self._gene_count
+        pass
 
     @property
-    def features(self) -> Tuple[str]:
+    @abstractmethod
+    def genes(self) -> Tuple[str]:
         """
-        List of regulatory features for which whole genome rankings are available in this database.
+        List of genes ranked according to the regulatory features in this database.
         """
-        return self._features
+        pass
+
+    @property
+    @memoize
+    def geneset(self) -> Set[str]:
+        """
+        Set of genes ranked according to the regulatory features in this database.
+        """
+        return set(self.genes)
+
+    @abstractmethod
+    def load_full(self) -> pd.DataFrame:
+        """
+        Load the whole database into memory.
+
+        :return: a dataframe.
+        """
+        pass
+
+    @abstractmethod
+    def load(self, gs: Type[GeneSignature]) -> pd.DataFrame:
+        """
+        Load the ranking of the genes in the supplied signature for all features in this database.
+
+        :param gs: The gene signature.
+        :return: a dataframe.
+        """
+        pass
 
     def __str__(self):
         """
@@ -109,74 +124,7 @@ class RankingDatabase:
         """
         Returns a unambiguous string representation.
         """
-        return "{}(name=\"{}\",n_features={})".format(
+        return "{}(name=\"{}\",nomenclature={})".format(
             self.__class__.__name__,
             self.name,
-            len(self.features))
-
-    @property
-    @memoize
-    def genes(self) -> Tuple[str]:
-        """
-        List of genes ranked according to the regulatory features in this database.
-        """
-        with sqlite3.connect(self._uri, uri=True) as db:
-            cursor = db.cursor()
-            genes = tuple(map(itemgetter(0), cursor.execute(ALL_GENE_IDS_QUERY).fetchall()))
-            cursor.close()
-        return genes
-
-    @property
-    @memoize
-    def geneset(self) -> Set[str]:
-        """
-        Set of genes ranked according to the regulatory features in this database.
-        """
-        return set(self.genes)
-
-    def load_full(self) -> (np.ndarray,np.ndarray,np.ndarray):
-        """
-        Load the whole database into memory.
-
-        :return: A tuple of numpy ndarrays: the vector of features, the vector of genes and the (n_features, n_genes)
-                 matrix containing the actual rankings of these genes for each regulatory feature in the database.
-        """
-        # Pre-allocate the matrix.
-        rankings = np.empty(shape=(len(self.features), len(self.genes)), dtype=self._dtype)
-        with sqlite3.connect(self._uri, uri=True) as db:
-            cursor = db.cursor()
-            for idx, (_, ranking) in enumerate(cursor.execute(ALL_RANKINGS_QUERY)):
-                rankings[:, idx] = np.frombuffer(ranking, dtype=self._dtype)
-            cursor.close()
-
-        return np.array(self.features, dtype='U'), np.array(self.genes, dtype='U'), rankings
-
-    def load(self, gs: GeneSignature) -> (np.ndarray,np.ndarray,np.ndarray,np.ndarray):
-        """
-        Load the ranking of the genes in the supplied signature for all features in this database.
-
-        :param gs: The gene signature.
-        :return: A tuple of numpy ndarrays: the vector of features, the vector of genes and the (n_features, n_genes)
-            matrix containing the actual rankings of these genes for each regulatory feature in the database.
-        """
-        assert gs, "A gene signature must be supplied"
-
-        def quoted_csv(values):
-            # Escape single quotes (') by using (''), because sometimes ID's contain a single quote.
-            def quote(value):
-                return "'" + value.replace("'", "''") + "'"
-            return ','.join(map(quote, values))
-
-        # For some genes in the signature there might not be a rank available in the database.
-        gene_set = self.geneset.intersection(set(gs.genes))
-        # Pre-allocate the matrix.
-        rankings = np.empty(shape=(len(self.features), len(gene_set)), dtype=self._dtype)
-        with sqlite3.connect(self._uri, uri=True) as db:
-            cursor = db.cursor()
-            genes = []
-            for idx, (gene, ranking) in enumerate(cursor.execute(RANKINGS_QUERY.format(quoted_csv(gene_set)))):
-                rankings[:, idx] = np.frombuffer(ranking, dtype=self._dtype)
-                genes.append(gene)
-            cursor.close()
-
-        return np.array(self._features, dtype='U'), np.array(genes, dtype='U'), rankings
+            self.nomenclature)

@@ -8,12 +8,16 @@ from functools import partial
 from itertools import repeat
 from typing import Type
 from .genesig import GeneSignature
-from .rnkdb import RankingDatabase
+from .sqlitedb import RankingDatabase
 import math
 from operator import itemgetter
 from itertools import chain
 from dask.multiprocessing import get
 from dask import delayed
+import multiprocessing
+
+# TODO: Strategy to make it faster in dask:
+# TODO: make one method (db, mod) => [regulomes] as one dask task - avoidance of to much data exchange between processes!
 
 
 def load_motif2tf_snapshot(fname: str) -> pd.DataFrame:
@@ -37,6 +41,7 @@ def generate_features(db: RankingDatabase, gs: Type[GeneSignature], rank_thresho
     assert rank_threshold >= 1
 
     # Create dataframe with enriched regulatory features.
+    #TODO: Room for performance improvement: creation of dataframe takes a lot of time.
     df = enrichment(db, gs, rank_threshold=rank_threshold).sort_values(by=('Enrichment', 'NES'), ascending=False)
 
     # Add additional metadata regarding the signature to the dataframe.
@@ -53,6 +58,7 @@ def generate_recovery_curves(df_features: pd.DataFrame) -> pd.DataFrame:
     """
     assert len(df_features) > 0
 
+    #TODO: This should not always be calculated. Currently the dask graph is not taking this into account.
     avgrcc = df_features['Recovery'].mean(axis=0)
     stdrcc = df_features['Recovery'].std(axis=0)
 
@@ -70,6 +76,7 @@ def add_tf_annotations(df_features: pd.DataFrame, motif2tf: pd.DataFrame):
     """
     Add TF annotations for enriched regulatory features.
     """
+    #TODO: Room for performance improvement -> might expand the table too much ...
     return pd.merge(df_features, motif2tf, how='left', left_index=True, right_index=True)
 
 
@@ -103,7 +110,7 @@ def add_regulome_score(df_features: pd.DataFrame) -> pd.DataFrame:
         motif_similarity_qval = row[('Motif2TF', 'motif_similarity_qvalue')]
         orthologuous_identity = row[('Motif2TF', 'orthologous_identity')]
         MAX_VALUE = 100
-        score = nes * -math.log(motif_similarity_qval)/MAX_VALUE if not math.isnan(motif_similarity_qval) else nes
+        score = nes * -math.log(motif_similarity_qval)/MAX_VALUE if not math.isnan(motif_similarity_qval) and motif_similarity_qval != 0.0 else nes
         return score if math.isnan(orthologuous_identity) else score * orthologuous_identity
 
     if len(df_features) > 0:
@@ -135,7 +142,7 @@ def create_regulomes(df_features, nomenclature="MGI"):
     return list(regulomes())
 
 
-def cistargetome(dbs, modules, fname, rank_threshold, nes_threshold, num_workers):
+def cistargetome(dbs, modules, motif_annotations, rank_threshold=1500, nes_threshold=3.0, num_workers=None):
     """
 
     :param dbs:
@@ -146,23 +153,24 @@ def cistargetome(dbs, modules, fname, rank_threshold, nes_threshold, num_workers
     :param num_workers:
     :return:
     """
-    dsk_generate_features = delayed(generate_features)
-    dsk_generate_recovery_curves = delayed(generate_recovery_curves)
-    dsk_add_targetome = delayed(add_targetome)
+
+    if not num_workers:
+        num_workers = multiprocessing.cpu_count()
 
     @delayed
-    def dsk_annotate_features(df_features, motif2tf, nes_threshold):
-        return add_regulome_score(filter_annotations(add_tf_annotations(filter_features(df_features, nes_threshold), motif2tf)))
+    def annotate_features(df_features, motif2tf, nes_threshold):
+        return add_regulome_score(
+                    filter_annotations(
+                        add_tf_annotations(
+                            filter_features(df_features, nes_threshold), motif2tf)))
 
     @delayed
-    def dsk_derive_regulomes(dfs):
-        return create_regulomes(pd.concat(dfs))\
+    def derive_regulomes(dfs):
+        return create_regulomes(pd.concat(dfs))
 
-    motif2tf = load_motif2tf_snapshot(fname)
-    features = [dsk_generate_features(db, gs, rank_threshold=rank_threshold) for db in dbs for gs in modules]
-    rccs = [ dsk_generate_recovery_curves(f) for f in features ]
-    annot_features = [dsk_annotate_features(f, motif2tf, nes_threshold) for f in features]
-    targetomes = [dsk_add_targetome(af, rcc['avg2std']) for af, rcc in zip(annot_features, rccs) ]
-    regulomes = dsk_derive_regulomes(targetomes)
-
+    features = [delayed(generate_features)(db, gs, rank_threshold=rank_threshold) for db in dbs for gs in modules]
+    factors = [annotate_features(f, motif_annotations, nes_threshold) for f in features]
+    rccs = [delayed(generate_recovery_curves)(f) for f in features]
+    targetomes = [delayed(add_targetome)(f, rcc['avg2std']) for f, rcc in zip(factors, rccs)]
+    regulomes = derive_regulomes(targetomes)
     return regulomes.compute(get=get, num_workers=num_workers)

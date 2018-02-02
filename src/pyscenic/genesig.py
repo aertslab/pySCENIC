@@ -10,6 +10,8 @@ import attr
 from cytoolz import merge_with, dissoc, keyfilter, first, second
 from frozendict import frozendict
 
+from cytoolz import memoize
+
 
 def convert(genes):
     # Genes supplied as dictionary.
@@ -117,6 +119,7 @@ class GeneSignature:
             raise ValueError("A gene signature must have at least one gene.")
 
     @property
+    @memoize
     def genes(self):
         """
         Return genes in this signature. Genes are sorted in descending order according to weight.

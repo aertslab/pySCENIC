@@ -5,11 +5,11 @@ import pandas as pd
 from itertools import repeat
 from typing import Type
 
-from .rnkdb import RankingDatabase
+from .sqlitedb import RankingDatabase
 from .genesig import GeneSignature
 
 
-def enrichment(rnkdb: RankingDatabase, gs: Type[GeneSignature], rank_threshold: int = 5000, auc_threshold: float = 0.05) -> pd.DataFrame:
+def enrichment(rnkdb: Type[RankingDatabase], gs: Type[GeneSignature], rank_threshold: int = 5000, auc_threshold: float = 0.05) -> pd.DataFrame:
     """
     Calculate AUC and NES for all regulatory features in the supplied database using the genes of the give signature.
 
@@ -30,7 +30,10 @@ def enrichment(rnkdb: RankingDatabase, gs: Type[GeneSignature], rank_threshold: 
             "Please increase the rank threshold or decrease the AUC threshold.".format(auc_threshold, rank_cutoff)
 
     # Load rank of genes from database.
-    features, genes, rankings = rnkdb.load(gs)
+    df = rnkdb.load(gs)
+    features = df.index.values
+    genes = df.columns.values
+    rankings = df.values
     weights = numpy.asarray([gs[gene] for gene in genes] + [0.0])
 
     # Calculate recovery curves.

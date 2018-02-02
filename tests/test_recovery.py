@@ -4,7 +4,7 @@ from pyscenic.recovery import enrichment
 
 import os
 from configparser import ConfigParser
-from pyscenic.rnkdb import RankingDatabase
+from pyscenic.sqlitedb import SQLiteRankingDatabase as RankingDatabase
 from pyscenic.genesig import GeneSignature
 
 
@@ -14,7 +14,7 @@ TEST_SIGNATURE = "msigdb_cancer_c6"
 
 def load_db_info(section):
     config = ConfigParser()
-    config.read(os.path.join(os.path.dirname(__file__), 'test_rnkdb.ini'))
+    config.read(os.path.join(os.path.dirname(__file__), 'test_sqlitedb.ini'))
     return config[section]
 
 def load_gs_info(section):

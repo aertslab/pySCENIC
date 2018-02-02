@@ -3,3 +3,4 @@ attrs
 frozendict
 numpy
 pandas
+feather-format

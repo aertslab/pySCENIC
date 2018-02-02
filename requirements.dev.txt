@@ -3,6 +3,7 @@ attrs
 frozendict
 numpy
 pandas
+feather-format
 sphinx
 sphinx_rtd_theme
 tox
