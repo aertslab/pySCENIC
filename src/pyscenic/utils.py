@@ -3,10 +3,7 @@
 import pandas as pd
 from .genesig import Regulome
 from collections import defaultdict, Counter
-from itertools import chain, repeat
-
-
-COLUMN_NAME_MOTIF2TF = 'Motif2TF'
+from itertools import chain
 
 
 def load_motif2tf_snapshot(fname: str,
@@ -20,10 +17,7 @@ def load_motif2tf_snapshot(fname: str,
     """
     # Create a MultiIndex for the index combining unique motif ID and gene name. This should facilitate
     # later merging.
-    motif2tf = pd.read_csv(fname, sep='\t', index_col=[0,1], usecols=column_names)
-    # Create a MultiIndex for the columns so that merging results in a clear separation of columns.
-    motif2tf.columns = pd.MultiIndex.from_tuples(list(map(tuple, zip(repeat(COLUMN_NAME_MOTIF2TF), motif2tf.columns))))
-    return motif2tf
+    return pd.read_csv(fname, sep='\t', index_col=[0,1], usecols=column_names)
 
 
 COLUMN_NAME_TF = "TF"

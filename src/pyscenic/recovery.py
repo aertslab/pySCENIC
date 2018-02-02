@@ -3,7 +3,7 @@
 import numpy as np
 import pandas as pd
 from itertools import repeat
-from typing import Type
+from typing import Type, List, Tuple, Optional
 
 from .rnkdb import RankingDatabase
 from .genesig import GeneSignature, Regulome
@@ -106,18 +106,23 @@ def enrichment4features(rnkdb: Type[RankingDatabase], gs: Type[GeneSignature], r
     return pd.concat([df_nes, df_rccs, df_rnks], axis=1)
 
 
-def leading_edge(row, avg2stdrcc, genes):
+def leading_edge(rcc: np.ndarray, avg2stdrcc: np.ndarray,
+                 ranking: np.ndarray, genes: np.ndarray,
+                 signature: Optional[Type[GeneSignature]] = None) -> List[Tuple[str,float]]:
     """
-    Calculate the leading edge for  . Use partial function application to make this function really appliable to the rows of a dataframe.
+    Calculate the leading edge for a given recovery curve.
 
-    :param row: The data
-    :param genes: The list of
-    :return:
+    :param rcc: The recovery curve.
+    :param avg2stdrcc: The average + 2 standard deviation recovery curve.
+    :param ranking: The rank numbers of the gene signature for a given regulatory feature.
+    :param genes: The genes corresponding to the ranking available in the aforementioned parameter.
+    :param signature: The gene signature from which these ranked genes originate.
+    :return: The leading edge returned as a list of tuple. Each tuple associates a gene part of the leading edge with
+        its rank or with its importance (if gene signature supplied).
     """
-    ranking = row['Ranking'].as_matrix()
-    rcc = row['Recovery'].as_matrix()
+    rank_threshold = len(rcc)
 
-    def critical_point(rcc, avg2stdrcc, rank_threshold):
+    def critical_point():
         """ Returns (x,y). """
         x_values = np.arange(1, rank_threshold + 1)
         y_values = rcc - avg2stdrcc
@@ -125,13 +130,32 @@ def leading_edge(row, avg2stdrcc, genes):
         x_max = int(x_values[y_values == y_max][0])
         return x_max, rcc[x_max - 1]
 
-    def get_genes(genes, ranking, rank):
+    def get_genes(rank):
         sorted_idx = np.argsort(ranking)
-        ranking = ranking[sorted_idx]
+        sranking = ranking[sorted_idx]
         gene_ids = genes[sorted_idx]
-        filtered_idx = ranking < rank
-        return list(zip(gene_ids[filtered_idx], ranking[filtered_idx]))
+        filtered_idx = sranking < rank
+        filtered_gene_ids = gene_ids[filtered_idx]
+        if signature is not None:
+            return list(zip(filtered_gene_ids, (signature[gid] for gid in filtered_gene_ids)))
+        else:
+            return list(zip(filtered_gene_ids, sranking[filtered_idx]))
 
-    rank_threshold = len(rcc)
-    rank, n_recovered_genes = critical_point(rcc, avg2stdrcc, rank_threshold)
-    return get_genes(genes, ranking, rank)
+    rank, n_recovered_genes = critical_point()
+    return get_genes(rank)
+
+
+def leading_edge4row(row: pd.Series, avg2stdrcc: np.ndarray, genes: np.ndarray,
+                     signature: Optional[Type[GeneSignature]] = None) -> List[Tuple[str,float]]:
+    """
+    Calculate the leading edge for a row of a dataframe. Should be used with partial function application to make this
+    function amenable to the apply idiom common for dataframes.
+
+    :param row: The row of the dataframe to calculate the leading edge for.
+    :param avg2stdrcc: The average + 2 standard deviation recovery curve.
+    :param genes: The genes corresponding to the ranking available in the supplied row.
+    :param signature: The gene signature from which these ranked genes originate.
+    :return: The leading edge returned as a list of tuple. Each tuple associates a gene part of the leading edge with
+        its rank or with its importance (if gene signature supplied).
+    """
+    return leading_edge(row['Recovery'].as_matrix(),  avg2stdrcc, row['Ranking'].as_matrix(), genes, signature)
