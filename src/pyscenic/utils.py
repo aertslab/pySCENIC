@@ -1,9 +1,29 @@
 # -*- coding: utf-8 -*-
 
-from pandas import DataFrame
+import pandas as pd
 from .genesig import Regulome
 from collections import defaultdict, Counter
-from itertools import chain
+from itertools import chain, repeat
+
+
+COLUMN_NAME_MOTIF2TF = 'Motif2TF'
+
+
+def load_motif2tf_snapshot(fname: str,
+                           column_names=('#motif_id', 'gene_name', 'motif_similarity_qvalue', 'orthologous_identity', 'description')) -> pd.DataFrame:
+    """
+    Load a motif2TF snapshot.
+
+    :param fname: the snapshot taken from motif2TF.
+    :param column_names: the names of the columns in the snapshot to load.
+    :return: A dataframe.
+    """
+    # Create a MultiIndex for the index combining unique motif ID and gene name. This should facilitate
+    # later merging.
+    motif2tf = pd.read_csv(fname, sep='\t', index_col=[0,1], usecols=column_names)
+    # Create a MultiIndex for the columns so that merging results in a clear separation of columns.
+    motif2tf.columns = pd.MultiIndex.from_tuples(list(map(tuple, zip(repeat(COLUMN_NAME_MOTIF2TF), motif2tf.columns))))
+    return motif2tf
 
 
 COLUMN_NAME_TF = "TF"
@@ -11,7 +31,7 @@ COLUMN_NAME_TARGET = "target"
 COLUMN_NAME_WEIGHT = "importance"
 
 
-def regulome4thr(adjacencies, threshold, nomenclature="MGI"):
+def modules4thr(adjacencies, threshold, nomenclature="MGI"):
     """
 
     :param adjacencies:
@@ -20,17 +40,17 @@ def regulome4thr(adjacencies, threshold, nomenclature="MGI"):
     :return:
     """
     for tf_name, target_genes in adjacencies.groupby(by=COLUMN_NAME_TF):
-        regulome = target_genes[target_genes[COLUMN_NAME_WEIGHT] >= threshold]
-        if len(regulome) > 0:
+        module = target_genes[target_genes[COLUMN_NAME_WEIGHT] >= threshold]
+        if len(module) > 0:
             yield Regulome(
                 name="Regulome for {}".format(tf_name),
                 nomenclature=nomenclature,
                 context=("target weight >= {}".format(threshold)),
                 transcription_factor=tf_name,
-                gene2weights=list(zip(regulome[COLUMN_NAME_TARGET].values, regulome[COLUMN_NAME_WEIGHT].values)))
+                gene2weights=list(zip(module[COLUMN_NAME_TARGET].values, module[COLUMN_NAME_WEIGHT].values)))
 
 
-def regulome4top_targets(adjacencies, n, nomenclature="MGI"):
+def modules4top_targets(adjacencies, n, nomenclature="MGI"):
     """
 
     :param adjacencies:
@@ -39,17 +59,17 @@ def regulome4top_targets(adjacencies, n, nomenclature="MGI"):
     :return:
     """
     for tf_name, target_genes in adjacencies.groupby(by=COLUMN_NAME_TF):
-        regulome = target_genes.sort_values(by=COLUMN_NAME_WEIGHT, ascending=False).head(n)
-        if len(regulome) > 0:
+        module = target_genes.sort_values(by=COLUMN_NAME_WEIGHT, ascending=False).head(n)
+        if len(module) > 0:
             yield Regulome(
                 name="Regulome for {}".format(tf_name),
                 nomenclature=nomenclature,
                 context=("target in top {}".format(n)),
                 transcription_factor=tf_name,
-                gene2weights=list(zip(regulome[COLUMN_NAME_TARGET].values, regulome[COLUMN_NAME_WEIGHT].values)))
+                gene2weights=list(zip(module[COLUMN_NAME_TARGET].values, module[COLUMN_NAME_WEIGHT].values)))
 
 
-def regulome4top_factors(adjacencies, n, nomenclature="MGI"):
+def modules4top_factors(adjacencies, n, nomenclature="MGI"):
     """
 
     :param adjacencies:
@@ -72,10 +92,10 @@ def regulome4top_factors(adjacencies, n, nomenclature="MGI"):
             gene2weights=target2weight)
 
 
-def regulomes_from_genie3(adjacencies: DataFrame, nomenclature: str,
-                                 thresholds=(0.001,0.005),
-                                 top_n_targets=(50,),
-                                 top_n_regulators=(5,10,50)):
+def modules_from_genie3(adjacencies: pd.DataFrame, nomenclature: str,
+                        thresholds=(0.001,0.005),
+                        top_n_targets=(50,),
+                        top_n_regulators=(5,10,50)):
     """
     
     :param adjacencies:
@@ -85,6 +105,6 @@ def regulomes_from_genie3(adjacencies: DataFrame, nomenclature: str,
     :param top_n_regulators:
     :return:
     """
-    yield from chain(chain.from_iterable(regulome4thr(adjacencies, thr, nomenclature) for thr in thresholds),
-                     chain.from_iterable(regulome4top_targets(adjacencies, n, nomenclature) for n in top_n_targets),
-                     chain.from_iterable(regulome4top_factors(adjacencies, n, nomenclature) for n in top_n_regulators))
+    yield from chain(chain.from_iterable(modules4thr(adjacencies, thr, nomenclature) for thr in thresholds),
+                     chain.from_iterable(modules4top_targets(adjacencies, n, nomenclature) for n in top_n_targets),
+                     chain.from_iterable(modules4top_factors(adjacencies, n, nomenclature) for n in top_n_regulators))
