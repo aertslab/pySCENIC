@@ -232,6 +232,9 @@ class SQLiteRankingDatabase(RankingDatabase):
         return pd.DataFrame(index=self.features, columns=genes, data=rankings)
 
 
+INDEX_NAME = "features"
+
+
 class FeatherRankingDatabase(RankingDatabase):
     def __init__(self, fname: str, name: str = None, nomenclature: str = None):
         """
@@ -254,10 +257,10 @@ class FeatherRankingDatabase(RankingDatabase):
         return tuple(self._reader.get_column_name(idx) for idx in range(self.total_genes))
 
     def load_full(self) -> pd.DataFrame:
-        return self._reader.read()
+        return self._reader.read().set_index(INDEX_NAME)
 
     def load(self, gs: Type[GeneSignature]) -> pd.DataFrame:
-        return self._reader.read(columns=gs.genes)
+        return self._reader.read(columns=(INDEX_NAME,) + gs.genes).set_index(INDEX_NAME)
 
 
 def convert2feather(fname: str, out_folder: str, name: str, nomenclature: str, extension: str="feather") -> str:
@@ -285,10 +288,8 @@ def convert2feather(fname: str, out_folder: str, name: str, nomenclature: str, e
     # nomenclature.
     db = SQLiteRankingDatabase(fname=fname, name=name, nomenclature=nomenclature)
     df = db.load_full()
-    # Nomenclature is stored as the name of the column-index of the dataframe.
-    df.columns.name = nomenclature
-    # The name of the database of rankings is stored as the name of the index of the dataframe.
-    df.index.name = name
+    df.index.name = INDEX_NAME
+    df.reset_index(inplace=True) # Index is not stored in feather format. https://github.com/wesm/feather/issues/200
     write_dataframe(df, feather_fname)
     return feather_fname
 
