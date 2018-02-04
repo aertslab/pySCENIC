@@ -6,18 +6,24 @@ from collections import defaultdict, Counter
 from itertools import chain
 
 
-def load_motif2tf_snapshot(fname: str,
-                           column_names=('#motif_id', 'gene_name', 'motif_similarity_qvalue', 'orthologous_identity', 'description')) -> pd.DataFrame:
+COLUMN_NAME_MOTIF_SIMILARITY_QVALUE = 'motif_similarity_qvalue'
+COLUMN_NAME_ORTHOLOGOUS_IDENTITY = 'orthologous_identity'
+
+
+def load_motif_annotations(fname: str,
+                           column_names=('#motif_id', 'gene_name',
+                                         COLUMN_NAME_MOTIF_SIMILARITY_QVALUE, COLUMN_NAME_ORTHOLOGOUS_IDENTITY,
+                                         'description')) -> pd.DataFrame:
     """
-    Load a motif2TF snapshot.
+    Load motif annotations from a motif2TF snapshot.
 
     :param fname: the snapshot taken from motif2TF.
     :param column_names: the names of the columns in the snapshot to load.
     :return: A dataframe.
     """
-    # Create a MultiIndex for the index combining unique motif ID and gene name. This should facilitate
+    # Create a MultiIndex for the index combining unique gene name and motif ID. This should facilitate
     # later merging.
-    return pd.read_csv(fname, sep='\t', index_col=[0,1], usecols=column_names)
+    return pd.read_csv(fname, sep='\t', index_col=[1,0], usecols=column_names)
 
 
 COLUMN_NAME_TF = "TF"

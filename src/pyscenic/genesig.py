@@ -4,7 +4,7 @@ import re
 import os
 from collections.abc import Iterable, Mapping
 from itertools import repeat
-from typing import Mapping, List, Tuple
+from typing import Mapping, List, FrozenSet, Type
 
 import attr
 from cytoolz import merge_with, dissoc, keyfilter, first, second
@@ -126,7 +126,7 @@ class GeneSignature:
         """
         return tuple(map(first, sorted(self.gene2weights.items(), key=second, reverse=True)))
 
-    def rename(self, name: str) -> 'GeneSignature':
+    def rename(self, name: str) -> Type['GeneSignature']:
         """
         Rename this signature.
 
@@ -135,7 +135,10 @@ class GeneSignature:
         """
         return GeneSignature(name=name, nomenclature=self.nomenclature, gene2weights=self.gene2weights)
 
-    def union(self, other: 'GeneSignature') -> 'GeneSignature':
+    def _union_impl(self, other):
+        return frozendict(merge_with(max, self.gene2weights, other.gene2weights))
+
+    def union(self, other: Type['GeneSignature']) -> Type['GeneSignature']:
         """
         Creates a new :class:`GeneSignature` instance which is the union of this signature and the other supplied
         signature.
@@ -148,9 +151,12 @@ class GeneSignature:
         assert self.nomenclature == other.nomenclature, "Union of gene signatures is only possible when both signatures use same nomenclature for genes."
         return GeneSignature(name="({} | {})".format(self.name, other.name),
                              nomenclature=self.nomenclature,
-                             gene2weights=frozendict(merge_with(max, self.gene2weights, other.gene2weights)))
+                             gene2weights=self._union_impl(other))
 
-    def difference(self, other: 'GeneSignature') -> 'GeneSignature':
+    def _difference_impl(self, other):
+        return frozendict(dissoc(dict(self.gene2weights), *other.genes))
+
+    def difference(self, other: Type['GeneSignature']) -> Type['GeneSignature']:
         """
         Creates a new :class:`GeneSignature` instance which is the difference of this signature and the supplied other
         signature.
@@ -163,9 +169,14 @@ class GeneSignature:
         assert self.nomenclature == other.nomenclature, "Difference of gene signatures is only possible when both signatures use same nomenclature for genes."
         return GeneSignature(name="({} - {})".format(self.name, other.name),
                          nomenclature=self.nomenclature,
-                         gene2weights=frozendict(dissoc(dict(self.gene2weights), *other.genes)))
+                         gene2weights=self._difference_impl(other))
 
-    def intersection(self, other: 'GeneSignature') -> 'GeneSignature':
+    def _intersection_impl(self, other):
+        genes = set(self.gene2weights.keys()).intersection(set(other.gene2weights.keys()))
+        return frozendict(keyfilter(lambda k: k in genes,
+                                    merge_with(max, self.gene2weights, other.gene2weights)))
+
+    def intersection(self, other: Type['GeneSignature']) -> Type['GeneSignature']:
         """
         Creates a new :class:`GeneSignature` instance which is the intersection of this signature and the supplied other
         signature.
@@ -176,11 +187,9 @@ class GeneSignature:
         :return: the new :class:`GeneSignature` instance.
         """
         assert self.nomenclature == other.nomenclature, "Intersection of gene signatures is only possible when both signatures use same nomenclature for genes."
-        genes = set(self.gene2weights.keys()).intersection(set(other.gene2weights.keys()))
         return GeneSignature(name="({} & {})".format(self.name, other.name),
                              nomenclature=self.nomenclature,
-                             gene2weights=frozendict(keyfilter(lambda k: k in genes,
-                                                       merge_with(max, self.gene2weights, other.gene2weights))))
+                             gene2weights=self._intersection_impl(other))
 
     def __len__(self):
         """
@@ -224,10 +233,42 @@ class Regulome(GeneSignature):
     A regulome is a gene signature that defines the target genes of a transcription factor.
     """
     transcription_factor: str = attr.ib()
-    context: Tuple[str] = attr.ib(default=())
+    context: FrozenSet[str] = attr.ib(default=frozenset())
     score: float = attr.ib(default=0.0)
 
     @transcription_factor.validator
     def non_empty(self, attribute, value):
         if len(value) == 0:
             raise ValueError("A regulome must have a transcription factor.")
+
+    def union(self, other: Type['GeneSignature']) -> Type['GeneSignature']:
+        assert self.nomenclature == other.nomenclature, "Union of gene signatures is only possible when both signatures use same nomenclature for genes."
+        assert self.transcription_factor == getattr(other, 'transcription_factor', self.transcription_factor), "Union of two regulomes is only possible when same factor."
+        return GeneSignature(name="({} | {})".format(self.name, other.name),
+                             nomenclature=self.nomenclature,
+                             transcription_factor=self.transcription_factor,
+                             context=self.context.union(getattr(other, 'context', frozenset())),
+                             score=max(self.score, getattr(other, 'score', 0.0)),
+                             gene2weights=self._union_impl(other))
+
+
+    def difference(self, other: Type['GeneSignature']) -> Type['GeneSignature']:
+        assert self.nomenclature == other.nomenclature, "Difference of gene signatures is only possible when both signatures use same nomenclature for genes."
+        assert self.transcription_factor == getattr(other, 'transcription_factor', self.transcription_factor), "Difference of two regulomes is only possible when same factor."
+        return GeneSignature(name="({} - {})".format(self.name, other.name),
+                             nomenclature=self.nomenclature,
+                             transcription_factor=self.transcription_factor,
+                             context=self.context.union(getattr(other, 'context', frozenset())),
+                             score=max(self.score, getattr(other, 'score', 0.0)),
+                             gene2weights=self._difference_impl(other))
+
+    def intersection(self, other: Type['GeneSignature']) -> Type['GeneSignature']:
+        assert self.nomenclature == other.nomenclature, "Intersection of gene signatures is only possible when both signatures use same nomenclature for genes."
+        assert self.transcription_factor == getattr(other, 'transcription_factor', self.transcription_factor), "Intersection of two regulomes is only possible when same factor."
+        return GeneSignature(name="({} & {})".format(self.name, other.name),
+                         nomenclature=self.nomenclature,
+                         transcription_factor=self.transcription_factor,
+                         context=self.context.union(getattr(other, 'context', frozenset())),
+                         score=max(self.score, getattr(other, 'score', 0.0)),
+                         gene2weights=self._intersection_impl(other))
+
