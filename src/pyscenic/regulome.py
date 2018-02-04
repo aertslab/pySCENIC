@@ -50,7 +50,8 @@ def module2regulome(db: Type[RankingDatabase], module: Regulome, motif_annotatio
     # Keep only features that are enriched, i.e. NES sufficiently high.
     enriched_features_idx = ness >= nes_threshold
     enriched_features = pd.DataFrame(index=pd.MultiIndex.from_tuples(list(zip(repeat(module.transcription_factor),
-                                                                              features[enriched_features_idx]))),
+                                                                              features[enriched_features_idx])),
+                                                                     names=["gene_name", "#motif_id"]),
                                      data={COLUMN_NAME_NES: ness[enriched_features_idx],
                                            COLUMN_NAME_AUC: aucs[enriched_features_idx]})
     if len(enriched_features) == 0:
@@ -84,7 +85,7 @@ def module2regulome(db: Type[RankingDatabase], module: Regulome, motif_annotatio
                                               row[COLUMN_NAME_MOTIF_SIMILARITY_QVALUE],
                                               row[COLUMN_NAME_ORTHOLOGOUS_IDENTITY]),
                                   nomenclature=module.nomenclature,
-                                  context=(module.context[0], db.name),
+                                  context=module.context.union(frozenset([db.name])),
                                   transcription_factor=module.transcription_factor,
                                   gene2weights=leading_edge(rcc, avg2stdrcc, ranking, genes, module)))
 

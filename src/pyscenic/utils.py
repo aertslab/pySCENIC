@@ -45,7 +45,7 @@ def modules4thr(adjacencies, threshold, nomenclature="MGI"):
             yield Regulome(
                 name="Regulome for {}".format(tf_name),
                 nomenclature=nomenclature,
-                context=("target weight >= {}".format(threshold)),
+                context=frozenset(["target weight >= {}".format(threshold)]),
                 transcription_factor=tf_name,
                 gene2weights=list(zip(module[COLUMN_NAME_TARGET].values, module[COLUMN_NAME_WEIGHT].values)))
 
@@ -64,7 +64,7 @@ def modules4top_targets(adjacencies, n, nomenclature="MGI"):
             yield Regulome(
                 name="Regulome for {}".format(tf_name),
                 nomenclature=nomenclature,
-                context=("target in top {}".format(n)),
+                context=frozenset(["target in top {}".format(n)]),
                 transcription_factor=tf_name,
                 gene2weights=list(zip(module[COLUMN_NAME_TARGET].values, module[COLUMN_NAME_WEIGHT].values)))
 
@@ -87,7 +87,7 @@ def modules4top_factors(adjacencies, n, nomenclature="MGI"):
         yield Regulome(
             name="Regulome for {}".format(tf_name),
             nomenclature=nomenclature,
-            context=("factor in top {}".format(n)),
+            context=frozenset(["factor in top {}".format(n)]),
             transcription_factor=tf_name,
             gene2weights=target2weight)
 

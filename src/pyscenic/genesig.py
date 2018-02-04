@@ -244,7 +244,7 @@ class Regulome(GeneSignature):
     def union(self, other: Type['GeneSignature']) -> Type['GeneSignature']:
         assert self.nomenclature == other.nomenclature, "Union of gene signatures is only possible when both signatures use same nomenclature for genes."
         assert self.transcription_factor == getattr(other, 'transcription_factor', self.transcription_factor), "Union of two regulomes is only possible when same factor."
-        return GeneSignature(name="({} | {})".format(self.name, other.name),
+        return Regulome(name="({} | {})".format(self.name, other.name),
                              nomenclature=self.nomenclature,
                              transcription_factor=self.transcription_factor,
                              context=self.context.union(getattr(other, 'context', frozenset())),
@@ -255,7 +255,7 @@ class Regulome(GeneSignature):
     def difference(self, other: Type['GeneSignature']) -> Type['GeneSignature']:
         assert self.nomenclature == other.nomenclature, "Difference of gene signatures is only possible when both signatures use same nomenclature for genes."
         assert self.transcription_factor == getattr(other, 'transcription_factor', self.transcription_factor), "Difference of two regulomes is only possible when same factor."
-        return GeneSignature(name="({} - {})".format(self.name, other.name),
+        return Regulome(name="({} - {})".format(self.name, other.name),
                              nomenclature=self.nomenclature,
                              transcription_factor=self.transcription_factor,
                              context=self.context.union(getattr(other, 'context', frozenset())),
@@ -265,7 +265,7 @@ class Regulome(GeneSignature):
     def intersection(self, other: Type['GeneSignature']) -> Type['GeneSignature']:
         assert self.nomenclature == other.nomenclature, "Intersection of gene signatures is only possible when both signatures use same nomenclature for genes."
         assert self.transcription_factor == getattr(other, 'transcription_factor', self.transcription_factor), "Intersection of two regulomes is only possible when same factor."
-        return GeneSignature(name="({} & {})".format(self.name, other.name),
+        return Regulome(name="({} & {})".format(self.name, other.name),
                          nomenclature=self.nomenclature,
                          transcription_factor=self.transcription_factor,
                          context=self.context.union(getattr(other, 'context', frozenset())),
