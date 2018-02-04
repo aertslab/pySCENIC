@@ -245,22 +245,26 @@ class FeatherRankingDatabase(RankingDatabase):
         :param nomenclature: The nomenclature used for the genes that are being ranked.
         """
         super().__init__(fname, name=name, nomenclature=nomenclature)
-        self._reader = FeatherReader(fname)
+        # FeatherReader cannot be pickle (important for dask framework) so filename is field instead.
+        self._fname = fname
 
     @property
+    @memoize
     def total_genes(self) -> int:
-        return self._reader.num_columns
+        return FeatherReader(self._fname).num_columns
 
     @property
+    @memoize
     def genes(self) -> Tuple[str]:
         # noinspection PyTypeChecker
-        return tuple(self._reader.get_column_name(idx) for idx in range(self.total_genes))
+        reader = FeatherReader(self._fname)
+        return tuple(reader.get_column_name(idx) for idx in range(self.total_genes))
 
     def load_full(self) -> pd.DataFrame:
-        return self._reader.read().set_index(INDEX_NAME)
+        return FeatherReader(self._fname).read().set_index(INDEX_NAME)
 
     def load(self, gs: Type[GeneSignature]) -> pd.DataFrame:
-        return self._reader.read(columns=(INDEX_NAME,) + gs.genes).set_index(INDEX_NAME)
+        return FeatherReader(self._fname).read(columns=(INDEX_NAME,) + gs.genes).set_index(INDEX_NAME)
 
 
 def convert2feather(fname: str, out_folder: str, name: str, nomenclature: str, extension: str="feather") -> str:
