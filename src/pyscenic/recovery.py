@@ -31,13 +31,12 @@ def recovery(rnk: pd.DataFrame, total_genes: int, weights: np.ndarray, rank_thre
         "Please increase the rank threshold or decrease the AUC threshold.".format(auc_threshold, rank_cutoff)
 
     features, genes, rankings = rnk.index.values, rnk.columns.values, rnk.values
-    weights = np.insert(weights, len(weights), 0.0)
+    n_features = len(features)
 
     # Calculate recovery curves.
-    n_features = len(features)
     rccs = np.empty(shape=(n_features, rank_threshold), dtype=np.float) # Pre-allocation.
     for row_idx in range(n_features):
-        curranking = np.append(rankings[row_idx, :], total_genes)
+        curranking = rankings[row_idx, :]
         rccs[row_idx, :] = np.cumsum(np.bincount(curranking, weights=weights)[:rank_threshold])
 
     # Calculate AUC.
