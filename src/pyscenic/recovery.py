@@ -34,11 +34,11 @@ def recovery(rnk: pd.DataFrame, total_genes: int, weights: np.ndarray, rank_thre
     weights = np.insert(weights, len(weights), 0.0)
 
     # Calculate recovery curves.
-    def calc_rcc(ranking, weights, total_genes, rank_threshold):
-        curranking = np.append(ranking, total_genes)
-        return np.cumsum(np.bincount(curranking, weights=weights)[:rank_threshold])
-    # Apply along axis does not improve performance, only more readable code.
-    rccs = np.apply_along_axis(calc_rcc, 1, rankings, weights, total_genes, rank_threshold)
+    n_features = len(features)
+    rccs = np.empty(shape=(n_features, rank_threshold), dtype=np.float) # Pre-allocation.
+    for row_idx in range(n_features):
+        curranking = np.append(rankings[row_idx, :], total_genes)
+        rccs[row_idx, :] = np.cumsum(np.bincount(curranking, weights=weights)[:rank_threshold])
 
     # Calculate AUC.
     maxauc = float(rank_cutoff * total_genes)
