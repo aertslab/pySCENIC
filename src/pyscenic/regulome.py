@@ -22,7 +22,7 @@ COLUMN_NAME_AUC = "AUC"
 
 def module2regulome(db: Type[RankingDatabase], module: Regulome, motif_annotations: pd.DataFrame,
                     rank_threshold: int = 1500, auc_threshold: float = 0.05, nes_threshold=3.0,
-                    avgrcc_sample_frac: float = None) -> Optional[Regulome]:
+                    avgrcc_sample_frac: float = None, weighted_recovery=False) -> Optional[Regulome]:
     """
     Create a regulome for a given ranking database and a co-expression module. If non can be created NoN is returned.
 
@@ -34,7 +34,7 @@ def module2regulome(db: Type[RankingDatabase], module: Regulome, motif_annotatio
     :param nes_threshold: The Normalized Enrichment Score (NES) threshold to select enriched features.
     :param avgrcc_sample_frac: The fraction of the features to use for the calculation of the average curve, If None
         then all features are used.
-    :param num_workers: The number of workers to use for the calculation. None of all available CPUs need to be used.
+    :param weighted_recovery: Use weights of a gene signature when calculating recovery curves?
     :return: A regulome or None.
     """
 
@@ -79,6 +79,7 @@ def module2regulome(db: Type[RankingDatabase], module: Regulome, motif_annotatio
         return score if math.isnan(orthologuous_identity) else score * orthologuous_identity
 
     regulomes = []
+    _module = module if weighted_recovery else module.noweights()
     for (_, row), rcc, ranking in zip(annotated_features.iterrows(), rccs[enriched_features_idx, :], rankings[enriched_features_idx, :]):
         regulomes.append(Regulome(name=module.name,
                                   score=score(row[COLUMN_NAME_NES],
@@ -87,17 +88,18 @@ def module2regulome(db: Type[RankingDatabase], module: Regulome, motif_annotatio
                                   nomenclature=module.nomenclature,
                                   context=module.context.union(frozenset([db.name])),
                                   transcription_factor=module.transcription_factor,
-                                  gene2weights=leading_edge(rcc, avg2stdrcc, ranking, genes, module)))
+                                  gene2weights=leading_edge(rcc, avg2stdrcc, ranking, genes, _module)))
 
     # Aggregate these regulomes into a single one using the union operator.
     return reduce(Regulome.union, regulomes)
 
 
-def derive_regulomes(rnkdbs: Sequence[Type[RankingDatabase]], modules: Sequence[Type[GeneSignature]],
+def derive_regulomes(rnkdbs: Sequence[Type[RankingDatabase]], modules: Sequence[Regulome],
                          motif_annotations_fname: str,
                          rank_threshold: int = 1500, auc_threshold: float = 0.05, nes_threshold=3.0,
                          motif_similarity_fdr: float = 0.001, orthologuous_identity_threshold: float = 0.0,
                          avgrcc_sample_frac: float = None,
+                         weighted_recovery=False,
                          num_workers=None) -> Sequence[Regulome]:
     """
     Calculate all regulomes for a given sequence of ranking databases and a sequence of co-expression modules.
@@ -114,6 +116,7 @@ def derive_regulomes(rnkdbs: Sequence[Type[RankingDatabase]], modules: Sequence[
         for enriched motifs.
     :param avgrcc_sample_frac: The fraction of the features to use for the calculation of the average curve, If None
         then all features are used.
+    :param weighted_recovery: Use weights of a gene signature when calculating recovery curves?
     :param num_workers: The number of workers to use for the calculation. None of all available CPUs need to be used.
     :return: A sequence of regulomes.
     """

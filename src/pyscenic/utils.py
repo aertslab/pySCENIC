@@ -35,37 +35,35 @@ def load_motif_annotations(fname: str,
     return df
 
 
-def rm_repressed_targets(adjacencies: pd.DataFrame, ex_mtx: pd.DataFrame) -> pd.DataFrame:
+COLUMN_NAME_TF = "TF"
+COLUMN_NAME_TARGET = "target"
+COLUMN_NAME_WEIGHT = "importance"
+COLUMN_NAME_CORRELATION = "correlation"
+RHO_THRESHOLD = 0.3
+
+
+def add_correlation(adjacencies: pd.DataFrame, ex_mtx: pd.DataFrame) -> pd.DataFrame:
     """
-    Remove repressed targets.
+    Add correlation in expression levels between target and factor.
 
     :param adjacencies: The dataframe with the TF-target links.
     :param ex_mtx: The expression matrix (n_genes x n_cells).
-    :return: The adjacencies dataframe with only TF-target links with clear activ
+    :return: The adjacencies dataframe with an extra column.
     """
-
-    # Remove duplicate genes in the index.
-    ex_mtx = ex_mtx[~ex_mtx.index.duplicated(keep='first')]
 
     # Calculate Pearson correlation to infer repression or activation.
     corr_mtx = pd.DataFrame(index=ex_mtx.index, columns=ex_mtx.index, data=np.corrcoef(ex_mtx.values))
 
     # Add "correlation" column to adjacencies dataframe.
     def add_regulation(row, corr_mtx):
-        tf = row['TF']
-        target = row['target']
+        tf = row[COLUMN_NAME_TF]
+        target = row[COLUMN_NAME_TARGET]
         rho = corr_mtx[tf][target]
-        return int(rho > 0.03) - int(rho < 0.03)
+        return int(rho > RHO_THRESHOLD) - int(rho < RHO_THRESHOLD)
 
-    adjacencies['correlation'] = adjacencies.apply(partial(add_regulation, corr_mtx=corr_mtx), axis=1)
+    adjacencies[COLUMN_NAME_CORRELATION] = adjacencies.apply(partial(add_regulation, corr_mtx=corr_mtx), axis=1)
 
-    # Only keep TF-target where the TF has a clear activating role.
-    return adjacencies[adjacencies['correlation'] > 0.0]
-
-
-COLUMN_NAME_TF = "TF"
-COLUMN_NAME_TARGET = "target"
-COLUMN_NAME_WEIGHT = "importance"
+    return adjacencies
 
 
 def modules4thr(adjacencies, threshold, nomenclature="MGI"):

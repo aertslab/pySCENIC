@@ -191,6 +191,13 @@ class GeneSignature:
                              nomenclature=self.nomenclature,
                              gene2weights=self._intersection_impl(other))
 
+    def noweights(self):
+        """
+        Create a new gene signature with uniform weights, i.e. all weights are equal and set to 1.0.
+        """
+        return GeneSignature(name=self.name, nomenclature=self.nomenclature,
+                             gene2weights=self.genes)
+
     def __len__(self):
         """
         The number of genes in this signature.
@@ -272,3 +279,13 @@ class Regulome(GeneSignature):
                          score=max(self.score, getattr(other, 'score', 0.0)),
                          gene2weights=self._intersection_impl(other))
 
+    def noweights(self):
+        """
+        Create a new regulome with uniform weights, i.e. all weights are equal and set to 1.0.
+        """
+        return Regulome(name=self.name,
+                        nomenclature=self.nomenclature,
+                        transcription_factor=self.transcription_factor,
+                        context=self.context,
+                        score=self.score,
+                         gene2weights=self.genes)
