@@ -11,3 +11,4 @@ __pycache__/
 .DS_Store
 docs/_build/
 **/.ipynb_checkpoints/
+**/dask-worker-space/

@@ -6,12 +6,13 @@ import numpy as np
 from .utils import load_motif_annotations, COLUMN_NAME_MOTIF_SIMILARITY_QVALUE, COLUMN_NAME_ORTHOLOGOUS_IDENTITY
 from itertools import repeat
 from .rnkdb import RankingDatabase
-from functools import reduce, partial
+from functools import reduce
 from dask.multiprocessing import get
 from dask import delayed
+from dask.distributed import LocalCluster, Client
 import multiprocessing
 from typing import Type, Sequence, Optional
-from .genesig import Regulome, GeneSignature
+from .genesig import Regulome
 import math
 from cytoolz import compose
 
@@ -94,12 +95,62 @@ def module2regulome(db: Type[RankingDatabase], module: Regulome, motif_annotatio
     return reduce(Regulome.union, regulomes)
 
 
+def _prepare_client(client_or_address):
+    """
+    :param client_or_address: one of:
+           * None
+           * verbatim: 'local'
+           * string address
+           * a Client instance
+    :return: a tuple: (Client instance, shutdown callback function).
+    :raises: ValueError if no valid client input was provided.
+    """
+    # Credits to Thomas Moerman (arboretum package).
+
+    if client_or_address is None or str(client_or_address).lower() == 'local':
+        local_cluster = LocalCluster(diagnostics_port=None)
+        client = Client(local_cluster)
+
+        def close_client_and_local_cluster(verbose=False):
+            if verbose:
+                print('shutting down client and local cluster')
+
+            client.close()
+            local_cluster.close()
+
+        return client, close_client_and_local_cluster
+
+    elif isinstance(client_or_address, str) and client_or_address.lower() != 'local':
+        client = Client(client_or_address)
+
+        def close_client(verbose=False):
+            if verbose:
+                print('shutting down client')
+
+            client.close()
+
+        return client, close_client
+
+    elif isinstance(client_or_address, Client):
+
+        def close_dummy(verbose=False):
+            if verbose:
+                print('not shutting down client, client was created externally')
+
+            return None
+
+        return client_or_address, close_dummy
+
+    else:
+        raise ValueError("Invalid client specified {}".format(str(client_or_address)))
+
+
 def derive_regulomes(rnkdbs: Sequence[Type[RankingDatabase]], modules: Sequence[Regulome],
                          motif_annotations_fname: str,
                          rank_threshold: int = 1500, auc_threshold: float = 0.05, nes_threshold=3.0,
                          motif_similarity_fdr: float = 0.001, orthologuous_identity_threshold: float = 0.0,
                          avgrcc_sample_frac: float = None,
-                         weighted_recovery=False,
+                         weighted_recovery=False, client_or_address=None,
                          num_workers=None) -> Sequence[Regulome]:
     """
     Calculate all regulomes for a given sequence of ranking databases and a sequence of co-expression modules.
@@ -117,17 +168,34 @@ def derive_regulomes(rnkdbs: Sequence[Type[RankingDatabase]], modules: Sequence[
     :param avgrcc_sample_frac: The fraction of the features to use for the calculation of the average curve, If None
         then all features are used.
     :param weighted_recovery: Use weights of a gene signature when calculating recovery curves?
-    :param num_workers: The number of workers to use for the calculation. None of all available CPUs need to be used.
+    :param num_workers: If not using a cluster, the number of workers to use for the calculation. None of all available CPUs need to be used.
+    :param client_or_address: The client of IP address of the scheduler when working with dask.
     :return: A sequence of regulomes.
     """
-    #TODO: Better to keep dask only for distributed computing and go for direct multiprocessing implementation
-    #TODO: for the parallelized version (use Pool over list of modules). The latter enables to initialize workers
-    #TOOD: with data.
+
+    # Load motif annotations.
     motif_annotations = load_motif_annotations(motif_annotations_fname,
-                                               motif_similarity_fdr, orthologuous_identity_threshold)
-    not_none = lambda r: r is not None
-    regulomes = delayed(compose(list, partial(filter, function=not_none)))(
-        (delayed(module2regulome)
-         (db, gs, motif_annotations, rank_threshold, auc_threshold, nes_threshold, avgrcc_sample_frac)
-            for db in rnkdbs for gs in modules))
-    return regulomes.compute(get=get, num_workers=num_workers if num_workers else multiprocessing.cpu_count())
+                                               motif_similarity_fdr=motif_similarity_fdr,
+                                               orthologuous_identity_threshold=orthologuous_identity_threshold)
+
+    # Create dask graph.
+    from cytoolz.curried import filter
+    is_not_none = lambda r: r is not None
+    dask_graph = delayed(compose(list, filter(is_not_none)))(
+                    (delayed(module2regulome)
+                        (db, gs, motif_annotations, rank_threshold, auc_threshold, nes_threshold, avgrcc_sample_frac, weighted_recovery)
+                            for db in rnkdbs for gs in modules))
+
+    if not client_or_address:
+        # Investigate if direct implementation using the multiprocessing modules is not advantageous performance wise
+        # (possibility to assign a database to a specific worker, etc ...). Running module2regulome in a non-parallelized
+        # version results in 4 sec per run, while using multiple processes this performance dwarfs to 12-14sec. Reason
+        # might be I/O bound limitations (i.e. reading genes from a feather file).
+        return dask_graph.compute(get=get,
+                                  num_workers=num_workers if num_workers else multiprocessing.cpu_count())
+    else: # Run via dask.distributed framework.
+        client, shutdown_callback = _prepare_client(client_or_address)
+        try:
+            return client.compute(dask_graph)
+        finally:
+            shutdown_callback(False)
