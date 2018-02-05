@@ -4,6 +4,8 @@ import pandas as pd
 from .genesig import Regulome
 from collections import defaultdict, Counter
 from itertools import chain
+import numpy as np
+from functools import partial
 
 
 COLUMN_NAME_MOTIF_SIMILARITY_QVALUE = 'motif_similarity_qvalue'
@@ -31,6 +33,34 @@ def load_motif_annotations(fname: str,
     df = df[(df[COLUMN_NAME_MOTIF_SIMILARITY_QVALUE] <= motif_similarity_fdr) &
             (df[COLUMN_NAME_ORTHOLOGOUS_IDENTITY] >= orthologuous_identity_threshold)]
     return df
+
+
+def rm_repressed_targets(adjacencies: pd.DataFrame, ex_mtx: pd.DataFrame) -> pd.DataFrame:
+    """
+    Remove repressed targets.
+
+    :param adjacencies: The dataframe with the TF-target links.
+    :param ex_mtx: The expression matrix (n_genes x n_cells).
+    :return: The adjacencies dataframe with only TF-target links with clear activ
+    """
+
+    # Remove duplicate genes in the index.
+    ex_mtx = ex_mtx[~ex_mtx.index.duplicated(keep='first')]
+
+    # Calculate Pearson correlation to infer repression or activation.
+    corr_mtx = pd.DataFrame(index=ex_mtx.index, columns=ex_mtx.index, data=np.corrcoef(ex_mtx.values))
+
+    # Add "correlation" column to adjacencies dataframe.
+    def add_regulation(row, corr_mtx):
+        tf = row['TF']
+        target = row['target']
+        rho = corr_mtx[tf][target]
+        return int(rho > 0.03) - int(rho < 0.03)
+
+    adjacencies['correlation'] = adjacencies.apply(partial(add_regulation, corr_mtx=corr_mtx), axis=1)
+
+    # Only keep TF-target where the TF has a clear activating role.
+    return adjacencies[adjacencies['correlation'] > 0.0]
 
 
 COLUMN_NAME_TF = "TF"
