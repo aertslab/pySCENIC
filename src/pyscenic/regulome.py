@@ -120,6 +120,9 @@ def derive_regulomes(rnkdbs: Sequence[Type[RankingDatabase]], modules: Sequence[
     :param num_workers: The number of workers to use for the calculation. None of all available CPUs need to be used.
     :return: A sequence of regulomes.
     """
+    #TODO: Better to keep dask only for distributed computing and go for direct multiprocessing implementation
+    #TODO: for the parallelized version (use Pool over list of modules). The latter enables to initialize workers
+    #TOOD: with data.
     motif_annotations = load_motif_annotations(motif_annotations_fname,
                                                motif_similarity_fdr, orthologuous_identity_threshold)
     not_none = lambda r: r is not None

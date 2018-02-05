@@ -80,5 +80,8 @@ setuptools.setup(
     package_dir={'': 'src'},
     py_modules=[os.path.splitext(os.path.basename(path))[0] for path in glob.glob('src/*.py')],
     include_package_data=True,
-    install_requires=read_requirements('requirements.txt')
+    install_requires=read_requirements('requirements.txt'),
+    entry_points = {
+        'console_scripts': ['pyscenic = pyscenic.cli:scenic'],
+    }
 )
