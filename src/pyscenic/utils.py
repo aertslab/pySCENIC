@@ -13,17 +13,24 @@ COLUMN_NAME_ORTHOLOGOUS_IDENTITY = 'orthologous_identity'
 def load_motif_annotations(fname: str,
                            column_names=('#motif_id', 'gene_name',
                                          COLUMN_NAME_MOTIF_SIMILARITY_QVALUE, COLUMN_NAME_ORTHOLOGOUS_IDENTITY,
-                                         'description')) -> pd.DataFrame:
+                                         'description'),
+                           motif_similarity_fdr: float = 0.001, orthologuous_identity_threshold: float = 0.0) -> pd.DataFrame:
     """
     Load motif annotations from a motif2TF snapshot.
 
     :param fname: the snapshot taken from motif2TF.
     :param column_names: the names of the columns in the snapshot to load.
+    :param motif_similarity_fdr: The maximum False Discovery Rate to find factor annotations for enriched motifs.
+    :param orthologuous_identity_threshold: The minimum orthologuous identity to find factor annotations
+        for enriched motifs.
     :return: A dataframe.
     """
     # Create a MultiIndex for the index combining unique gene name and motif ID. This should facilitate
     # later merging.
-    return pd.read_csv(fname, sep='\t', index_col=[1,0], usecols=column_names)
+    df = pd.read_csv(fname, sep='\t', index_col=[1,0], usecols=column_names)
+    df = df[(df[COLUMN_NAME_MOTIF_SIMILARITY_QVALUE] <= motif_similarity_fdr) &
+            (df[COLUMN_NAME_ORTHOLOGOUS_IDENTITY] >= orthologuous_identity_threshold)]
+    return df
 
 
 COLUMN_NAME_TF = "TF"

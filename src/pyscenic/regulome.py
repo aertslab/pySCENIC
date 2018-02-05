@@ -96,6 +96,7 @@ def module2regulome(db: Type[RankingDatabase], module: Regulome, motif_annotatio
 def derive_regulomes(rnkdbs: Sequence[Type[RankingDatabase]], modules: Sequence[Type[GeneSignature]],
                          motif_annotations_fname: str,
                          rank_threshold: int = 1500, auc_threshold: float = 0.05, nes_threshold=3.0,
+                         motif_similarity_fdr: float = 0.001, orthologuous_identity_threshold: float = 0.0,
                          avgrcc_sample_frac: float = None,
                          num_workers=None) -> Sequence[Regulome]:
     """
@@ -108,12 +109,16 @@ def derive_regulomes(rnkdbs: Sequence[Type[RankingDatabase]], modules: Sequence[
     :param auc_threshold: The fraction of the ranked genome to take into account for the calculation of the
         Area Under the recovery Curve.
     :param nes_threshold: The Normalized Enrichment Score (NES) threshold to select enriched features.
+    :param motif_similarity_fdr: The maximum False Discovery Rate to find factor annotations for enriched motifs.
+    :param orthologuous_identity_threshold: The minimum orthologuous identity to find factor annotations
+        for enriched motifs.
     :param avgrcc_sample_frac: The fraction of the features to use for the calculation of the average curve, If None
         then all features are used.
     :param num_workers: The number of workers to use for the calculation. None of all available CPUs need to be used.
     :return: A sequence of regulomes.
     """
-    motif_annotations = load_motif_annotations(motif_annotations_fname)
+    motif_annotations = load_motif_annotations(motif_annotations_fname,
+                                               motif_similarity_fdr, orthologuous_identity_threshold)
     not_none = lambda r: r is not None
     regulomes = delayed(compose(list, partial(filter, function=not_none)))(
         (delayed(module2regulome)
