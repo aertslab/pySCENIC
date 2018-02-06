@@ -1,9 +1,8 @@
 # -*- coding: utf-8 -*-
 
-import numpy as np
 import pandas as pd
 from itertools import repeat
-from typing import Type, List, Tuple, Optional
+from numba import *
 
 from .rnkdb import RankingDatabase
 from .genesig import GeneSignature, Regulome
@@ -160,3 +159,64 @@ def leading_edge4row(row: pd.Series, avg2stdrcc: np.ndarray, genes: np.ndarray,
         its rank or with its importance (if gene signature supplied).
     """
     return leading_edge(row['Recovery'].as_matrix(),  avg2stdrcc, row['Ranking'].as_matrix(), genes, signature)
+
+
+# Giving numba a signature makes the code marginally faster but with losing flexibility (only being able to use one
+# type of integers used in rankings).
+#@jit(signature_or_function=float64(int16[:], int_, float64), nopython=True)
+@jit(nopython=True)
+def auc1d(ranking, rank_threshold, max_auc):
+    """
+    Calculate the AUC of a single ranking.
+
+    :param ranking: The rank numbers of the genes.
+    :param rank_threshold: The maximum rank to take into account when calculating the AUC.
+    :param max_auc: The maximum AUC.
+    :return: The normalized AUC.
+    """
+    # Python implementation of AUC calculation in R implementation of SCENIC.
+    # Using concatenate and full constructs required by numba.
+    x = np.concatenate((np.sort(ranking[ranking < rank_threshold]), np.full((1,), rank_threshold, dtype=np.int_)))
+    y = np.arange(x.size)
+    return np.sum(np.diff(x*y))/max_auc
+
+
+def auc2d(rankings, rank_threshold, max_auc):
+    """
+    Calculate the AUCs of multiple rankings.
+
+    :param ranking: The rankings.
+    :param rank_threshold: The maximum rank to take into account when calculating the AUC.
+    :param max_auc: The maximum AUC.
+    :return: The normalized AUCs.
+    """
+    n_features = rankings.shape[0]
+    aucs = np.empty(shape=(n_features,), dtype=np.float64) # Pre-allocation.
+    for row_idx in range(n_features):
+        aucs[row_idx] = auc1d(rankings[row_idx, :], rank_threshold, max_auc)
+    return aucs
+
+
+def aucs(rnk: pd.DataFrame, total_genes: int, rank_threshold: int, auc_threshold: float) -> np.ndarray:
+    """
+    Calculate AUCs (implementation without calculating recovery curves first).
+
+    :param rnk: A dataframe containing the rank number of genes of interest. Columns correspond to genes.
+    :param total_genes: The total number of genes ranked.
+    :param weights: the weights associated with the selected genes.
+    :param rank_threshold: The total number of ranked genes to take into account when creating a recovery curve.
+    :param auc_threshold: The fraction of the ranked genome to take into account for the calculation of the
+        Area Under the recovery Curve.
+    :return: An array with the AUCs.
+    """
+    assert 0 < rank_threshold < total_genes, \
+        "Rank threshold must be an integer between 1 and {0:d}".format(total_genes)
+    assert 0.0 < auc_threshold <= 1.0, "AUC threshold must be a fraction between 0.0 and 1.0"
+    rank_cutoff = int(round(auc_threshold * total_genes))
+    assert rank_cutoff <= rank_threshold, \
+        "An AUC threshold of {0:f} corresponds to {1:d} top ranked genes/regions in the database. " \
+        "Please increase the rank threshold or decrease the AUC threshold.".format(auc_threshold, rank_cutoff)
+
+    features, genes, rankings = rnk.index.values, rnk.columns.values, rnk.values
+    maxauc = float(rank_cutoff * total_genes)
+    return auc2d(rankings, rank_cutoff, maxauc)

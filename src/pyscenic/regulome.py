@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-from .recovery import recovery, leading_edge
+from .recovery import recovery, leading_edge, aucs as calc_aucs
 import pandas as pd
 import numpy as np
 from .utils import load_motif_annotations, COLUMN_NAME_MOTIF_SIMILARITY_QVALUE, COLUMN_NAME_ORTHOLOGOUS_IDENTITY
@@ -21,7 +21,7 @@ COLUMN_NAME_NES = "NES"
 COLUMN_NAME_AUC = "AUC"
 
 
-def module2regulome(db: Type[RankingDatabase], module: Regulome, motif_annotations: pd.DataFrame,
+def module2regulome_bincount_impl(db: Type[RankingDatabase], module: Regulome, motif_annotations: pd.DataFrame,
                     rank_threshold: int = 1500, auc_threshold: float = 0.05, nes_threshold=3.0,
                     avgrcc_sample_frac: float = None, weighted_recovery=False) -> Optional[Regulome]:
     """
@@ -93,6 +93,81 @@ def module2regulome(db: Type[RankingDatabase], module: Regulome, motif_annotatio
 
     # Aggregate these regulomes into a single one using the union operator.
     return reduce(Regulome.union, regulomes)
+
+
+def module2regulome_numba_impl(db: Type[RankingDatabase], module: Regulome, motif_annotations: pd.DataFrame,
+                    rank_threshold: int = 1500, auc_threshold: float = 0.05, nes_threshold=3.0,
+                    avgrcc_sample_frac: float = None) -> Optional[Regulome]:
+    """
+    Create a regulome for a given ranking database and a co-expression module. If non can be created NoN is returned.
+
+    :param db: The ranking database.
+    :param module: The co-expression module.
+    :param rank_threshold: The total number of ranked genes to take into account when creating a recovery curve.
+    :param auc_threshold: The fraction of the ranked genome to take into account for the calculation of the
+        Area Under the recovery Curve.
+    :param nes_threshold: The Normalized Enrichment Score (NES) threshold to select enriched features.
+    :param avgrcc_sample_frac: The fraction of the features to use for the calculation of the average curve, If None
+        then all features are used.
+    :return: A regulome or None.
+    """
+
+    # Load rank of genes from database.
+    df = db.load(module)
+    features, genes, rankings = df.index.values, df.columns.values, df.values
+
+    # Calculate recovery curves, AUC and NES values.
+    aucs = calc_aucs(df, db.total_genes, rank_threshold, auc_threshold)
+    ness = (aucs - aucs.mean()) / aucs.std()
+
+    # Keep only features that are enriched, i.e. NES sufficiently high.
+    enriched_features_idx = ness >= nes_threshold
+    enriched_features = pd.DataFrame(index=pd.MultiIndex.from_tuples(list(zip(repeat(module.transcription_factor),
+                                                                              features[enriched_features_idx])),
+                                                                     names=["gene_name", "#motif_id"]),
+                                     data={COLUMN_NAME_NES: ness[enriched_features_idx],
+                                           COLUMN_NAME_AUC: aucs[enriched_features_idx]})
+    if len(enriched_features) == 0:
+        return None
+
+    # Find motif annotations for enriched features.
+    annotated_features = pd.merge(enriched_features, motif_annotations, how="inner", left_index=True, right_index=True)
+    if len(annotated_features) == 0:
+        return None
+
+    # Calculated leading edge for the remaining enriched features that have annotations.
+    if avgrcc_sample_frac is None:
+        rccs, _ = recovery(df, db.total_genes, np.full(len(genes), 1.0), rank_threshold, auc_threshold)
+        avgrcc = rccs.mean(axis=0)
+        avg2stdrcc =  avgrcc + 2.0 * rccs.std(axis=0)
+    else:
+        rccs, _ = recovery(df.sample(frac=avgrcc_sample_frac), db.total_genes, np.full(len(genes), 1.0), rank_threshold, auc_threshold)
+        avgrcc = rccs.mean(axis=0)
+        avg2stdrcc = avgrcc + 2.0 * rccs.std(axis=0)
+
+    # Create regulomes for each enriched and annotated feature.
+    def score(nes, motif_similarity_qval, orthologuous_identity):
+        MAX_VALUE = 100
+        score = nes * -math.log(motif_similarity_qval)/MAX_VALUE if not math.isnan(motif_similarity_qval) and motif_similarity_qval != 0.0 else nes
+        return score if math.isnan(orthologuous_identity) else score * orthologuous_identity
+
+    regulomes = []
+    for (_, row), rcc, ranking in zip(annotated_features.iterrows(), rccs[enriched_features_idx, :], rankings[enriched_features_idx, :]):
+        regulomes.append(Regulome(name=module.name,
+                                  score=score(row[COLUMN_NAME_NES],
+                                              row[COLUMN_NAME_MOTIF_SIMILARITY_QVALUE],
+                                              row[COLUMN_NAME_ORTHOLOGOUS_IDENTITY]),
+                                  nomenclature=module.nomenclature,
+                                  context=module.context.union(frozenset([db.name])),
+                                  transcription_factor=module.transcription_factor,
+                                  gene2weights=leading_edge(rcc, avg2stdrcc, ranking, genes, module.noweights())))
+
+    # Aggregate these regulomes into a single one using the union operator.
+    return reduce(Regulome.union, regulomes)
+
+
+# The 'bincount' implementation is slower but can generated weighted recovery curves.
+module2regulome = module2regulome_bincount_impl
 
 
 def _prepare_client(client_or_address):
@@ -181,10 +256,9 @@ def derive_regulomes(rnkdbs: Sequence[Type[RankingDatabase]], modules: Sequence[
     is_not_none = lambda r: r is not None
 
     if not client_or_address:
-        # Investigate if direct implementation using the multiprocessing modules is not advantageous performance wise
-        # (possibility to assign a database to a specific worker, etc ...). Running module2regulome in a non-parallelized
-        # version results in 4 sec per run, while using multiple processes this performance dwarfs to 12-14sec. Reason
-        # might be I/O bound limitations (i.e. reading genes from a feather file).
+        #TODO: Based on current understanding (I/O-bound performance that can be mitigated by in-memory databases),
+        #TODO: best approach towards parallelization is to create dedicated workers for a specific database. These
+        #TODO: workers process all gene signatures using a in-memory version of the database.
         p = Pool(num_workers if num_workers else cpu_count())
         module2regulome4pair = partial(module2regulome, motif_annotations=motif_annotations,
                                    rank_threshold=rank_threshold, auc_threshold=auc_threshold,
@@ -203,7 +277,9 @@ def derive_regulomes(rnkdbs: Sequence[Type[RankingDatabase]], modules: Sequence[
 
         if client_or_address == "local":
             return dask_graph.compute(get=get, num_workers=num_workers if num_workers else cpu_count())
-        else: # Run via dask.distributed framework.
+        else:
+            # Run via dask.distributed framework.
+            #TODO: Problem when using a cluster: Workers are being killed for an unknown reason.
             client, shutdown_callback = _prepare_client(client_or_address)
             try:
                 return client.compute(dask_graph)
