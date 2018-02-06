@@ -1,7 +1,9 @@
 # -*- coding: utf-8 -*-
 
 import pandas as pd
+import numpy as np
 from itertools import repeat
+from typing import Type, Optional, List, Tuple
 from numba import *
 
 from .rnkdb import RankingDatabase
