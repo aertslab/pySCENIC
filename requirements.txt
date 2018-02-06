@@ -1,4 +1,5 @@
 cytoolz
+pathos
 attrs
 frozendict
 numpy

@@ -6,11 +6,11 @@ import numpy as np
 from .utils import load_motif_annotations, COLUMN_NAME_MOTIF_SIMILARITY_QVALUE, COLUMN_NAME_ORTHOLOGOUS_IDENTITY
 from itertools import repeat
 from .rnkdb import RankingDatabase
-from functools import reduce
+from functools import reduce, partial
 from dask.multiprocessing import get
 from dask import delayed
 from dask.distributed import LocalCluster, Client
-import multiprocessing
+from pathos.multiprocessing import Pool, cpu_count
 from typing import Type, Sequence, Optional
 from .genesig import Regulome
 import math
@@ -178,24 +178,34 @@ def derive_regulomes(rnkdbs: Sequence[Type[RankingDatabase]], modules: Sequence[
                                                motif_similarity_fdr=motif_similarity_fdr,
                                                orthologuous_identity_threshold=orthologuous_identity_threshold)
 
-    # Create dask graph.
-    from cytoolz.curried import filter
     is_not_none = lambda r: r is not None
-    dask_graph = delayed(compose(list, filter(is_not_none)))(
-                    (delayed(module2regulome)
-                        (db, gs, motif_annotations, rank_threshold, auc_threshold, nes_threshold, avgrcc_sample_frac, weighted_recovery)
-                            for db in rnkdbs for gs in modules))
 
     if not client_or_address:
         # Investigate if direct implementation using the multiprocessing modules is not advantageous performance wise
         # (possibility to assign a database to a specific worker, etc ...). Running module2regulome in a non-parallelized
         # version results in 4 sec per run, while using multiple processes this performance dwarfs to 12-14sec. Reason
         # might be I/O bound limitations (i.e. reading genes from a feather file).
-        return dask_graph.compute(get=get,
-                                  num_workers=num_workers if num_workers else multiprocessing.cpu_count())
-    else: # Run via dask.distributed framework.
-        client, shutdown_callback = _prepare_client(client_or_address)
-        try:
-            return client.compute(dask_graph)
-        finally:
-            shutdown_callback(False)
+        p = Pool(num_workers if num_workers else cpu_count())
+        module2regulome4pair = partial(module2regulome, motif_annotations=motif_annotations,
+                                   rank_threshold=rank_threshold, auc_threshold=auc_threshold,
+                                   nes_threshold=nes_threshold, avgrcc_sample_frac=avgrcc_sample_frac,
+                                   weighted_recovery=weighted_recovery)
+        return list(filter(is_not_none,
+                           p.imap(lambda pair: module2regulome4pair(*pair),
+                                  ((db, gs) for gs in modules for db in rnkdbs), chunksize=len(rnkdbs))))
+    else:
+        # Create dask graph.
+        from cytoolz.curried import filter as filtercur
+        dask_graph = delayed(compose(list, filtercur(is_not_none)))(
+            (delayed(module2regulome)
+                (db, gs, motif_annotations, rank_threshold, auc_threshold, nes_threshold, avgrcc_sample_frac, weighted_recovery)
+                    for db in rnkdbs for gs in modules))
+
+        if client_or_address == "local":
+            return dask_graph.compute(get=get, num_workers=num_workers if num_workers else cpu_count())
+        else: # Run via dask.distributed framework.
+            client, shutdown_callback = _prepare_client(client_or_address)
+            try:
+                return client.compute(dask_graph)
+            finally:
+                shutdown_callback(False)
