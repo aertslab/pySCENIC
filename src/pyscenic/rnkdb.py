@@ -267,6 +267,31 @@ class FeatherRankingDatabase(RankingDatabase):
         return FeatherReader(self._fname).read(columns=(INDEX_NAME,) + gs.genes).set_index(INDEX_NAME)
 
 
+class MemoryDecorator(RankingDatabase):
+    """
+    A decorator for a ranking database which loads the entire database in memory.
+    """
+    def __init__(self, db: Type[RankingDatabase]):
+        assert db, "Database should be supplied."
+        self._db = db
+        self._df = db.load_full()
+        super().__init__(db._fname, db.name, db.nomenclature)
+
+    @property
+    def total_genes(self) -> int:
+        return self._db.total_genes
+
+    @property
+    def genes(self) -> Tuple[str]:
+        return self._db.genes
+
+    def load_full(self) -> pd.DataFrame:
+        return self._df
+
+    def load(self, gs: Type[GeneSignature]) -> pd.DataFrame:
+        return self._df.loc[:, self._df.columns.isin(gs.genes)]
+
+
 def convert2feather(fname: str, out_folder: str, name: str, nomenclature: str, extension: str="feather") -> str:
     """
     Convert a whole genome rankings database to a feather format based database.
