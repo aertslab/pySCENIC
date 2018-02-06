@@ -225,7 +225,8 @@ class Worker(Process):
     def __init__(self, db: Type[RankingDatabase], modules: Sequence[Regulome],
                  motif_annotations_fname: str, sender,
                  rank_threshold: int = 1500, auc_threshold: float = 0.05, nes_threshold=3.0,
-                 motif_similarity_fdr: float = 0.001, orthologuous_identity_threshold: float = 0.0):
+                 motif_similarity_fdr: float = 0.001, orthologuous_identity_threshold: float = 0.0,
+                 avgrcc_sample_frac=None):
         super().__init__(name=db.name)
         self.database = db
         self.motif_annotations_fname = motif_annotations_fname
@@ -235,6 +236,7 @@ class Worker(Process):
         self.nes_threshold = nes_threshold
         self.motif_similarity_fdr = motif_similarity_fdr
         self.orthologuous_identity_threshold = orthologuous_identity_threshold
+        self.avgrcc_sample_frac=avgrcc_sample_frac
         self.sender = sender
 
 
@@ -253,7 +255,8 @@ class Worker(Process):
         def module2regulome(module):
             return module2regulome_numba_impl(rnkdb, module, motif_annotations=motif_annotations,
                                               rank_threshold=self.rank_threshold, auc_threshold=self.auc_threshold,
-                                              nes_threshold=self.nes_threshold, avgrcc_sample_frac=None)
+                                              nes_threshold=self.nes_threshold,
+                                              avgrcc_sample_frac=self.avgrcc_sample_frac)
         is_not_none = lambda r: r is not None
         regulomes = list(filter(is_not_none, map(module2regulome, self.modules)))
         print("Worker for {}: {} regulomes created.".format(self.name, len(regulomes)))
@@ -310,14 +313,17 @@ def derive_regulomes(rnkdbs: Sequence[Type[RankingDatabase]], modules: Sequence[
         for db in rnkdbs:
             sender, receiver = Pipe()
             receivers.append(receiver)
-            Worker(db, modules, motif_annotations_fname, sender).start()
+            Worker(db, modules, motif_annotations_fname, sender,
+                   rank_threshold, auc_threshold, nes_threshold,
+                   motif_similarity_fdr, orthologuous_identity_threshold,
+                   avgrcc_sample_frac).start()
         return reduce(concat, (recv.recv() for recv in receivers))
     else:
         # Create dask graph.
         from cytoolz.curried import filter as filtercur
         dask_graph = delayed(compose(list, filtercur(is_not_none)))(
-            (delayed(module2regulome)
-                (db, gs, motif_annotations, rank_threshold, auc_threshold, nes_threshold, avgrcc_sample_frac, weighted_recovery)
+            (delayed(module2regulome_numba_impl)
+                (db, gs, motif_annotations, rank_threshold, auc_threshold, nes_threshold, avgrcc_sample_frac)
                     for db in rnkdbs for gs in modules))
 
         if client_or_address == "local":
