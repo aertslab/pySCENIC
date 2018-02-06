@@ -5,12 +5,13 @@ import pandas as pd
 import numpy as np
 from .utils import load_motif_annotations, COLUMN_NAME_MOTIF_SIMILARITY_QVALUE, COLUMN_NAME_ORTHOLOGOUS_IDENTITY
 from itertools import repeat
-from .rnkdb import RankingDatabase
-from functools import reduce, partial
+from .rnkdb import RankingDatabase, MemoryDecorator
+from functools import reduce
+from operator import concat
 from dask.multiprocessing import get
 from dask import delayed
 from dask.distributed import LocalCluster, Client
-from pathos.multiprocessing import Pool, cpu_count
+from multiprocessing import Pipe, cpu_count, Process
 from typing import Type, Sequence, Optional
 from .genesig import Regulome
 import math
@@ -220,6 +221,49 @@ def _prepare_client(client_or_address):
         raise ValueError("Invalid client specified {}".format(str(client_or_address)))
 
 
+class Worker(Process):
+    def __init__(self, db: Type[RankingDatabase], modules: Sequence[Regulome],
+                 motif_annotations_fname: str, sender,
+                 rank_threshold: int = 1500, auc_threshold: float = 0.05, nes_threshold=3.0,
+                 motif_similarity_fdr: float = 0.001, orthologuous_identity_threshold: float = 0.0):
+        super().__init__(name=db.name)
+        self.database = db
+        self.motif_annotations_fname = motif_annotations_fname
+        self.modules = modules
+        self.rank_threshold = rank_threshold
+        self.auc_threshold = auc_threshold
+        self.nes_threshold = nes_threshold
+        self.motif_similarity_fdr = motif_similarity_fdr
+        self.orthologuous_identity_threshold = orthologuous_identity_threshold
+        self.sender = sender
+
+
+    def run(self):
+        # Load ranking database in memory.
+        rnkdb = MemoryDecorator(self.database)
+        print("Worker for {}: database loaded in memory.".format(self.name))
+
+        # Load motif annotations in memory.
+        motif_annotations = load_motif_annotations(self.motif_annotations_fname,
+                                                   motif_similarity_fdr=self.motif_similarity_fdr,
+                                                   orthologuous_identity_threshold=self.orthologuous_identity_threshold)
+        print("Worker for {}: motif annotations loaded in memory.".format(self.name))
+
+        # Apply module2regulome on all modules.
+        def module2regulome(module):
+            return module2regulome_numba_impl(rnkdb, module, motif_annotations=motif_annotations,
+                                              rank_threshold=self.rank_threshold, auc_threshold=self.auc_threshold,
+                                              nes_threshold=self.nes_threshold, avgrcc_sample_frac=None)
+        is_not_none = lambda r: r is not None
+        regulomes = list(filter(is_not_none, map(module2regulome, self.modules)))
+        print("Worker for {}: {} regulomes created.".format(self.name, len(regulomes)))
+
+        # Sending information back to parent process.
+        self.sender.send(regulomes)
+        self.sender.close()
+        print("Worker for {}: Done.".format(self.name))
+
+
 def derive_regulomes(rnkdbs: Sequence[Type[RankingDatabase]], modules: Sequence[Regulome],
                          motif_annotations_fname: str,
                          rank_threshold: int = 1500, auc_threshold: float = 0.05, nes_threshold=3.0,
@@ -256,17 +300,18 @@ def derive_regulomes(rnkdbs: Sequence[Type[RankingDatabase]], modules: Sequence[
     is_not_none = lambda r: r is not None
 
     if not client_or_address:
-        #TODO: Based on current understanding (I/O-bound performance that can be mitigated by in-memory databases),
-        #TODO: best approach towards parallelization is to create dedicated workers for a specific database. These
-        #TODO: workers process all gene signatures using a in-memory version of the database.
-        p = Pool(num_workers if num_workers else cpu_count())
-        module2regulome4pair = partial(module2regulome, motif_annotations=motif_annotations,
-                                   rank_threshold=rank_threshold, auc_threshold=auc_threshold,
-                                   nes_threshold=nes_threshold, avgrcc_sample_frac=avgrcc_sample_frac,
-                                   weighted_recovery=weighted_recovery)
-        return list(filter(is_not_none,
-                           p.imap(lambda pair: module2regulome4pair(*pair),
-                                  ((db, gs) for gs in modules for db in rnkdbs), chunksize=len(rnkdbs))))
+        # This implementation overcomes the I/O-bounded performance by the dask-based parallelized/distributed version.
+        # Each worker (subprocess) loads a dedicated ranking database and motif annotation table into its own memory
+        # space before consuming module. The implementation of each worker uses the AUC-first numba JIT based implementation
+        # of the algorithm.
+        assert len(rnkdbs) <= num_workers if num_workers else cpu_count(), "The number of databases is larger than the number of cores."
+        print("Using {} workers.".format(len(rnkdbs)))
+        receivers = []
+        for db in rnkdbs:
+            sender, receiver = Pipe()
+            receivers.append(receiver)
+            Worker(db, modules, motif_annotations_fname, sender).start()
+        return reduce(concat, (recv.recv() for recv in receivers))
     else:
         # Create dask graph.
         from cytoolz.curried import filter as filtercur
