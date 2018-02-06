@@ -43,7 +43,7 @@ def recovery(rnk: pd.DataFrame, total_genes: int, weights: np.ndarray, rank_thre
         rccs[row_idx, :] = np.cumsum(np.bincount(curranking, weights=weights)[:rank_threshold])
 
     # Calculate AUC.
-    maxauc = float(rank_cutoff * total_genes)
+    maxauc = float(rank_cutoff * len(genes))
     aucs = rccs[:, :rank_cutoff].sum(axis=1) / maxauc
 
     return rccs, aucs
@@ -179,8 +179,8 @@ def auc1d(ranking, rank_threshold, max_auc):
     # Python implementation of AUC calculation in R implementation of SCENIC.
     # Using concatenate and full constructs required by numba.
     x = np.concatenate((np.sort(ranking[ranking < rank_threshold]), np.full((1,), rank_threshold, dtype=np.int_)))
-    y = np.arange(x.size)
-    return np.sum(np.diff(x*y))/max_auc
+    y = np.arange(x.size - 1) + 1.0
+    return np.sum(np.diff(x)*y)/max_auc
 
 
 def auc2d(rankings, rank_threshold, max_auc):
@@ -220,5 +220,5 @@ def aucs(rnk: pd.DataFrame, total_genes: int, rank_threshold: int, auc_threshold
         "Please increase the rank threshold or decrease the AUC threshold.".format(auc_threshold, rank_cutoff)
 
     features, genes, rankings = rnk.index.values, rnk.columns.values, rnk.values
-    maxauc = float(rank_cutoff * total_genes)
+    maxauc = float(rank_cutoff * len(genes))
     return auc2d(rankings, rank_cutoff, maxauc)
