@@ -10,6 +10,9 @@ from .rnkdb import RankingDatabase
 from .genesig import GeneSignature, Regulome
 
 
+__all__ = ["recovery", "aucs", "enrichment4features", "enrichment4cells"]
+
+
 def recovery(rnk: pd.DataFrame, total_genes: int, weights: np.ndarray, rank_threshold: int, auc_threshold: float) -> (np.ndarray, np.ndarray):
     """
     Calculate recovery curves and AUCs. This is the workhorse of the recovery algorithm.
@@ -169,25 +172,46 @@ def leading_edge4row(row: pd.Series, avg2stdrcc: np.ndarray, genes: np.ndarray,
 @jit(nopython=True)
 def auc1d(ranking, rank_threshold, max_auc):
     """
-    Calculate the AUC of a single ranking.
+    Calculate the AUC of the recovery curve of a single ranking.
 
     :param ranking: The rank numbers of the genes.
     :param rank_threshold: The maximum rank to take into account when calculating the AUC.
     :param max_auc: The maximum AUC.
     :return: The normalized AUC.
     """
-    # Python implementation of AUC calculation in R implementation of SCENIC.
     # Using concatenate and full constructs required by numba.
     x = np.concatenate((np.sort(ranking[ranking < rank_threshold]), np.full((1,), rank_threshold, dtype=np.int_)))
     y = np.arange(x.size - 1) + 1.0
     return np.sum(np.diff(x)*y)/max_auc
 
 
-def auc2d(rankings, rank_threshold, max_auc):
+@jit(nopython=True)
+def weighted_auc1d(ranking, weights, rank_threshold, max_auc):
+    """
+    Calculate the AUC of the weighted recovery curve of a single ranking.
+
+    :param ranking: The rank numbers of the genes.
+    :param weights: The associated weights.
+    :param rank_threshold: The maximum rank to take into account when calculating the AUC.
+    :param max_auc: The maximum AUC.
+    :return: The normalized AUC.
+    """
+    # Using concatenate and full constructs required by numba.
+    filter_idx = ranking < rank_threshold
+    x = ranking[filter_idx]
+    y = weights[filter_idx]
+    sort_idx = np.argsort(x)
+    x = np.concatenate((x[sort_idx], np.full((1,), rank_threshold, dtype=np.int_)))
+    y = y[sort_idx].cumsum()
+    return np.sum(np.diff(x)*y)/max_auc
+
+
+def auc2d(rankings, auc_func, rank_threshold, max_auc):
     """
     Calculate the AUCs of multiple rankings.
 
     :param ranking: The rankings.
+    :param auc_func: The 1d AUC function to use.
     :param rank_threshold: The maximum rank to take into account when calculating the AUC.
     :param max_auc: The maximum AUC.
     :return: The normalized AUCs.
@@ -195,17 +219,18 @@ def auc2d(rankings, rank_threshold, max_auc):
     n_features = rankings.shape[0]
     aucs = np.empty(shape=(n_features,), dtype=np.float64) # Pre-allocation.
     for row_idx in range(n_features):
-        aucs[row_idx] = auc1d(rankings[row_idx, :], rank_threshold, max_auc)
+        aucs[row_idx] = auc_func(rankings[row_idx, :], rank_threshold, max_auc)
     return aucs
 
 
-def aucs(rnk: pd.DataFrame, total_genes: int, rank_threshold: int, auc_threshold: float) -> np.ndarray:
+def aucs(rnk: pd.DataFrame, total_genes: int, weights: Optional[np.ndarray], rank_threshold: int, auc_threshold: float) -> np.ndarray:
     """
     Calculate AUCs (implementation without calculating recovery curves first).
 
     :param rnk: A dataframe containing the rank number of genes of interest. Columns correspond to genes.
     :param total_genes: The total number of genes ranked.
-    :param weights: the weights associated with the selected genes.
+    :param weights: the weights associated with the selected genes. If None the unweighted versions of the algorithm are
+        used.
     :param rank_threshold: The total number of ranked genes to take into account when creating a recovery curve.
     :param auc_threshold: The fraction of the ranked genome to take into account for the calculation of the
         Area Under the recovery Curve.
@@ -220,5 +245,6 @@ def aucs(rnk: pd.DataFrame, total_genes: int, rank_threshold: int, auc_threshold
         "Please increase the rank threshold or decrease the AUC threshold.".format(auc_threshold, rank_cutoff)
 
     features, genes, rankings = rnk.index.values, rnk.columns.values, rnk.values
-    maxauc = float(rank_cutoff * len(genes))
-    return auc2d(rankings, rank_cutoff, maxauc)
+    y_max = weights.sum() if weights else len(genes)
+    maxauc = float(rank_cutoff * y_max)
+    return auc2d(rankings, rank_cutoff, maxauc, weighted_auc1d if weights else auc1d)

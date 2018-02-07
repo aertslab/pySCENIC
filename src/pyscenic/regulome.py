@@ -21,6 +21,8 @@ from cytoolz import compose
 COLUMN_NAME_NES = "NES"
 COLUMN_NAME_AUC = "AUC"
 
+__all__ = ["module2regulome", "derive_regulomes"]
+
 
 def module2regulome_bincount_impl(db: Type[RankingDatabase], module: Regulome, motif_annotations: pd.DataFrame,
                     rank_threshold: int = 1500, auc_threshold: float = 0.05, nes_threshold=3.0,
@@ -36,14 +38,14 @@ def module2regulome_bincount_impl(db: Type[RankingDatabase], module: Regulome, m
     :param nes_threshold: The Normalized Enrichment Score (NES) threshold to select enriched features.
     :param avgrcc_sample_frac: The fraction of the features to use for the calculation of the average curve, If None
         then all features are used.
-    :param weighted_recovery: Use weights of a gene signature when calculating recovery curves?
+    :param weighted_recovery: Use weighted recovery in the analysis.
     :return: A regulome or None.
     """
 
     # Load rank of genes from database.
     df = db.load(module)
     features, genes, rankings = df.index.values, df.columns.values, df.values
-    weights = np.asarray([module[gene] for gene in genes])
+    weights = np.asarray([module[gene] for gene in genes]) if weighted_recovery else np.ones(len(genes))
 
     # Calculate recovery curves, AUC and NES values.
     rccs, aucs = recovery(df, db.total_genes, weights, rank_threshold, auc_threshold)
@@ -98,7 +100,7 @@ def module2regulome_bincount_impl(db: Type[RankingDatabase], module: Regulome, m
 
 def module2regulome_numba_impl(db: Type[RankingDatabase], module: Regulome, motif_annotations: pd.DataFrame,
                     rank_threshold: int = 1500, auc_threshold: float = 0.05, nes_threshold=3.0,
-                    avgrcc_sample_frac: float = None) -> Optional[Regulome]:
+                    avgrcc_sample_frac: float = None, weighted_recovery=False) -> Optional[Regulome]:
     """
     Create a regulome for a given ranking database and a co-expression module. If non can be created NoN is returned.
 
@@ -110,15 +112,18 @@ def module2regulome_numba_impl(db: Type[RankingDatabase], module: Regulome, moti
     :param nes_threshold: The Normalized Enrichment Score (NES) threshold to select enriched features.
     :param avgrcc_sample_frac: The fraction of the features to use for the calculation of the average curve, If None
         then all features are used.
+    :param weighted_recovery: Use weighted recovery in the analysis.
     :return: A regulome or None.
     """
 
     # Load rank of genes from database.
     df = db.load(module)
     features, genes, rankings = df.index.values, df.columns.values, df.values
+    weights = np.asarray([module[gene] for gene in genes]) if weighted_recovery else np.ones(len(genes))
 
     # Calculate recovery curves, AUC and NES values.
-    aucs = calc_aucs(df, db.total_genes, rank_threshold, auc_threshold)
+    # For fast unweighted implementation so weights to None.
+    aucs = calc_aucs(df, db.total_genes, weights if weighted_recovery else None, rank_threshold, auc_threshold)
     ness = (aucs - aucs.mean()) / aucs.std()
 
     # Keep only features that are enriched, i.e. NES sufficiently high.
@@ -153,6 +158,7 @@ def module2regulome_numba_impl(db: Type[RankingDatabase], module: Regulome, moti
         return score if math.isnan(orthologuous_identity) else score * orthologuous_identity
 
     regulomes = []
+    _module = module if weighted_recovery else module.noweights()
     for (_, row), rcc, ranking in zip(annotated_features.iterrows(), rccs[enriched_features_idx, :], rankings[enriched_features_idx, :]):
         regulomes.append(Regulome(name=module.name,
                                   score=score(row[COLUMN_NAME_NES],
@@ -161,13 +167,12 @@ def module2regulome_numba_impl(db: Type[RankingDatabase], module: Regulome, moti
                                   nomenclature=module.nomenclature,
                                   context=module.context.union(frozenset([db.name])),
                                   transcription_factor=module.transcription_factor,
-                                  gene2weights=leading_edge(rcc, avg2stdrcc, ranking, genes, module.noweights())))
+                                  gene2weights=leading_edge(rcc, avg2stdrcc, ranking, genes, _module)))
 
     # Aggregate these regulomes into a single one using the union operator.
     return reduce(Regulome.union, regulomes)
 
 
-# The 'bincount' implementation is slower but can generated weighted recovery curves.
 module2regulome = module2regulome_bincount_impl
 
 
@@ -226,7 +231,8 @@ class Worker(Process):
                  motif_annotations_fname: str, sender,
                  rank_threshold: int = 1500, auc_threshold: float = 0.05, nes_threshold=3.0,
                  motif_similarity_fdr: float = 0.001, orthologuous_identity_threshold: float = 0.0,
-                 avgrcc_sample_frac=None):
+                 avgrcc_sample_frac=None, weighted_recovery=False,
+                 module2regulome_func=module2regulome_numba_impl):
         super().__init__(name=db.name)
         self.database = db
         self.motif_annotations_fname = motif_annotations_fname
@@ -237,6 +243,8 @@ class Worker(Process):
         self.motif_similarity_fdr = motif_similarity_fdr
         self.orthologuous_identity_threshold = orthologuous_identity_threshold
         self.avgrcc_sample_frac=avgrcc_sample_frac
+        self.weighted_recovery = weighted_recovery
+        self.module2regulome = module2regulome_func
         self.sender = sender
 
 
@@ -253,10 +261,11 @@ class Worker(Process):
 
         # Apply module2regulome on all modules.
         def module2regulome(module):
-            return module2regulome_numba_impl(rnkdb, module, motif_annotations=motif_annotations,
+            return self.module2regulome(rnkdb, module, motif_annotations=motif_annotations,
                                               rank_threshold=self.rank_threshold, auc_threshold=self.auc_threshold,
                                               nes_threshold=self.nes_threshold,
-                                              avgrcc_sample_frac=self.avgrcc_sample_frac)
+                                              avgrcc_sample_frac=self.avgrcc_sample_frac,
+                                              weighted_recovery=self.weighted_recovery)
         is_not_none = lambda r: r is not None
         regulomes = list(filter(is_not_none, map(module2regulome, self.modules)))
         print("Worker for {}: {} regulomes created.".format(self.name, len(regulomes)))
@@ -272,8 +281,8 @@ def derive_regulomes(rnkdbs: Sequence[Type[RankingDatabase]], modules: Sequence[
                          rank_threshold: int = 1500, auc_threshold: float = 0.05, nes_threshold=3.0,
                          motif_similarity_fdr: float = 0.001, orthologuous_identity_threshold: float = 0.0,
                          avgrcc_sample_frac: float = None,
-                         weighted_recovery=False, client_or_address=None,
-                         num_workers=None) -> Sequence[Regulome]:
+                         weighted_recovery=False, client_or_address='custom_multiprocessing',
+                         num_workers=None, module2regulome_func=module2regulome_numba_impl) -> Sequence[Regulome]:
     """
     Calculate all regulomes for a given sequence of ranking databases and a sequence of co-expression modules.
 
@@ -292,8 +301,16 @@ def derive_regulomes(rnkdbs: Sequence[Type[RankingDatabase]], modules: Sequence[
     :param weighted_recovery: Use weights of a gene signature when calculating recovery curves?
     :param num_workers: If not using a cluster, the number of workers to use for the calculation. None of all available CPUs need to be used.
     :param client_or_address: The client of IP address of the scheduler when working with dask.
+    :param module2regulome_func: A module2regulome implementation.
     :return: A sequence of regulomes.
     """
+    def is_valid(client_or_address):
+        if isinstance(client_or_address, int):
+            return True
+        elif isinstance(client_or_address, str) and client_or_address in {"custom_multiprocessing", "dask_multiprocessing", "local"}:
+            return True
+        return False
+    assert not is_valid(client_or_address), "\"{}\"is not valid for parameter client_or_address.".format(client_or_address)
 
     # Load motif annotations.
     motif_annotations = load_motif_annotations(motif_annotations_fname,
@@ -302,7 +319,7 @@ def derive_regulomes(rnkdbs: Sequence[Type[RankingDatabase]], modules: Sequence[
 
     is_not_none = lambda r: r is not None
 
-    if not client_or_address:
+    if client_or_address == 'custom_multiprocessing':
         # This implementation overcomes the I/O-bounded performance by the dask-based parallelized/distributed version.
         # Each worker (subprocess) loads a dedicated ranking database and motif annotation table into its own memory
         # space before consuming module. The implementation of each worker uses the AUC-first numba JIT based implementation
@@ -316,17 +333,19 @@ def derive_regulomes(rnkdbs: Sequence[Type[RankingDatabase]], modules: Sequence[
             Worker(db, modules, motif_annotations_fname, sender,
                    rank_threshold, auc_threshold, nes_threshold,
                    motif_similarity_fdr, orthologuous_identity_threshold,
-                   avgrcc_sample_frac).start()
+                   avgrcc_sample_frac, weighted_recovery, module2regulome_func).start()
         return reduce(concat, (recv.recv() for recv in receivers))
     else:
         # Create dask graph.
         from cytoolz.curried import filter as filtercur
         dask_graph = delayed(compose(list, filtercur(is_not_none)))(
             (delayed(module2regulome_numba_impl)
-                (db, gs, motif_annotations, rank_threshold, auc_threshold, nes_threshold, avgrcc_sample_frac)
+                (db, gs, motif_annotations,
+                    rank_threshold, auc_threshold, nes_threshold,
+                        avgrcc_sample_frac, weighted_recovery, module2regulome_func)
                     for db in rnkdbs for gs in modules))
 
-        if client_or_address == "local":
+        if client_or_address == "dask_multiprocessing":
             return dask_graph.compute(get=get, num_workers=num_workers if num_workers else cpu_count())
         else:
             # Run via dask.distributed framework.
