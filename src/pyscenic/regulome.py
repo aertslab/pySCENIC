@@ -310,7 +310,7 @@ def derive_regulomes(rnkdbs: Sequence[Type[RankingDatabase]], modules: Sequence[
         elif isinstance(client_or_address, str) and client_or_address in {"custom_multiprocessing", "dask_multiprocessing", "local"}:
             return True
         return False
-    assert not is_valid(client_or_address), "\"{}\"is not valid for parameter client_or_address.".format(client_or_address)
+    assert is_valid(client_or_address), "\"{}\"is not valid for parameter client_or_address.".format(client_or_address)
 
     # Load motif annotations.
     motif_annotations = load_motif_annotations(motif_annotations_fname,
