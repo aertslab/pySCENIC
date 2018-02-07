@@ -309,6 +309,8 @@ def derive_regulomes(rnkdbs: Sequence[Type[RankingDatabase]], modules: Sequence[
             return True
         elif isinstance(client_or_address, str) and client_or_address in {"custom_multiprocessing", "dask_multiprocessing", "local"}:
             return True
+        elif isinstance(client_or_address, Client):
+            return True
         return False
     assert is_valid(client_or_address), "\"{}\"is not valid for parameter client_or_address.".format(client_or_address)
 
@@ -349,7 +351,6 @@ def derive_regulomes(rnkdbs: Sequence[Type[RankingDatabase]], modules: Sequence[
             return dask_graph.compute(get=get, num_workers=num_workers if num_workers else cpu_count())
         else:
             # Run via dask.distributed framework.
-            #TODO: Problem when using a cluster: Workers are being killed for an unknown reason.
             client, shutdown_callback = _prepare_client(client_or_address)
             try:
                 return client.compute(dask_graph)
