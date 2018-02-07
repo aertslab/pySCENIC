@@ -339,10 +339,10 @@ def derive_regulomes(rnkdbs: Sequence[Type[RankingDatabase]], modules: Sequence[
         # Create dask graph.
         from cytoolz.curried import filter as filtercur
         dask_graph = delayed(compose(list, filtercur(is_not_none)))(
-            (delayed(module2regulome_numba_impl)
+            (delayed(module2regulome_func)
                 (db, gs, motif_annotations,
                     rank_threshold, auc_threshold, nes_threshold,
-                        avgrcc_sample_frac, weighted_recovery, module2regulome_func)
+                        avgrcc_sample_frac, weighted_recovery)
                     for db in rnkdbs for gs in modules))
 
         if client_or_address == "dask_multiprocessing":
