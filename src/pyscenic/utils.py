@@ -76,15 +76,14 @@ def modules4thr(adjacencies, threshold, nomenclature="MGI"):
     :param nomenclature:
     :return:
     """
-    for tf_name, target_genes in adjacencies.groupby(by=COLUMN_NAME_TF):
-        module = target_genes[target_genes[COLUMN_NAME_WEIGHT] >= threshold]
-        if len(module) > 0:
+    for tf_name, df_grp in adjacencies[adjacencies[COLUMN_NAME_WEIGHT] > threshold].groupby(by=COLUMN_NAME_TF):
+        if len(df_grp) > 0:
             yield Regulome(
                 name="Regulome for {}".format(tf_name),
                 nomenclature=nomenclature,
-                context=frozenset(["target weight >= {}".format(threshold)]),
+                context=frozenset(["weight>{}".format(threshold)]),
                 transcription_factor=tf_name,
-                gene2weights=list(zip(module[COLUMN_NAME_TARGET].values, module[COLUMN_NAME_WEIGHT].values)))
+                gene2weights=list(zip(df_grp[COLUMN_NAME_TARGET].values, df_grp[COLUMN_NAME_WEIGHT].values)))
 
 
 def modules4top_targets(adjacencies, n, nomenclature="MGI"):
@@ -95,13 +94,13 @@ def modules4top_targets(adjacencies, n, nomenclature="MGI"):
     :param nomenclature:
     :return:
     """
-    for tf_name, target_genes in adjacencies.groupby(by=COLUMN_NAME_TF):
-        module = target_genes.sort_values(by=COLUMN_NAME_WEIGHT, ascending=False).head(n)
+    for tf_name, df_grp in adjacencies.groupby(by=COLUMN_NAME_TF):
+        module = df_grp.nlargest(n, COLUMN_NAME_WEIGHT)
         if len(module) > 0:
             yield Regulome(
                 name="Regulome for {}".format(tf_name),
                 nomenclature=nomenclature,
-                context=frozenset(["target in top {}".format(n)]),
+                context=frozenset(["top{}".format(n)]),
                 transcription_factor=tf_name,
                 gene2weights=list(zip(module[COLUMN_NAME_TARGET].values, module[COLUMN_NAME_WEIGHT].values)))
 
@@ -114,19 +113,15 @@ def modules4top_factors(adjacencies, n, nomenclature="MGI"):
     :param nomenclature:
     :return:
     """
-    tf2target2weight = defaultdict(Counter)
-    for target_name, factors in adjacencies.groupby(by=COLUMN_NAME_TARGET):
-        regulators = factors.sort_values(by=COLUMN_NAME_WEIGHT, ascending=False).head(n)
-        for factor, weight in zip(regulators[COLUMN_NAME_TF].values, regulators[COLUMN_NAME_WEIGHT].values):
-            tf2target2weight[factor][target_name] = weight
-
-    for tf_name, target2weight in tf2target2weight.items():
-        yield Regulome(
-            name="Regulome for {}".format(tf_name),
-            nomenclature=nomenclature,
-            context=frozenset(["factor in top {}".format(n)]),
-            transcription_factor=tf_name,
-            gene2weights=target2weight)
+    df = adjacencies.groupby(by=COLUMN_NAME_TARGET).apply(lambda grp: grp.nlargest(n, COLUMN_NAME_WEIGHT))
+    for tf_name, df_grp in df.groupby(by=COLUMN_NAME_TF):
+        if len(df_grp) > 0:
+            yield Regulome(
+                name="Regulome for {}".format(tf_name),
+                nomenclature=nomenclature,
+                context=frozenset(["top{}perTarget".format(n)]),
+                transcription_factor=tf_name,
+                gene2weights=list(zip(df_grp[COLUMN_NAME_TARGET].values, df_grp[COLUMN_NAME_WEIGHT].values)))
 
 
 def modules_from_genie3(adjacencies: pd.DataFrame, nomenclature: str,
