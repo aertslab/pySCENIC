@@ -32,8 +32,15 @@ def test_module2regulome():
     motif_annotations = load_motif_annotations(MOTIF_ANNOTATIONS_FNAME)
     reg = module2regulome(db, module, motif_annotations)
 
-def text_to_yaml():
+def test_to_from_yaml():
     gs = GeneSignature.from_gmt(gene_separator="\t", field_separator="\t", **load_gs_info(TEST_SIGNATURE))[3]
     regulome = Regulome(gs.name, gs.nomenclature, gs.gene2weights, "TP53")
-    print(yaml.dump(regulome))
-    print(regulome.name)
+    yml = yaml.dump(regulome)
+    regulome2 = yaml.load(yml)
+    assert regulome.name == regulome2.name
+    assert regulome.nomenclature == regulome2.nomenclature
+    assert regulome.genes == regulome2.genes
+    assert regulome.weights == regulome2.weights
+    assert regulome.score == regulome2.score
+    assert regulome.context == regulome2.context
+

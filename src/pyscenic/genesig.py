@@ -7,6 +7,7 @@ from itertools import repeat
 from typing import Mapping, List, FrozenSet, Type
 
 import attr
+import yaml
 from cytoolz import merge_with, dissoc, keyfilter, first, second
 from frozendict import frozendict
 
@@ -26,10 +27,31 @@ def convert(genes):
 
 
 @attr.s(frozen=True)
-class GeneSignature:
+class GeneSignature(yaml.YAMLObject):
     """
     A class of gene signatures, i.e. a set of genes.
     """
+
+    yaml_tag = u'!GeneSignature'
+
+    @classmethod
+    def to_yaml(cls, dumper, data):
+        dict_representation = {
+            'name': data.name,
+            'nomenclature': data.nomenclature,
+            'genes': list(data.genes),
+            'weights': list(data.weights)
+        }
+        return dumper.represent_mapping(cls.yaml_tag,
+                                        dict_representation,
+                                            cls)
+
+    @classmethod
+    def from_yaml(cls, loader, node):
+        data = loader.construct_mapping(node, cls)
+        return GeneSignature(name=data['name'],
+                             nomenclature=data['nomenclature'],
+                             gene2weights=zip(data['genes'], data['weights']))
 
     @classmethod
     def from_gmt(cls, fname: str, nomenclature: str, field_separator: str =',', gene_separator=',') -> List['GeneSignature']:
@@ -125,6 +147,14 @@ class GeneSignature:
         Return genes in this signature. Genes are sorted in descending order according to weight.
         """
         return tuple(map(first, sorted(self.gene2weights.items(), key=second, reverse=True)))
+
+    @property
+    @memoize
+    def weights(self):
+        """
+        Return the weights of the genes in this signature. Genes are sorted in descending order according to weight.
+        """
+        return tuple(map(second, sorted(self.gene2weights.items(), key=second, reverse=True)))
 
     def rename(self, name: str) -> Type['GeneSignature']:
         """
@@ -235,10 +265,38 @@ class GeneSignature:
 
 
 @attr.s(frozen=True)
-class Regulome(GeneSignature):
+class Regulome(GeneSignature, yaml.YAMLObject):
     """
     A regulome is a gene signature that defines the target genes of a transcription factor.
     """
+
+    yaml_tag = u'!Regulome'
+
+    @classmethod
+    def to_yaml(cls, dumper, data):
+        dict_representation = {
+            'name': data.name,
+            'nomenclature': data.nomenclature,
+            'genes': list(data.genes),
+            'weights': list(data.weights),
+            'score': data.score,
+            'context': list(data.context),
+            'transcription_factor': data.transcription_factor
+        }
+        return dumper.represent_mapping(cls.yaml_tag,
+                                            dict_representation,
+                                            cls)
+
+    @classmethod
+    def from_yaml(cls, loader, node):
+        data = loader.construct_mapping(node, cls)
+        return Regulome(name=data['name'],
+                         nomenclature=data['nomenclature'],
+                         gene2weights=list(zip(data['genes'], data['weights'])),
+                         score=data['score'],
+                         context=frozenset(data['context']),
+                         transcription_factor=data['transcription_factor'])
+
     transcription_factor: str = attr.ib()
     context: FrozenSet[str] = attr.ib(default=frozenset())
     score: float = attr.ib(default=0.0)
