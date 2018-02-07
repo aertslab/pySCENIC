@@ -247,4 +247,4 @@ def aucs(rnk: pd.DataFrame, total_genes: int, weights: Optional[np.ndarray], ran
     features, genes, rankings = rnk.index.values, rnk.columns.values, rnk.values
     y_max = weights.sum() if weights else len(genes)
     maxauc = float(rank_cutoff * y_max)
-    return auc2d(rankings, rank_cutoff, maxauc, weighted_auc1d if weights else auc1d)
+    return auc2d(rankings, weighted_auc1d if weights else auc1d, rank_cutoff, maxauc)
