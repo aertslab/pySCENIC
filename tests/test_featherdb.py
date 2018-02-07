@@ -3,7 +3,7 @@
 import pytest
 import os
 from configparser import ConfigParser
-from pyscenic.rnkdb import FeatherRankingDatabase as RankingDatabase
+from pyscenic.rnkdb import FeatherRankingDatabase as RankingDatabase, convert2feather
 from pyscenic.genesig import GeneSignature
 
 
@@ -18,7 +18,14 @@ def load_db_info(section):
 
 @pytest.fixture
 def db():
-    return RankingDatabase(**load_db_info(TEST_DATABASE))
+    cfg = load_db_info(TEST_DATABASE)
+    if not os.path.exists(cfg['fname']):
+        fname = cfg['fname']
+        convert2feather(fname=os.path.basename(fname),
+                        name=cfg['name'],
+                        out_folder="{}.db".format(os.path.dirname(fname)),
+                        nomenclature=cfg['nomenclature'])
+    return RankingDatabase(**cfg)
 
 def load_gs_info(section):
     config = ConfigParser()
