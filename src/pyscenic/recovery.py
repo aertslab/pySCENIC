@@ -43,7 +43,7 @@ def recovery(rnk: pd.DataFrame, total_genes: int, weights: np.ndarray, rank_thre
         rccs[row_idx, :] = np.cumsum(np.bincount(curranking, weights=weights)[:rank_threshold])
 
     # Calculate AUC.
-    maxauc = float(rank_cutoff * len(genes))
+    maxauc = float(rank_cutoff * weights.sum())
     aucs = rccs[:, :rank_cutoff].sum(axis=1) / maxauc
 
     return rccs, aucs
