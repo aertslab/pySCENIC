@@ -1,11 +1,13 @@
 # -*- coding: utf-8 -*-
 
 import pandas as pd
-from .genesig import Regulome
+from .genesig import Regulome, GeneSignature
 from collections import defaultdict, Counter
 from itertools import chain
 import numpy as np
 from functools import partial
+from typing import Sequence, Type
+import yaml
 
 
 COLUMN_NAME_MOTIF_SIMILARITY_QVALUE = 'motif_similarity_qvalue'
@@ -143,3 +145,23 @@ def modules_from_genie3(adjacencies: pd.DataFrame, nomenclature: str,
     yield from chain(chain.from_iterable(modules4thr(adjacencies, thr, nomenclature) for thr in thresholds),
                      chain.from_iterable(modules4top_targets(adjacencies, n, nomenclature) for n in top_n_targets),
                      chain.from_iterable(modules4top_factors(adjacencies, n, nomenclature) for n in top_n_regulators))
+
+
+def save_as_yaml(signatures: Sequence[Type[GeneSignature]], fname: str):
+    """
+
+    :param signatures:
+    :return:
+    """
+    with open(fname, 'w') as f:
+        f.write(yaml.dump(signatures))
+
+
+def load_from_yaml(fname: str) -> Sequence[Type[GeneSignature]]:
+    """
+
+    :param fname:
+    :return:
+    """
+    with open(fname, 'r') as f:
+        return yaml.load(f.read())
