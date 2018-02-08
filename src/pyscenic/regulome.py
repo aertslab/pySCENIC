@@ -12,7 +12,6 @@ from boltons.iterutils import chunked_iter
 from dask.multiprocessing import get
 from dask import delayed
 from dask.distributed import LocalCluster, Client
-from multiprocessing import Pipe, cpu_count, Process
 from typing import Type, Sequence, Optional
 from .genesig import Regulome
 from .recovery import leading_edge4row
@@ -21,6 +20,10 @@ from cytoolz import compose, first
 from itertools import chain
 from math import ceil
 from functools import partial
+# Using multiprocessing using dill package for pickling to avoid strange bugs.
+from multiprocessing import cpu_count
+from multiprocessing_on_dill.connection import Pipe
+from multiprocessing_on_dill.context import Process
 
 
 COLUMN_NAME_NES = "NES"
@@ -70,8 +73,9 @@ def module2df_bincount_impl(db: Type[RankingDatabase], module: Regulome, motif_a
         return pd.DataFrame(), None, None, genes, None
 
     # Find motif annotations for enriched features.
-    annotated_features = pd.merge(enriched_features, motif_annotations, how="inner", left_index=True, right_index=True)
-    if len(annotated_features) == 0:
+    annotated_features = pd.merge(enriched_features, motif_annotations, how="left", left_index=True, right_index=True)
+    select_idx = pd.notnull(annotated_features.description)
+    if len(annotated_features[select_idx]) == 0:
         return pd.DataFrame(), None, None, genes, None
 
     # Calculated leading edge for the remaining enriched features that have annotations.
@@ -86,9 +90,10 @@ def module2df_bincount_impl(db: Type[RankingDatabase], module: Regulome, motif_a
 
     # Add additional information to the dataframe.
     annotated_features[COLUMN_NAME_TF] = module.transcription_factor
-    annotated_features[COLUMN_NAME_CONTEXT] = len(annotated_features) * [module.context]
+    context = frozenset(chain(module.context, [db.name]))
+    annotated_features[COLUMN_NAME_CONTEXT] = len(annotated_features) * [context]
 
-    return annotated_features, rccs[enriched_features_idx, :], rankings[enriched_features_idx, :], genes, avg2stdrcc
+    return annotated_features[select_idx], rccs[enriched_features_idx, :][select_idx, :], rankings[enriched_features_idx, :][select_idx, :], genes, avg2stdrcc
 
 
 def module2df_numba_impl(db: Type[RankingDatabase], module: Regulome, motif_annotations: pd.DataFrame,
@@ -130,8 +135,9 @@ def module2df_numba_impl(db: Type[RankingDatabase], module: Regulome, motif_anno
         return pd.DataFrame(), None, None, genes, None
 
     # Find motif annotations for enriched features.
-    annotated_features = pd.merge(enriched_features, motif_annotations, how="inner", left_index=True, right_index=True)
-    if len(annotated_features) == 0:
+    annotated_features = pd.merge(enriched_features, motif_annotations, how="left", left_index=True, right_index=True)
+    select_idx = pd.notnull(annotated_features.description)
+    if len(annotated_features[select_idx]) == 0:
         return pd.DataFrame(), None, None, genes, None
 
     # Calculated leading edge for the remaining enriched features that have annotations.
@@ -149,7 +155,7 @@ def module2df_numba_impl(db: Type[RankingDatabase], module: Regulome, motif_anno
     context = frozenset(chain(module.context, [db.name]))
     annotated_features[COLUMN_NAME_CONTEXT] = len(annotated_features) * [context]
 
-    return annotated_features, rccs[enriched_features_idx, :], rankings[enriched_features_idx, :], genes, avg2stdrcc
+    return annotated_features[select_idx], rccs[enriched_features_idx, :][select_idx, :], rankings[enriched_features_idx, :][select_idx, :], genes, avg2stdrcc
 
 
 def module2df(db: Type[RankingDatabase], module: Regulome, motif_annotations: pd.DataFrame,
@@ -176,16 +182,18 @@ def module2df(db: Type[RankingDatabase], module: Regulome, motif_annotations: pd
     if len(df_annotated_features) == 0:
         return None
     df_rnks = pd.DataFrame(index=df_annotated_features.index,
-                           columns=list(zip(repeat("Ranking"), genes)),
+                           columns=pd.MultiIndex.from_tuples(list(zip(repeat("Ranking"), genes))),
                            data=rankings)
     df_rccs = pd.DataFrame(index=df_annotated_features.index,
-                           columns=list(zip(repeat("Recovery"), np.arange(rank_threshold))),
+                           columns=pd.MultiIndex.from_tuples(list(zip(repeat("Recovery"), np.arange(rank_threshold)))),
                            data=rccs)
-    df_annotated_features.columns = list(zip(repeat("Enrichment", df_annotated_features.columns)))
+    df_annotated_features.columns = pd.MultiIndex.from_tuples(list(zip(repeat("Enrichment"), df_annotated_features.columns)))
 
     df = pd.concat([df_annotated_features, df_rccs, df_rnks], axis=1)
     weights = np.array([module[gene] for gene in genes]) if weighted_recovery else None
-    df[("Enrichment", "Leading Edge")] = df.apply(partial(leading_edge4row, avg2stdrcc=avg2stdrcc, genes=genes, weights=weights))
+    df[("Enrichment", "Leading Edge")] = df.apply(partial(leading_edge4row, avg2stdrcc=avg2stdrcc, genes=genes, weights=weights), axis=1)
+    del df['Ranking']
+    del df['Recovery']
     return df
 
 
@@ -338,6 +346,18 @@ class Worker(Process):
         regulomes = list(filter(is_not_none, map(module2obj, self.modules)))
 
         # Sending information back to parent process.
+#TODO:
+#         Process 10kbp(2):
+# Traceback (most recent call last):
+# File "/Users/bramvandesande/miniconda3/envs/pyscenic_dev/lib/python3.6/multiprocessing/process.py", line 249, in _bootstrap
+# self.run()
+# File "/Users/bramvandesande/Projects/lcb/pyscenic/src/pyscenic/regulome.py", line 305, in run
+# self.database = db
+# File "/Users/bramvandesande/miniconda3/envs/pyscenic_dev/lib/python3.6/multiprocessing/connection.py", line 206, in send
+# self._send_bytes(_ForkingPickler.dumps(obj))
+# File "/Users/bramvandesande/miniconda3/envs/pyscenic_dev/lib/python3.6/multiprocessing/connection.py", line 393, in _send_bytes
+# header = struct.pack("!i", n)
+# struct.error: 'i' format requires -2147483648 <= number <= 2147483647
         self.sender.send(regulomes)
         self.sender.close()
         print("Worker {}: Done.".format(self.name))

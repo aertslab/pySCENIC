@@ -1,5 +1,5 @@
 cytoolz
-pathos
+multiprocessing_on_dill
 numba
 attrs
 frozendict
