@@ -10,6 +10,7 @@ import attr
 import yaml
 from cytoolz import merge_with, dissoc, keyfilter, first, second
 from frozendict import frozendict
+from itertools import chain
 
 from cytoolz import memoize
 
@@ -165,6 +166,16 @@ class GeneSignature(yaml.YAMLObject):
         """
         return GeneSignature(name=name, nomenclature=self.nomenclature, gene2weights=self.gene2weights)
 
+    def add(self, gene_symbol, weight=1.0)  -> Type['GeneSignature']:
+        """
+        Add an extra gene symbol to this signature.
+        :param gene_symbol: The symbol of the gene.
+        :param weight: The weight.
+        :return: the new :class:`GeneSignature` instance.
+        """
+        return GeneSignature(name=self.name, nomenclature=self.nomenclature,
+                             gene2weights=chain(self.gene2weights.items(), [(gene_symbol, weight)]))
+
     def _union_impl(self, other):
         return frozendict(merge_with(max, self.gene2weights, other.gene2weights))
 
@@ -306,7 +317,19 @@ class Regulome(GeneSignature, yaml.YAMLObject):
         if len(value) == 0:
             raise ValueError("A regulome must have a transcription factor.")
 
-    def union(self, other: Type['GeneSignature']) -> Type['GeneSignature']:
+    def add(self, gene_symbol, weight=1.0) -> 'Regulome':
+        """
+        Add an extra gene symbol to this signature.
+        :param gene_symbol: The symbol of the gene.
+        :param weight: The weight.
+        :return: the new :class:`GeneSignature` instance.
+        """
+        return Regulome(name=self.name, nomenclature=self.nomenclature,
+                        context=self.context, transcription_factor=self.transcription_factor,
+                        score=self.score,
+                             gene2weights=chain(self.gene2weights.items(), [(gene_symbol, weight)]))
+
+    def union(self, other: Type['GeneSignature']) -> 'Regulome':
         assert self.nomenclature == other.nomenclature, "Union of gene signatures is only possible when both signatures use same nomenclature for genes."
         assert self.transcription_factor == getattr(other, 'transcription_factor', self.transcription_factor), "Union of two regulomes is only possible when same factor."
         return Regulome(name="({} | {})".format(self.name, other.name) if self.name != other.name else self.name,
@@ -317,7 +340,7 @@ class Regulome(GeneSignature, yaml.YAMLObject):
                              gene2weights=self._union_impl(other))
 
 
-    def difference(self, other: Type['GeneSignature']) -> Type['GeneSignature']:
+    def difference(self, other: Type['GeneSignature']) -> 'Regulome':
         assert self.nomenclature == other.nomenclature, "Difference of gene signatures is only possible when both signatures use same nomenclature for genes."
         assert self.transcription_factor == getattr(other, 'transcription_factor', self.transcription_factor), "Difference of two regulomes is only possible when same factor."
         return Regulome(name="({} - {})".format(self.name, other.name) if self.name != other.name else self.name,
@@ -327,7 +350,7 @@ class Regulome(GeneSignature, yaml.YAMLObject):
                              score=max(self.score, getattr(other, 'score', 0.0)),
                              gene2weights=self._difference_impl(other))
 
-    def intersection(self, other: Type['GeneSignature']) -> Type['GeneSignature']:
+    def intersection(self, other: Type['GeneSignature']) -> 'Regulome':
         assert self.nomenclature == other.nomenclature, "Intersection of gene signatures is only possible when both signatures use same nomenclature for genes."
         assert self.transcription_factor == getattr(other, 'transcription_factor', self.transcription_factor), "Intersection of two regulomes is only possible when same factor."
         return Regulome(name="({} & {})".format(self.name, other.name) if self.name != other.name else self.name,

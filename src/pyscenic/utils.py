@@ -142,7 +142,7 @@ def modules_from_genie3(adjacencies: pd.DataFrame, nomenclature: str,
                      chain.from_iterable(modules4top_factors(adjacencies, n, nomenclature) for n in top_n_regulators))
 
 
-def save_as_yaml(signatures: Sequence[Type[GeneSignature]], fname: str):
+def save_to_yaml(signatures: Sequence[Type[GeneSignature]], fname: str):
     """
 
     :param signatures:
