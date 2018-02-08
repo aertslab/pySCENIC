@@ -179,3 +179,9 @@ def test_load_gmt():
     assert "COPZ1" in gss[0]
     assert len(gss[0]) == 29
 
+
+def test_add():
+    gss = GeneSignature.from_gmt(field_separator='\t', gene_separator='\t', **load_info(TEST_SIGNATURE))
+    res = gss[0].add("MEF2")
+    assert "MEF2" in res
+

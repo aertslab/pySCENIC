@@ -174,7 +174,7 @@ class GeneSignature(yaml.YAMLObject):
         :return: the new :class:`GeneSignature` instance.
         """
         return GeneSignature(name=self.name, nomenclature=self.nomenclature,
-                             gene2weights=chain(self.gene2weights.items(), [(gene_symbol, weight)]))
+                             gene2weights=list(chain(self.gene2weights.items(), [(gene_symbol, weight)])))
 
     def _union_impl(self, other):
         return frozendict(merge_with(max, self.gene2weights, other.gene2weights))
@@ -327,7 +327,7 @@ class Regulome(GeneSignature, yaml.YAMLObject):
         return Regulome(name=self.name, nomenclature=self.nomenclature,
                         context=self.context, transcription_factor=self.transcription_factor,
                         score=self.score,
-                             gene2weights=chain(self.gene2weights.items(), [(gene_symbol, weight)]))
+                             gene2weights=list(chain(self.gene2weights.items(), [(gene_symbol, weight)])))
 
     def union(self, other: Type['GeneSignature']) -> 'Regulome':
         assert self.nomenclature == other.nomenclature, "Union of gene signatures is only possible when both signatures use same nomenclature for genes."
