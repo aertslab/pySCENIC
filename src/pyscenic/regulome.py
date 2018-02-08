@@ -15,10 +15,12 @@ from dask.distributed import LocalCluster, Client
 from multiprocessing import Pipe, cpu_count, Process
 from typing import Type, Sequence, Optional
 from .genesig import Regulome
+from .recovery import leading_edge4row
 import math
 from cytoolz import compose, first
 from itertools import chain
 from math import ceil
+from functools import partial
 
 
 COLUMN_NAME_NES = "NES"
@@ -150,10 +152,44 @@ def module2df_numba_impl(db: Type[RankingDatabase], module: Regulome, motif_anno
     return annotated_features, rccs[enriched_features_idx, :], rankings[enriched_features_idx, :], genes, avg2stdrcc
 
 
-module2df = module2df_numba_impl
+def module2df(db: Type[RankingDatabase], module: Regulome, motif_annotations: pd.DataFrame,
+              rank_threshold: int = 1500, auc_threshold: float = 0.05, nes_threshold=3.0,
+              avgrcc_sample_frac: float = None, weighted_recovery=False,
+              module2df_func=module2df_numba_impl):
+
+    """
+
+    :param db:
+    :param module:
+    :param motif_annotations:
+    :param rank_threshold:
+    :param auc_threshold:
+    :param nes_threshold:
+    :param avgrcc_sample_frac:
+    :param weighted_recovery:
+    :param module2df_func:
+    :return:
+    """
+    df_annotated_features, rccs, rankings, genes, avg2stdrcc = module2df_func(db, module, motif_annotations,
+                                                                           rank_threshold, auc_threshold, nes_threshold,
+                                                                           avgrcc_sample_frac, weighted_recovery)
+    if len(df_annotated_features) == 0:
+        return None
+    df_rnks = pd.DataFrame(index=df_annotated_features.index,
+                           columns=list(zip(repeat("Ranking"), genes)),
+                           data=rankings)
+    df_rccs = pd.DataFrame(index=df_annotated_features.index,
+                           columns=list(zip(repeat("Recovery"), np.arange(rank_threshold))),
+                           data=rccs)
+    df_annotated_features.columns = list(zip(repeat("Enrichment", df_annotated_features.columns)))
+
+    df = pd.concat([df_annotated_features, df_rccs, df_rnks], axis=1)
+    weights = np.array([module[gene] for gene in genes]) if weighted_recovery else None
+    df[("Enrichment", "Leading Edge")] = df.apply(partial(leading_edge4row, avg2stdrcc=avg2stdrcc, genes=genes, weights=weights))
+    return df
 
 
-def df2regulome(name, nomenclature, annotated_features, rccs, rankings, avg2stdrcc, genes, weights):
+def _df2regulome(name, nomenclature, annotated_features, rccs, rankings, avg2stdrcc, genes, weights):
     """
     Convert a dataframe of enriched and annotated features into a regulome.
 
@@ -205,7 +241,7 @@ def module2regulome(db: Type[RankingDatabase], module: Regulome, motif_annotatio
     if len(annotated_features) == 0:
         return None
     weights = np.array([module[gene] for gene in genes]) if weighted_recovery else None
-    return df2regulome(module.name, module.nomenclature, annotated_features, rccs, rankings, avg2stdrcc, genes, weights)
+    return _df2regulome(module.name, module.nomenclature, annotated_features, rccs, rankings, avg2stdrcc, genes, weights)
 
 
 def _prepare_client(client_or_address):
