@@ -149,7 +149,7 @@ def leading_edge(rcc: np.ndarray, avg2stdrcc: np.ndarray,
 
 
 def leading_edge4row(row: pd.Series, avg2stdrcc: np.ndarray, genes: np.ndarray,
-                     weights: Optional[np.array] = None) -> List[Tuple[str,float]]:
+                     weights: Optional[np.array] = None) -> pd.Series:
     """
     Calculate the leading edge for a row of a dataframe. Should be used with partial function application to make this
     function amenable to the apply idiom common for dataframes.
@@ -161,7 +161,7 @@ def leading_edge4row(row: pd.Series, avg2stdrcc: np.ndarray, genes: np.ndarray,
     :return: The leading edge returned as a list of tuple. Each tuple associates a gene part of the leading edge with
         its rank or with its importance (if gene signature supplied).
     """
-    return pd.Series(data=[leading_edge(row['Recovery'].as_matrix(),  avg2stdrcc, row['Ranking'].as_matrix(), genes, weights)])
+    return pd.Series(data=[leading_edge(row['Recovery'].as_matrix(), avg2stdrcc, row['Ranking'].as_matrix(), genes, weights)])
 
 
 # Giving numba a signature makes the code marginally faster but with losing flexibility (only being able to use one

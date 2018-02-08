@@ -180,7 +180,7 @@ def module2df(db: Type[RankingDatabase], module: Regulome, motif_annotations: pd
                                                                            rank_threshold, auc_threshold, nes_threshold,
                                                                            avgrcc_sample_frac, weighted_recovery)
     if len(df_annotated_features) == 0:
-        return None
+        return pd.DataFrame()
     df_rnks = pd.DataFrame(index=df_annotated_features.index,
                            columns=pd.MultiIndex.from_tuples(list(zip(repeat("Ranking"), genes))),
                            data=rankings)
@@ -346,7 +346,6 @@ class Worker(Process):
         regulomes = list(filter(is_not_none, map(module2obj, self.modules)))
 
         # Sending information back to parent process.
-#TODO:
 #         Process 10kbp(2):
 # Traceback (most recent call last):
 # File "/Users/bramvandesande/miniconda3/envs/pyscenic_dev/lib/python3.6/multiprocessing/process.py", line 249, in _bootstrap
@@ -407,8 +406,6 @@ def derive_regulomes(rnkdbs: Sequence[Type[RankingDatabase]], modules: Sequence[
                                                motif_similarity_fdr=motif_similarity_fdr,
                                                orthologuous_identity_threshold=orthologuous_identity_threshold)
 
-    is_not_none = lambda r: r is not None
-
     if client_or_address == 'custom_multiprocessing':
         # This implementation overcomes the I/O-bounded performance by the dask-based parallelized/distributed version.
         # Each worker (subprocess) loads a dedicated ranking database and motif annotation table into its own memory
@@ -429,13 +426,12 @@ def derive_regulomes(rnkdbs: Sequence[Type[RankingDatabase]], modules: Sequence[
                    motif_similarity_fdr, orthologuous_identity_threshold,
                    avgrcc_sample_frac, weighted_recovery, transformation_func).start()
         results = [recv.recv() for recv in receivers]
-        def tuples2df(sequence_of_tuples):
-            return pd.concat(list(map(first, sequence_of_tuples)))
-        return reduce(concat, results) if output == "regulomes" else pd.concat(list(map(tuples2df, results)))
+        return reduce(concat, results) if output == "regulomes" else pd.concat(list(map(pd.concat, results)))
     else:
         transformation_func = module2regulome if output == "regulomes" else module2df
         from cytoolz.curried import filter as filtercur
-        aggregation_func = compose(list, filtercur(is_not_none)) if output == "regulomes" else lambda gen: pd.concat(list(map(first, gen)))
+        is_not_none = lambda r: r is not None
+        aggregation_func = compose(list, filtercur(is_not_none)) if output == "regulomes" else pd.concat
         dask_graph = delayed(aggregation_func)(
                  (delayed(transformation_func)
                     (db, gs, motif_annotations,
