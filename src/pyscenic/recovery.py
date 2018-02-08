@@ -10,7 +10,24 @@ from .rnkdb import RankingDatabase
 from .genesig import GeneSignature, Regulome
 
 
-__all__ = ["recovery", "aucs", "enrichment4features", "enrichment4cells"]
+__all__ = ["recovery", "aucs", "enrichment4features", "enrichment4cells", "leading_edge4row"]
+
+
+@jit(nopython=True)
+def rcc2d(rankings: np.ndarray, weights: np.ndarray, rank_threshold: int) -> np.ndarray:
+    """
+    Calculate recovery curves.
+
+    :param rankings: The features rankings for a gene signature (n_features, n_genes).
+    :param weights: The weights of these genes.
+    :return: Recovery curves (n_features, rank_threshold).
+    """
+    n_features = rankings.shape[0]
+    rccs = np.empty(shape=(n_features, rank_threshold)) # Pre-allocation.
+    for row_idx in range(n_features):
+        curranking = rankings[row_idx, :]
+        rccs[row_idx, :] = np.cumsum(np.bincount(curranking, weights=weights)[:rank_threshold])
+    return rccs
 
 
 def recovery(rnk: pd.DataFrame, total_genes: int, weights: np.ndarray, rank_threshold: int, auc_threshold: float) -> (np.ndarray, np.ndarray):
@@ -35,16 +52,13 @@ def recovery(rnk: pd.DataFrame, total_genes: int, weights: np.ndarray, rank_thre
         "Please increase the rank threshold or decrease the AUC threshold.".format(auc_threshold, rank_cutoff)
 
     features, genes, rankings = rnk.index.values, rnk.columns.values, rnk.values
-    # TODO: It was requested to show/log I warning when not all genes in the signature have a ranking in the database.
+    # TODO: It was requested to show/log a warning when not all genes in the signature have a ranking in the database.
     weights = np.insert(weights, len(weights), 0.0)
     n_features = len(features)
     rankings = np.append(rankings, np.full(shape=(n_features, 1), fill_value=total_genes), axis=1)
 
     # Calculate recovery curves.
-    rccs = np.empty(shape=(n_features, rank_threshold), dtype=np.float) # Pre-allocation.
-    for row_idx in range(n_features):
-        curranking = rankings[row_idx, :]
-        rccs[row_idx, :] = np.cumsum(np.bincount(curranking, weights=weights)[:rank_threshold])
+    rccs = rcc2d(rankings, weights, rank_threshold)
 
     # Calculate AUC.
     maxauc = float(rank_cutoff * weights.sum())
@@ -104,10 +118,10 @@ def enrichment4features(rnkdb: Type[RankingDatabase], gs: Type[GeneSignature], r
     df_nes = pd.DataFrame(index=features,
                           data={("Enrichment", "AUC"): aucs, ("Enrichment", "NES"): ness})
     df_rnks = pd.DataFrame(index=features,
-                           columns=list(zip(repeat("Ranking"), genes)),
+                           columns=pd.MultiIndex.from_tuples(list(zip(repeat("Ranking"), genes))),
                            data=rankings)
     df_rccs = pd.DataFrame(index=features,
-                           columns=list(zip(repeat("Recovery"), np.arange(rank_threshold))),
+                           columns=pd.MultiIndex.from_tuples(list(zip(repeat("Recovery"), np.arange(rank_threshold)))),
                            data=rccs)
     return pd.concat([df_nes, df_rccs, df_rnks], axis=1)
 
