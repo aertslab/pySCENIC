@@ -18,3 +18,4 @@ yappi
 snakeviz
 line-profiler
 pyyaml
+boltons

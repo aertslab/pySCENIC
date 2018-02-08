@@ -8,3 +8,4 @@ pandas
 dask
 feather-format
 pyyaml
+boltons

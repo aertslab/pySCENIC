@@ -114,7 +114,7 @@ def enrichment4features(rnkdb: Type[RankingDatabase], gs: Type[GeneSignature], r
 
 def leading_edge(rcc: np.ndarray, avg2stdrcc: np.ndarray,
                  ranking: np.ndarray, genes: np.ndarray,
-                 signature: Optional[Type[GeneSignature]] = None) -> List[Tuple[str,float]]:
+                 weights: Optional[np.array] = None) -> List[Tuple[str,float]]:
     """
     Calculate the leading edge for a given recovery curve.
 
@@ -122,7 +122,7 @@ def leading_edge(rcc: np.ndarray, avg2stdrcc: np.ndarray,
     :param avg2stdrcc: The average + 2 standard deviation recovery curve.
     :param ranking: The rank numbers of the gene signature for a given regulatory feature.
     :param genes: The genes corresponding to the ranking available in the aforementioned parameter.
-    :param signature: The gene signature from which these ranked genes originate.
+    :param weights: The weights for these genes.
     :return: The leading edge returned as a list of tuple. Each tuple associates a gene part of the leading edge with
         its rank or with its importance (if gene signature supplied).
     """
@@ -142,17 +142,14 @@ def leading_edge(rcc: np.ndarray, avg2stdrcc: np.ndarray,
         gene_ids = genes[sorted_idx]
         filtered_idx = sranking < rank
         filtered_gene_ids = gene_ids[filtered_idx]
-        if signature is not None:
-            return list(zip(filtered_gene_ids, (signature[gid] for gid in filtered_gene_ids)))
-        else:
-            return list(zip(filtered_gene_ids, sranking[filtered_idx]))
+        return list(zip(filtered_gene_ids, weights[filtered_idx] if weights is not None else sranking[filtered_idx]))
 
     rank, n_recovered_genes = critical_point()
     return get_genes(rank)
 
 
 def leading_edge4row(row: pd.Series, avg2stdrcc: np.ndarray, genes: np.ndarray,
-                     signature: Optional[Type[GeneSignature]] = None) -> List[Tuple[str,float]]:
+                     weights: Optional[np.array] = None) -> List[Tuple[str,float]]:
     """
     Calculate the leading edge for a row of a dataframe. Should be used with partial function application to make this
     function amenable to the apply idiom common for dataframes.
@@ -160,11 +157,11 @@ def leading_edge4row(row: pd.Series, avg2stdrcc: np.ndarray, genes: np.ndarray,
     :param row: The row of the dataframe to calculate the leading edge for.
     :param avg2stdrcc: The average + 2 standard deviation recovery curve.
     :param genes: The genes corresponding to the ranking available in the supplied row.
-    :param signature: The gene signature from which these ranked genes originate.
+    :param weights: The weights for these genes.
     :return: The leading edge returned as a list of tuple. Each tuple associates a gene part of the leading edge with
         its rank or with its importance (if gene signature supplied).
     """
-    return leading_edge(row['Recovery'].as_matrix(),  avg2stdrcc, row['Ranking'].as_matrix(), genes, signature)
+    return leading_edge(row['Recovery'].as_matrix(),  avg2stdrcc, row['Ranking'].as_matrix(), genes, weights)
 
 
 # Giving numba a signature makes the code marginally faster but with losing flexibility (only being able to use one

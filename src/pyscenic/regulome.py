@@ -8,6 +8,7 @@ from itertools import repeat
 from .rnkdb import RankingDatabase, MemoryDecorator
 from functools import reduce
 from operator import concat
+from boltons.iterutils import chunked_iter
 from dask.multiprocessing import get
 from dask import delayed
 from dask.distributed import LocalCluster, Client
@@ -15,20 +16,25 @@ from multiprocessing import Pipe, cpu_count, Process
 from typing import Type, Sequence, Optional
 from .genesig import Regulome
 import math
-from cytoolz import compose
+from cytoolz import compose, first
+from itertools import chain
+from math import ceil
 
 
 COLUMN_NAME_NES = "NES"
 COLUMN_NAME_AUC = "AUC"
+COLUMN_NAME_TF = "TF"
+COLUMN_NAME_CONTEXT = "context"
+
 
 __all__ = ["module2regulome", "derive_regulomes"]
 
 
-def module2regulome_bincount_impl(db: Type[RankingDatabase], module: Regulome, motif_annotations: pd.DataFrame,
-                    rank_threshold: int = 1500, auc_threshold: float = 0.05, nes_threshold=3.0,
-                    avgrcc_sample_frac: float = None, weighted_recovery=False) -> Optional[Regulome]:
+def module2df_bincount_impl(db: Type[RankingDatabase], module: Regulome, motif_annotations: pd.DataFrame,
+                                  rank_threshold: int = 1500, auc_threshold: float = 0.05, nes_threshold=3.0,
+                                  avgrcc_sample_frac: float = None, weighted_recovery=False):
     """
-    Create a regulome for a given ranking database and a co-expression module. If non can be created NoN is returned.
+    Create a dataframe of enriched and annotated features a given ranking database and a co-expression module.
 
     :param db: The ranking database.
     :param module: The co-expression module.
@@ -39,7 +45,7 @@ def module2regulome_bincount_impl(db: Type[RankingDatabase], module: Regulome, m
     :param avgrcc_sample_frac: The fraction of the features to use for the calculation of the average curve, If None
         then all features are used.
     :param weighted_recovery: Use weighted recovery in the analysis.
-    :return: A regulome or None.
+    :return: A dataframe with enriched and annotated features.
     """
 
     # Load rank of genes from database.
@@ -59,12 +65,12 @@ def module2regulome_bincount_impl(db: Type[RankingDatabase], module: Regulome, m
                                      data={COLUMN_NAME_NES: ness[enriched_features_idx],
                                            COLUMN_NAME_AUC: aucs[enriched_features_idx]})
     if len(enriched_features) == 0:
-        return None
+        return pd.DataFrame(), None, None, genes, None
 
     # Find motif annotations for enriched features.
     annotated_features = pd.merge(enriched_features, motif_annotations, how="inner", left_index=True, right_index=True)
     if len(annotated_features) == 0:
-        return None
+        return pd.DataFrame(), None, None, genes, None
 
     # Calculated leading edge for the remaining enriched features that have annotations.
     if avgrcc_sample_frac is None:
@@ -76,33 +82,18 @@ def module2regulome_bincount_impl(db: Type[RankingDatabase], module: Regulome, m
         avgrcc = rccs[sample_idx, :].mean(axis=0)
         avg2stdrcc = avgrcc + 2.0 * rccs[sample_idx, :].std(axis=0)
 
-    # Create regulomes for each enriched and annotated feature.
-    def score(nes, motif_similarity_qval, orthologuous_identity):
-        MAX_VALUE = 100
-        score = nes * -math.log(motif_similarity_qval)/MAX_VALUE if not math.isnan(motif_similarity_qval) and motif_similarity_qval != 0.0 else nes
-        return score if math.isnan(orthologuous_identity) else score * orthologuous_identity
+    # Add additional information to the dataframe.
+    annotated_features[COLUMN_NAME_TF] = module.transcription_factor
+    annotated_features[COLUMN_NAME_CONTEXT] = len(annotated_features) * [module.context]
 
-    regulomes = []
-    _module = module if weighted_recovery else module.noweights()
-    for (_, row), rcc, ranking in zip(annotated_features.iterrows(), rccs[enriched_features_idx, :], rankings[enriched_features_idx, :]):
-        regulomes.append(Regulome(name=module.name,
-                                  score=score(row[COLUMN_NAME_NES],
-                                              row[COLUMN_NAME_MOTIF_SIMILARITY_QVALUE],
-                                              row[COLUMN_NAME_ORTHOLOGOUS_IDENTITY]),
-                                  nomenclature=module.nomenclature,
-                                  context=module.context.union(frozenset([db.name])),
-                                  transcription_factor=module.transcription_factor,
-                                  gene2weights=leading_edge(rcc, avg2stdrcc, ranking, genes, _module)))
-
-    # Aggregate these regulomes into a single one using the union operator.
-    return reduce(Regulome.union, regulomes)
+    return annotated_features, rccs[enriched_features_idx, :], rankings[enriched_features_idx, :], genes, avg2stdrcc
 
 
-def module2regulome_numba_impl(db: Type[RankingDatabase], module: Regulome, motif_annotations: pd.DataFrame,
-                    rank_threshold: int = 1500, auc_threshold: float = 0.05, nes_threshold=3.0,
-                    avgrcc_sample_frac: float = None, weighted_recovery=False) -> Optional[Regulome]:
+def module2df_numba_impl(db: Type[RankingDatabase], module: Regulome, motif_annotations: pd.DataFrame,
+                               rank_threshold: int = 1500, auc_threshold: float = 0.05, nes_threshold=3.0,
+                               avgrcc_sample_frac: float = None, weighted_recovery=False):
     """
-    Create a regulome for a given ranking database and a co-expression module. If non can be created NoN is returned.
+    Create a dataframe of enriched and annotated features a given ranking database and a co-expression module.
 
     :param db: The ranking database.
     :param module: The co-expression module.
@@ -113,7 +104,7 @@ def module2regulome_numba_impl(db: Type[RankingDatabase], module: Regulome, moti
     :param avgrcc_sample_frac: The fraction of the features to use for the calculation of the average curve, If None
         then all features are used.
     :param weighted_recovery: Use weighted recovery in the analysis.
-    :return: A regulome or None.
+    :return: A dataframe with enriched and annotated features.
     """
 
     # Load rank of genes from database.
@@ -134,12 +125,12 @@ def module2regulome_numba_impl(db: Type[RankingDatabase], module: Regulome, moti
                                      data={COLUMN_NAME_NES: ness[enriched_features_idx],
                                            COLUMN_NAME_AUC: aucs[enriched_features_idx]})
     if len(enriched_features) == 0:
-        return None
+        return pd.DataFrame(), None, None, genes, None
 
     # Find motif annotations for enriched features.
     annotated_features = pd.merge(enriched_features, motif_annotations, how="inner", left_index=True, right_index=True)
     if len(annotated_features) == 0:
-        return None
+        return pd.DataFrame(), None, None, genes, None
 
     # Calculated leading edge for the remaining enriched features that have annotations.
     if avgrcc_sample_frac is None:
@@ -151,6 +142,24 @@ def module2regulome_numba_impl(db: Type[RankingDatabase], module: Regulome, moti
         avgrcc = rccs.mean(axis=0)
         avg2stdrcc = avgrcc + 2.0 * rccs.std(axis=0)
 
+    # Add additional information to the dataframe.
+    annotated_features[COLUMN_NAME_TF] = module.transcription_factor
+    context = frozenset(chain(module.context, [db.name]))
+    annotated_features[COLUMN_NAME_CONTEXT] = len(annotated_features) * [context]
+
+    return annotated_features, rccs[enriched_features_idx, :], rankings[enriched_features_idx, :], genes, avg2stdrcc
+
+
+module2df = module2df_numba_impl
+
+
+def df2regulome(name, nomenclature, annotated_features, rccs, rankings, avg2stdrcc, genes, weights):
+    """
+    Convert a dataframe of enriched and annotated features into a regulome.
+
+    Caveat: the supplied dataframe should contain only the enriched and annotated features for a single module.
+    """
+
     # Create regulomes for each enriched and annotated feature.
     def score(nes, motif_similarity_qval, orthologuous_identity):
         MAX_VALUE = 100
@@ -158,22 +167,45 @@ def module2regulome_numba_impl(db: Type[RankingDatabase], module: Regulome, moti
         return score if math.isnan(orthologuous_identity) else score * orthologuous_identity
 
     regulomes = []
-    _module = module if weighted_recovery else module.noweights()
-    for (_, row), rcc, ranking in zip(annotated_features.iterrows(), rccs[enriched_features_idx, :], rankings[enriched_features_idx, :]):
-        regulomes.append(Regulome(name=module.name,
+    for (_, row), rcc, ranking in zip(annotated_features.iterrows(), rccs, rankings):
+        regulomes.append(Regulome(name=name,
                                   score=score(row[COLUMN_NAME_NES],
                                               row[COLUMN_NAME_MOTIF_SIMILARITY_QVALUE],
                                               row[COLUMN_NAME_ORTHOLOGOUS_IDENTITY]),
-                                  nomenclature=module.nomenclature,
-                                  context=module.context.union(frozenset([db.name])),
-                                  transcription_factor=module.transcription_factor,
-                                  gene2weights=leading_edge(rcc, avg2stdrcc, ranking, genes, _module)))
+                                  nomenclature=nomenclature,
+                                  context=row[COLUMN_NAME_CONTEXT],
+                                  transcription_factor=row[COLUMN_NAME_TF],
+                                  gene2weights=leading_edge(rcc, avg2stdrcc, ranking, genes, weights)))
 
     # Aggregate these regulomes into a single one using the union operator.
     return reduce(Regulome.union, regulomes)
 
 
-module2regulome = module2regulome_bincount_impl
+def module2regulome(db: Type[RankingDatabase], module: Regulome, motif_annotations: pd.DataFrame,
+                    rank_threshold: int = 1500, auc_threshold: float = 0.05, nes_threshold=3.0,
+                    avgrcc_sample_frac: float = None, weighted_recovery=False,
+                    module2df_func=module2df_numba_impl) -> Optional[Regulome]:
+    """
+    Create a regulome for a given ranking database and a co-expression module. If non can be created NoN is returned.
+
+    :param db: The ranking database.
+    :param module: The co-expression module.
+    :param rank_threshold: The total number of ranked genes to take into account when creating a recovery curve.
+    :param auc_threshold: The fraction of the ranked genome to take into account for the calculation of the
+        Area Under the recovery Curve.
+    :param nes_threshold: The Normalized Enrichment Score (NES) threshold to select enriched features.
+    :param avgrcc_sample_frac: The fraction of the features to use for the calculation of the average curve, If None
+        then all features are used.
+    :param weighted_recovery: Use weighted recovery in the analysis.
+    :return: A regulome or None.
+    """
+    annotated_features, rccs, rankings, genes, avg2stdrcc = module2df_func(db, module, motif_annotations,
+                                                                           rank_threshold, auc_threshold, nes_threshold,
+                                                                           avgrcc_sample_frac, weighted_recovery)
+    if len(annotated_features) == 0:
+        return None
+    weights = np.array([module[gene] for gene in genes]) if weighted_recovery else None
+    return df2regulome(module.name, module.nomenclature, annotated_features, rccs, rankings, avg2stdrcc, genes, weights)
 
 
 def _prepare_client(client_or_address):
@@ -227,13 +259,13 @@ def _prepare_client(client_or_address):
 
 
 class Worker(Process):
-    def __init__(self, db: Type[RankingDatabase], modules: Sequence[Regulome],
+    def __init__(self, name: str, db: Type[RankingDatabase], modules: Sequence[Regulome],
                  motif_annotations_fname: str, sender,
                  rank_threshold: int = 1500, auc_threshold: float = 0.05, nes_threshold=3.0,
                  motif_similarity_fdr: float = 0.001, orthologuous_identity_threshold: float = 0.0,
                  avgrcc_sample_frac=None, weighted_recovery=False,
-                 module2regulome_func=module2regulome_numba_impl):
-        super().__init__(name=db.name)
+                 transformation_func=module2regulome):
+        super().__init__(name=name)
         self.database = db
         self.motif_annotations_fname = motif_annotations_fname
         self.modules = modules
@@ -244,36 +276,35 @@ class Worker(Process):
         self.orthologuous_identity_threshold = orthologuous_identity_threshold
         self.avgrcc_sample_frac=avgrcc_sample_frac
         self.weighted_recovery = weighted_recovery
-        self.module2regulome = module2regulome_func
+        self.transformation_func = transformation_func
         self.sender = sender
 
 
     def run(self):
         # Load ranking database in memory.
         rnkdb = MemoryDecorator(self.database)
-        print("Worker for {}: database loaded in memory.".format(self.name))
+        print("Worker {}: database loaded in memory.".format(self.name))
 
         # Load motif annotations in memory.
         motif_annotations = load_motif_annotations(self.motif_annotations_fname,
                                                    motif_similarity_fdr=self.motif_similarity_fdr,
                                                    orthologuous_identity_threshold=self.orthologuous_identity_threshold)
-        print("Worker for {}: motif annotations loaded in memory.".format(self.name))
+        print("Worker {}: motif annotations loaded in memory.".format(self.name))
 
         # Apply module2regulome on all modules.
-        def module2regulome(module):
-            return self.module2regulome(rnkdb, module, motif_annotations=motif_annotations,
+        def module2obj(module):
+            return self.transformation_func(rnkdb, module, motif_annotations=motif_annotations,
                                               rank_threshold=self.rank_threshold, auc_threshold=self.auc_threshold,
                                               nes_threshold=self.nes_threshold,
                                               avgrcc_sample_frac=self.avgrcc_sample_frac,
                                               weighted_recovery=self.weighted_recovery)
         is_not_none = lambda r: r is not None
-        regulomes = list(filter(is_not_none, map(module2regulome, self.modules)))
-        print("Worker for {}: {} regulomes created.".format(self.name, len(regulomes)))
+        regulomes = list(filter(is_not_none, map(module2obj, self.modules)))
 
         # Sending information back to parent process.
         self.sender.send(regulomes)
         self.sender.close()
-        print("Worker for {}: Done.".format(self.name))
+        print("Worker {}: Done.".format(self.name))
 
 
 def derive_regulomes(rnkdbs: Sequence[Type[RankingDatabase]], modules: Sequence[Regulome],
@@ -282,7 +313,7 @@ def derive_regulomes(rnkdbs: Sequence[Type[RankingDatabase]], modules: Sequence[
                          motif_similarity_fdr: float = 0.001, orthologuous_identity_threshold: float = 0.0,
                          avgrcc_sample_frac: float = None,
                          weighted_recovery=False, client_or_address='custom_multiprocessing',
-                         num_workers=None, module2regulome_func=module2regulome_numba_impl) -> Sequence[Regulome]:
+                         num_workers=None, output="regulomes") -> Sequence[Regulome]:
     """
     Calculate all regulomes for a given sequence of ranking databases and a sequence of co-expression modules.
 
@@ -301,7 +332,7 @@ def derive_regulomes(rnkdbs: Sequence[Type[RankingDatabase]], modules: Sequence[
     :param weighted_recovery: Use weights of a gene signature when calculating recovery curves?
     :param num_workers: If not using a cluster, the number of workers to use for the calculation. None of all available CPUs need to be used.
     :param client_or_address: The client of IP address of the scheduler when working with dask.
-    :param module2regulome_func: A module2regulome implementation.
+    :param output: The type of output requested, i.e. regulomes or a dataframe.
     :return: A sequence of regulomes.
     """
     def is_valid(client_or_address):
@@ -313,6 +344,7 @@ def derive_regulomes(rnkdbs: Sequence[Type[RankingDatabase]], modules: Sequence[
             return True
         return False
     assert is_valid(client_or_address), "\"{}\"is not valid for parameter client_or_address.".format(client_or_address)
+    assert output in {"regulomes", "df"}, "Invalid output type."
 
     # Load motif annotations.
     motif_annotations = load_motif_annotations(motif_annotations_fname,
@@ -327,25 +359,33 @@ def derive_regulomes(rnkdbs: Sequence[Type[RankingDatabase]], modules: Sequence[
         # space before consuming module. The implementation of each worker uses the AUC-first numba JIT based implementation
         # of the algorithm.
         assert len(rnkdbs) <= num_workers if num_workers else cpu_count(), "The number of databases is larger than the number of cores."
-        print("Using {} workers.".format(len(rnkdbs)))
+        amplifier = int((num_workers if num_workers else cpu_count())/len(rnkdbs))
+        print("Using {} workers.".format(len(rnkdbs) * amplifier))
+
+        transformation_func = module2regulome if output == "regulomes" else module2df
         receivers = []
         for db in rnkdbs:
-            sender, receiver = Pipe()
-            receivers.append(receiver)
-            Worker(db, modules, motif_annotations_fname, sender,
+            for idx, chunk in enumerate(chunked_iter(modules, ceil(len(modules)/float(amplifier)))):
+                sender, receiver = Pipe()
+                receivers.append(receiver)
+                Worker("{}({})".format(db.name, idx+1), db, chunk, motif_annotations_fname, sender,
                    rank_threshold, auc_threshold, nes_threshold,
                    motif_similarity_fdr, orthologuous_identity_threshold,
-                   avgrcc_sample_frac, weighted_recovery, module2regulome_func).start()
-        return reduce(concat, (recv.recv() for recv in receivers))
+                   avgrcc_sample_frac, weighted_recovery, transformation_func).start()
+        results = [recv.recv() for recv in receivers]
+        def tuples2df(sequence_of_tuples):
+            return pd.concat(list(map(first, sequence_of_tuples)))
+        return reduce(concat, results) if output == "regulomes" else pd.concat(list(map(tuples2df, results)))
     else:
-        # Create dask graph.
+        transformation_func = module2regulome if output == "regulomes" else module2df
         from cytoolz.curried import filter as filtercur
-        dask_graph = delayed(compose(list, filtercur(is_not_none)))(
-            (delayed(module2regulome_func)
-                (db, gs, motif_annotations,
-                    rank_threshold, auc_threshold, nes_threshold,
-                        avgrcc_sample_frac, weighted_recovery)
-                    for db in rnkdbs for gs in modules))
+        aggregation_func = compose(list, filtercur(is_not_none)) if output == "regulomes" else lambda gen: pd.concat(list(map(first, gen)))
+        dask_graph = delayed(aggregation_func)(
+                 (delayed(transformation_func)
+                    (db, gs, motif_annotations,
+                        rank_threshold, auc_threshold, nes_threshold,
+                            avgrcc_sample_frac, weighted_recovery)
+                                for db in rnkdbs for gs in modules))
 
         if client_or_address == "dask_multiprocessing":
             return dask_graph.compute(get=get, num_workers=num_workers if num_workers else cpu_count())
