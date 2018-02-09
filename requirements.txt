@@ -9,3 +9,5 @@ dask
 feather-format
 pyyaml
 boltons
+cloudpickle
+distributed
