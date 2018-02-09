@@ -10,6 +10,7 @@ in no time.
 The package itself can be installed via `pip install pyscenic` 
 
 The successfully use this pipeline you also need auxilliary datasets:
+
 1. Databases ranking the whole genome of your species of interest based on regulatory features (i.e. transcription factor).
 2. Motif annotation database.
 Please contact [LCB](https://aertslab.org).
