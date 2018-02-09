@@ -44,7 +44,6 @@ def load_motif_annotations(fname: str,
     return df
 
 
-COLUMN_NAME_TF = "TF"
 COLUMN_NAME_TARGET = "target"
 COLUMN_NAME_WEIGHT = "importance"
 COLUMN_NAME_CORRELATION = "correlation"
@@ -156,7 +155,7 @@ def save_to_yaml(signatures: Sequence[Type[GeneSignature]], fname: str):
     :return:
     """
     with open(fname, 'w') as f:
-        f.write(yaml.dump(signatures))
+        f.write(yaml.dump(signatures, default_flow_style=False))
 
 
 def load_from_yaml(fname: str) -> Sequence[Type[GeneSignature]]:

@@ -30,7 +30,8 @@ def rcc2d(rankings: np.ndarray, weights: np.ndarray, rank_threshold: int) -> np.
     return rccs
 
 
-def recovery(rnk: pd.DataFrame, total_genes: int, weights: np.ndarray, rank_threshold: int, auc_threshold: float) -> (np.ndarray, np.ndarray):
+def recovery(rnk: pd.DataFrame, total_genes: int, weights: np.ndarray, rank_threshold: int, auc_threshold: float,
+             no_auc=False) -> (np.ndarray, np.ndarray):
     """
     Calculate recovery curves and AUCs. This is the workhorse of the recovery algorithm.
 
@@ -59,6 +60,8 @@ def recovery(rnk: pd.DataFrame, total_genes: int, weights: np.ndarray, rank_thre
 
     # Calculate recovery curves.
     rccs = rcc2d(rankings, weights, rank_threshold)
+    if no_auc:
+        return rccs, np.array([])
 
     # Calculate AUC.
     maxauc = float(rank_cutoff * weights.sum())

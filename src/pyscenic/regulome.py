@@ -145,11 +145,11 @@ def module2features_numba_impl(db: Type[RankingDatabase], module: Regulome, moti
 
     # Calculated leading edge for the remaining enriched features that have annotations.
     if avgrcc_sample_frac is None:
-        rccs, _ = recovery(df, db.total_genes, np.full(len(genes), 1.0), rank_threshold, auc_threshold)
+        rccs, _ = recovery(df, db.total_genes, np.full(len(genes), 1.0), rank_threshold, auc_threshold, no_auc=True)
         avgrcc = rccs.mean(axis=0)
         avg2stdrcc =  avgrcc + 2.0 * rccs.std(axis=0)
     else:
-        rccs, _ = recovery(df.sample(frac=avgrcc_sample_frac), db.total_genes, np.full(len(genes), 1.0), rank_threshold, auc_threshold)
+        rccs, _ = recovery(df.sample(frac=avgrcc_sample_frac), db.total_genes, np.full(len(genes), 1.0), rank_threshold, auc_threshold, no_auc=True)
         avgrcc = rccs.mean(axis=0)
         avg2stdrcc = avgrcc + 2.0 * rccs.std(axis=0)
     rccs = rccs[enriched_features_idx, :][annotated_features_idx, :]
