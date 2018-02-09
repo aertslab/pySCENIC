@@ -349,6 +349,7 @@ class Worker(Process):
         # Sending information back to parent process.
         # Another approach might be to write a CSV file (for dataframes) or YAML file (for regulomes) to a temp.
         # file and share the name of the file with the parent process.
+        # TODO: Serialization introduces a performance penalty!
         self.sender.send(regulomes)
         self.sender.close()
         print("Worker {}: Done.".format(self.name))
