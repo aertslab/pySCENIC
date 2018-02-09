@@ -13,7 +13,7 @@ from .genesig import GeneSignature, Regulome
 __all__ = ["recovery", "aucs", "enrichment4features", "enrichment4cells", "leading_edge4row"]
 
 
-@jit(nopython=True)
+# Do not use numba as it dwarfs the performance.
 def rcc2d(rankings: np.ndarray, weights: np.ndarray, rank_threshold: int) -> np.ndarray:
     """
     Calculate recovery curves.
@@ -62,6 +62,8 @@ def recovery(rnk: pd.DataFrame, total_genes: int, weights: np.ndarray, rank_thre
 
     # Calculate AUC.
     maxauc = float(rank_cutoff * weights.sum())
+    # The rankings are 0-based. The position at the rank threshold is included in the calculation.
+    # The maximum AUC takes this into account.
     aucs = rccs[:, :rank_cutoff].sum(axis=1) / maxauc
 
     return rccs, aucs
@@ -192,6 +194,7 @@ def auc1d(ranking, rank_threshold, max_auc):
     :return: The normalized AUC.
     """
     # Using concatenate and full constructs required by numba.
+    # The rankings are 0-based. The position at the rank threshold is included in the calculation.
     x = np.concatenate((np.sort(ranking[ranking < rank_threshold]), np.full((1,), rank_threshold, dtype=np.int_)))
     y = np.arange(x.size - 1) + 1.0
     return np.sum(np.diff(x)*y)/max_auc
@@ -209,6 +212,7 @@ def weighted_auc1d(ranking, weights, rank_threshold, max_auc):
     :return: The normalized AUC.
     """
     # Using concatenate and full constructs required by numba.
+    # The rankings are 0-based. The position at the rank threshold is included in the calculation.
     filter_idx = ranking < rank_threshold
     x = ranking[filter_idx]
     y = weights[filter_idx]
@@ -258,5 +262,7 @@ def aucs(rnk: pd.DataFrame, total_genes: int, weights: Optional[np.ndarray], ran
 
     features, genes, rankings = rnk.index.values, rnk.columns.values, rnk.values
     y_max = weights.sum() if weights else len(genes)
+    # The rankings are 0-based. The position at the rank threshold is included in the calculation.
+    # The maximum AUC takes this into account.
     maxauc = float(rank_cutoff * y_max)
     return auc2d(rankings, weighted_auc1d if weights else auc1d, rank_cutoff, maxauc)

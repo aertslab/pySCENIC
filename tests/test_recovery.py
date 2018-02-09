@@ -30,17 +30,20 @@ def test_enrichment():
 
 def test_auc1d():
     total_genes = 100
-    auc_rank_threshold = 8
-    ranking = np.asarray([2, 4, 6])
+    auc_rank_threshold = 8 # This rank threshold is inclusive.
+    ranking = np.asarray([2, 4, 6]) - 1 # The databases have a zero-based ranking system
     weights = np.ones(len(ranking))
     auc_max = 1.0 # Disable normalization.
-    assert 12.0 == auc1d(ranking, auc_rank_threshold, auc_max)
+    assert 15.0 == auc1d(ranking, auc_rank_threshold, auc_max)
 
 def test_weighted_auc1d():
+    # CAVE: In python the ranking databases are 0-based. The only difference a 1-based system has on the calc
+    # of the AUC is that in the latter the rank threshold would not be included. This has an infuence on the
+    # normalization factor max AUC but nothing else.
     total_genes = 100
     auc_rank_threshold = 8
-    ranking = np.asarray([2, 4, 6])
+    ranking = np.asarray([2, 4, 6]) - 1 # The databases have a zero-based ranking system
     weights = np.ones(len(ranking))
     auc_max = 1.0 # Disable normalization.
-    assert 12.0 == weighted_auc1d(ranking, weights, auc_rank_threshold, auc_max)
+    assert 15.0 == weighted_auc1d(ranking, weights, auc_rank_threshold, auc_max)
 
