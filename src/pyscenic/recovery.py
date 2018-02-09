@@ -83,12 +83,9 @@ def enrichment4cells(rnk_mtx: pd.DataFrame, regulome: Regulome, rank_threshold: 
         Area Under the recovery Curve.
     :return:
     """
-    assert rnk_mtx
-    assert regulome
-
     total_genes = len(rnk_mtx.columns)
-    rnk = rnk_mtx[rnk_mtx.columns.isin(regulome.genes)]
-    weights = np.asarray([regulome[gene] for gene in rnk.columns.values])
+    rnk = rnk_mtx.iloc[:,rnk_mtx.columns.isin(regulome.genes)]
+    weights = np.asarray([regulome[gene] if gene in regulome.genes else 1.0 for gene in rnk.columns.values])
     rccs, aucs = recovery(rnk, total_genes, weights, rank_threshold, auc_threshold)
     index = pd.MultiIndex.from_tuples(list(zip(rnk.index.values, repeat(regulome.transcription_factor))),
                                       names=["Cell", "Regulome"])
