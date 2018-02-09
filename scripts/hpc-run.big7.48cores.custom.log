@@ -1,0 +1,301 @@
+2018-02-09 21:19:45.398054 - Loading modules.
+2018-02-09 21:27:11.322225 - Loading databases.
+2018-02-09 21:27:11.330627 - Calculating regulomes.
+Using 48 workers.
+2018-02-09 21:27:41.804158 - Worker mm9-500bp-upstream-7species(5): database loaded in memory.
+2018-02-09 21:27:41.826205 - Worker mm9-tss-centered-5kb-7species(6): database loaded in memory.
+2018-02-09 21:27:42.290870 - Worker mm9-tss-centered-10kb-7species(1): database loaded in memory.
+2018-02-09 21:27:42.829177 - Worker mm9-tss-centered-10kb-10species(1): database loaded in memory.
+2018-02-09 21:27:43.114743 - Worker mm9-500bp-upstream-10species(8): database loaded in memory.
+2018-02-09 21:27:43.290078 - Worker mm9-tss-centered-5kb-10species(1): database loaded in memory.
+2018-02-09 21:27:43.512109 - Worker mm9-500bp-upstream-7species(5): motif annotations loaded in memory.
+2018-02-09 21:27:43.524967 - Worker mm9-tss-centered-5kb-7species(6): motif annotations loaded in memory.
+2018-02-09 21:27:43.834809 - Worker mm9-tss-centered-10kb-7species(1): motif annotations loaded in memory.
+2018-02-09 21:27:44.368152 - Worker mm9-tss-centered-10kb-10species(1): motif annotations loaded in memory.
+2018-02-09 21:27:44.450668 - Worker mm9-500bp-upstream-7species(7): database loaded in memory.
+2018-02-09 21:27:44.459573 - Worker mm9-500bp-upstream-7species(2): database loaded in memory.
+2018-02-09 21:27:44.464163 - Worker mm9-500bp-upstream-7species(8): database loaded in memory.
+2018-02-09 21:27:44.467141 - Worker mm9-500bp-upstream-7species(4): database loaded in memory.
+2018-02-09 21:27:44.485467 - Worker mm9-500bp-upstream-7species(6): database loaded in memory.
+2018-02-09 21:27:44.523204 - Worker mm9-500bp-upstream-7species(3): database loaded in memory.
+2018-02-09 21:27:44.915333 - Worker mm9-tss-centered-5kb-10species(1): motif annotations loaded in memory.
+2018-02-09 21:27:44.916346 - Worker mm9-500bp-upstream-7species(1): database loaded in memory.
+2018-02-09 21:27:45.002890 - Worker mm9-500bp-upstream-10species(8): motif annotations loaded in memory.
+2018-02-09 21:27:45.882470 - Worker mm9-tss-centered-5kb-10species(3): database loaded in memory.
+2018-02-09 21:27:45.885028 - Worker mm9-tss-centered-5kb-10species(6): database loaded in memory.
+2018-02-09 21:27:45.922368 - Worker mm9-tss-centered-5kb-10species(4): database loaded in memory.
+2018-02-09 21:27:45.924359 - Worker mm9-tss-centered-5kb-10species(8): database loaded in memory.
+2018-02-09 21:27:46.007076 - Worker mm9-tss-centered-5kb-10species(2): database loaded in memory.
+2018-02-09 21:27:46.073380 - Worker mm9-tss-centered-5kb-10species(5): database loaded in memory.
+2018-02-09 21:27:46.128513 - Worker mm9-tss-centered-5kb-10species(7): database loaded in memory.
+2018-02-09 21:27:46.164311 - Worker mm9-tss-centered-5kb-7species(8): database loaded in memory.
+2018-02-09 21:27:46.270709 - Worker mm9-tss-centered-5kb-7species(2): database loaded in memory.
+2018-02-09 21:27:46.271311 - Worker mm9-tss-centered-5kb-7species(3): database loaded in memory.
+2018-02-09 21:27:46.312215 - Worker mm9-tss-centered-10kb-7species(4): database loaded in memory.
+2018-02-09 21:27:46.345891 - Worker mm9-tss-centered-5kb-7species(1): database loaded in memory.
+2018-02-09 21:27:46.389926 - Worker mm9-tss-centered-5kb-7species(5): database loaded in memory.
+2018-02-09 21:27:46.393366 - Worker mm9-tss-centered-10kb-7species(7): database loaded in memory.
+2018-02-09 21:27:46.438849 - Worker mm9-tss-centered-5kb-7species(4): database loaded in memory.
+2018-02-09 21:27:46.447525 - Worker mm9-tss-centered-10kb-7species(8): database loaded in memory.
+2018-02-09 21:27:46.455451 - Worker mm9-tss-centered-10kb-7species(5): database loaded in memory.
+2018-02-09 21:27:46.455455 - Worker mm9-tss-centered-10kb-7species(2): database loaded in memory.
+2018-02-09 21:27:46.458487 - Worker mm9-tss-centered-10kb-7species(6): database loaded in memory.
+2018-02-09 21:27:46.476951 - Worker mm9-500bp-upstream-7species(4): motif annotations loaded in memory.
+2018-02-09 21:27:46.498832 - Worker mm9-500bp-upstream-10species(2): database loaded in memory.
+2018-02-09 21:27:46.498981 - Worker mm9-500bp-upstream-10species(3): database loaded in memory.
+2018-02-09 21:27:46.507732 - Worker mm9-500bp-upstream-7species(6): motif annotations loaded in memory.
+2018-02-09 21:27:46.560792 - Worker mm9-tss-centered-5kb-7species(7): database loaded in memory.
+2018-02-09 21:27:46.561674 - Worker mm9-500bp-upstream-10species(4): database loaded in memory.
+2018-02-09 21:27:46.571962 - Worker mm9-500bp-upstream-7species(3): motif annotations loaded in memory.
+2018-02-09 21:27:46.572207 - Worker mm9-500bp-upstream-10species(5): database loaded in memory.
+2018-02-09 21:27:46.573992 - Worker mm9-tss-centered-10kb-7species(3): database loaded in memory.
+2018-02-09 21:27:46.601124 - Worker mm9-500bp-upstream-7species(8): motif annotations loaded in memory.
+2018-02-09 21:27:46.616634 - Worker mm9-500bp-upstream-7species(2): motif annotations loaded in memory.
+2018-02-09 21:27:46.640547 - Worker mm9-500bp-upstream-7species(7): motif annotations loaded in memory.
+2018-02-09 21:27:46.642284 - Worker mm9-500bp-upstream-10species(7): database loaded in memory.
+2018-02-09 21:27:46.642284 - Worker mm9-500bp-upstream-10species(6): database loaded in memory.
+2018-02-09 21:27:46.695316 - Worker mm9-tss-centered-10kb-10species(3): database loaded in memory.
+2018-02-09 21:27:46.697451 - Worker mm9-tss-centered-10kb-10species(4): database loaded in memory.
+2018-02-09 21:27:46.741362 - Worker mm9-tss-centered-10kb-10species(7): database loaded in memory.
+2018-02-09 21:27:46.743195 - Worker mm9-tss-centered-10kb-10species(2): database loaded in memory.
+2018-02-09 21:27:46.744853 - Worker mm9-tss-centered-10kb-10species(6): database loaded in memory.
+2018-02-09 21:27:46.760662 - Worker mm9-500bp-upstream-10species(1): database loaded in memory.
+2018-02-09 21:27:46.811705 - Worker mm9-tss-centered-10kb-10species(5): database loaded in memory.
+2018-02-09 21:27:46.842458 - Worker mm9-tss-centered-10kb-10species(8): database loaded in memory.
+2018-02-09 21:27:47.380635 - Worker mm9-500bp-upstream-7species(1): motif annotations loaded in memory.
+2018-02-09 21:27:47.586378 - Worker mm9-tss-centered-5kb-10species(6): motif annotations loaded in memory.
+2018-02-09 21:27:47.746622 - Worker mm9-tss-centered-5kb-10species(3): motif annotations loaded in memory.
+2018-02-09 21:27:47.760828 - Worker mm9-tss-centered-5kb-10species(8): motif annotations loaded in memory.
+2018-02-09 21:27:47.762167 - Worker mm9-tss-centered-5kb-10species(4): motif annotations loaded in memory.
+2018-02-09 21:27:47.850418 - Worker mm9-tss-centered-5kb-10species(2): motif annotations loaded in memory.
+2018-02-09 21:27:47.946086 - Worker mm9-tss-centered-5kb-7species(8): motif annotations loaded in memory.
+2018-02-09 21:27:47.982664 - Worker mm9-tss-centered-5kb-10species(7): motif annotations loaded in memory.
+2018-02-09 21:27:48.058745 - Worker mm9-tss-centered-5kb-7species(2): motif annotations loaded in memory.
+2018-02-09 21:27:48.060822 - Worker mm9-tss-centered-5kb-7species(3): motif annotations loaded in memory.
+2018-02-09 21:27:48.073798 - Worker mm9-tss-centered-5kb-10species(5): motif annotations loaded in memory.
+2018-02-09 21:27:48.162451 - Worker mm9-tss-centered-5kb-7species(1): motif annotations loaded in memory.
+2018-02-09 21:27:48.174008 - Worker mm9-tss-centered-10kb-7species(4): motif annotations loaded in memory.
+2018-02-09 21:27:48.180982 - Worker mm9-tss-centered-10kb-7species(7): motif annotations loaded in memory.
+2018-02-09 21:27:48.238786 - Worker mm9-tss-centered-5kb-7species(5): motif annotations loaded in memory.
+2018-02-09 21:27:48.242096 - Worker mm9-tss-centered-5kb-7species(4): motif annotations loaded in memory.
+2018-02-09 21:27:48.270322 - Worker mm9-tss-centered-10kb-7species(6): motif annotations loaded in memory.
+2018-02-09 21:27:48.289370 - Worker mm9-500bp-upstream-10species(3): motif annotations loaded in memory.
+2018-02-09 21:27:48.297336 - Worker mm9-500bp-upstream-10species(2): motif annotations loaded in memory.
+2018-02-09 21:27:48.305585 - Worker mm9-tss-centered-10kb-7species(8): motif annotations loaded in memory.
+2018-02-09 21:27:48.309313 - Worker mm9-tss-centered-10kb-7species(2): motif annotations loaded in memory.
+2018-02-09 21:27:48.359405 - Worker mm9-500bp-upstream-10species(4): motif annotations loaded in memory.
+2018-02-09 21:27:48.360107 - Worker mm9-tss-centered-10kb-7species(5): motif annotations loaded in memory.
+2018-02-09 21:27:48.360405 - Worker mm9-500bp-upstream-10species(5): motif annotations loaded in memory.
+2018-02-09 21:27:48.490418 - Worker mm9-tss-centered-10kb-10species(3): motif annotations loaded in memory.
+2018-02-09 21:27:48.516295 - Worker mm9-tss-centered-10kb-10species(7): motif annotations loaded in memory.
+2018-02-09 21:27:48.523545 - Worker mm9-tss-centered-10kb-7species(3): motif annotations loaded in memory.
+2018-02-09 21:27:48.536461 - Worker mm9-tss-centered-10kb-10species(6): motif annotations loaded in memory.
+2018-02-09 21:27:48.537891 - Worker mm9-tss-centered-10kb-10species(4): motif annotations loaded in memory.
+2018-02-09 21:27:48.541425 - Worker mm9-500bp-upstream-10species(6): motif annotations loaded in memory.
+2018-02-09 21:27:48.541455 - Worker mm9-500bp-upstream-10species(7): motif annotations loaded in memory.
+2018-02-09 21:27:48.565637 - Worker mm9-500bp-upstream-10species(1): motif annotations loaded in memory.
+2018-02-09 21:27:48.610676 - Worker mm9-tss-centered-10kb-10species(2): motif annotations loaded in memory.
+2018-02-09 21:27:48.490418 - Worker mm9-tss-centered-10kb-10species(3): motif annotations loaded in memory.
+2018-02-09 21:27:48.516295 - Worker mm9-tss-centered-10kb-10species(7): motif annotations loaded in memory.
+2018-02-09 21:27:48.523545 - Worker mm9-tss-centered-10kb-7species(3): motif annotations loaded in memory.
+2018-02-09 21:27:48.536461 - Worker mm9-tss-centered-10kb-10species(6): motif annotations loaded in memory.
+2018-02-09 21:27:48.537891 - Worker mm9-tss-centered-10kb-10species(4): motif annotations loaded in memory.
+2018-02-09 21:27:48.541425 - Worker mm9-500bp-upstream-10species(6): motif annotations loaded in memory.
+2018-02-09 21:27:48.541455 - Worker mm9-500bp-upstream-10species(7): motif annotations loaded in memory.
+2018-02-09 21:27:48.565637 - Worker mm9-500bp-upstream-10species(1): motif annotations loaded in memory.
+2018-02-09 21:27:48.610676 - Worker mm9-tss-centered-10kb-10species(2): motif annotations loaded in memory.
+2018-02-09 21:27:48.821125 - Worker mm9-tss-centered-10kb-10species(8): motif annotations loaded in memory.
+2018-02-09 21:27:48.828335 - Worker mm9-tss-centered-5kb-7species(7): motif annotations loaded in memory.
+2018-02-09 21:27:48.174008 - Worker mm9-tss-centered-10kb-7species(4): motif annotations loaded in memory.
+2018-02-09 21:27:48.180982 - Worker mm9-tss-centered-10kb-7species(7): motif annotations loaded in memory.
+2018-02-09 21:27:48.238786 - Worker mm9-tss-centered-5kb-7species(5): motif annotations loaded in memory.
+2018-02-09 21:27:48.242096 - Worker mm9-tss-centered-5kb-7species(4): motif annotations loaded in memory.
+2018-02-09 21:27:48.270322 - Worker mm9-tss-centered-10kb-7species(6): motif annotations loaded in memory.
+2018-02-09 21:27:48.289370 - Worker mm9-500bp-upstream-10species(3): motif annotations loaded in memory.
+2018-02-09 21:27:48.297336 - Worker mm9-500bp-upstream-10species(2): motif annotations loaded in memory.
+2018-02-09 21:27:48.305585 - Worker mm9-tss-centered-10kb-7species(8): motif annotations loaded in memory.
+2018-02-09 21:27:48.309313 - Worker mm9-tss-centered-10kb-7species(2): motif annotations loaded in memory.
+2018-02-09 21:27:48.359405 - Worker mm9-500bp-upstream-10species(4): motif annotations loaded in memory.
+2018-02-09 21:27:48.360107 - Worker mm9-tss-centered-10kb-7species(5): motif annotations loaded in memory.
+2018-02-09 21:27:48.360405 - Worker mm9-500bp-upstream-10species(5): motif annotations loaded in memory.
+2018-02-09 21:27:48.490418 - Worker mm9-tss-centered-10kb-10species(3): motif annotations loaded in memory.
+2018-02-09 21:27:48.516295 - Worker mm9-tss-centered-10kb-10species(7): motif annotations loaded in memory.
+2018-02-09 21:27:48.523545 - Worker mm9-tss-centered-10kb-7species(3): motif annotations loaded in memory.
+2018-02-09 21:27:48.536461 - Worker mm9-tss-centered-10kb-10species(6): motif annotations loaded in memory.
+2018-02-09 21:27:48.537891 - Worker mm9-tss-centered-10kb-10species(4): motif annotations loaded in memory.
+2018-02-09 21:27:48.541425 - Worker mm9-500bp-upstream-10species(6): motif annotations loaded in memory.
+2018-02-09 21:27:48.541455 - Worker mm9-500bp-upstream-10species(7): motif annotations loaded in memory.
+2018-02-09 21:27:48.565637 - Worker mm9-500bp-upstream-10species(1): motif annotations loaded in memory.
+2018-02-09 21:27:48.610676 - Worker mm9-tss-centered-10kb-10species(2): motif annotations loaded in memory.
+2018-02-09 21:27:48.821125 - Worker mm9-tss-centered-10kb-10species(8): motif annotations loaded in memory.
+2018-02-09 21:27:48.828335 - Worker mm9-tss-centered-5kb-7species(7): motif annotations loaded in memory.
+2018-02-09 21:27:49.339683 - Worker mm9-tss-centered-10kb-10species(5): motif annotations loaded in memory.
+2018-02-09 21:27:48.174008 - Worker mm9-tss-centered-10kb-7species(4): motif annotations loaded in memory.
+2018-02-09 21:27:48.180982 - Worker mm9-tss-centered-10kb-7species(7): motif annotations loaded in memory.
+2018-02-09 21:27:48.238786 - Worker mm9-tss-centered-5kb-7species(5): motif annotations loaded in memory.
+2018-02-09 21:27:48.242096 - Worker mm9-tss-centered-5kb-7species(4): motif annotations loaded in memory.
+2018-02-09 21:27:48.270322 - Worker mm9-tss-centered-10kb-7species(6): motif annotations loaded in memory.
+2018-02-09 21:27:48.289370 - Worker mm9-500bp-upstream-10species(3): motif annotations loaded in memory.
+2018-02-09 21:27:48.297336 - Worker mm9-500bp-upstream-10species(2): motif annotations loaded in memory.
+2018-02-09 21:27:48.305585 - Worker mm9-tss-centered-10kb-7species(8): motif annotations loaded in memory.
+2018-02-09 21:27:48.309313 - Worker mm9-tss-centered-10kb-7species(2): motif annotations loaded in memory.
+2018-02-09 21:27:48.359405 - Worker mm9-500bp-upstream-10species(4): motif annotations loaded in memory.
+2018-02-09 21:27:48.360107 - Worker mm9-tss-centered-10kb-7species(5): motif annotations loaded in memory.
+2018-02-09 21:27:48.360405 - Worker mm9-500bp-upstream-10species(5): motif annotations loaded in memory.
+2018-02-09 21:27:48.490418 - Worker mm9-tss-centered-10kb-10species(3): motif annotations loaded in memory.
+2018-02-09 21:27:48.516295 - Worker mm9-tss-centered-10kb-10species(7): motif annotations loaded in memory.
+2018-02-09 21:27:48.523545 - Worker mm9-tss-centered-10kb-7species(3): motif annotations loaded in memory.
+2018-02-09 21:27:48.536461 - Worker mm9-tss-centered-10kb-10species(6): motif annotations loaded in memory.
+2018-02-09 21:27:48.537891 - Worker mm9-tss-centered-10kb-10species(4): motif annotations loaded in memory.
+2018-02-09 21:27:48.541425 - Worker mm9-500bp-upstream-10species(6): motif annotations loaded in memory.
+2018-02-09 21:27:48.541455 - Worker mm9-500bp-upstream-10species(7): motif annotations loaded in memory.
+2018-02-09 21:27:48.565637 - Worker mm9-500bp-upstream-10species(1): motif annotations loaded in memory.
+2018-02-09 21:27:48.610676 - Worker mm9-tss-centered-10kb-10species(2): motif annotations loaded in memory.
+2018-02-09 21:27:48.821125 - Worker mm9-tss-centered-10kb-10species(8): motif annotations loaded in memory.
+2018-02-09 21:27:48.828335 - Worker mm9-tss-centered-5kb-7species(7): motif annotations loaded in memory.
+2018-02-09 21:27:49.339683 - Worker mm9-tss-centered-10kb-10species(5): motif annotations loaded in memory.
+2018-02-09 21:27:48.174008 - Worker mm9-tss-centered-10kb-7species(4): motif annotations loaded in memory.
+2018-02-09 21:27:48.180982 - Worker mm9-tss-centered-10kb-7species(7): motif annotations loaded in memory.
+2018-02-09 21:27:48.238786 - Worker mm9-tss-centered-5kb-7species(5): motif annotations loaded in memory.
+2018-02-09 21:27:48.242096 - Worker mm9-tss-centered-5kb-7species(4): motif annotations loaded in memory.
+2018-02-09 21:27:48.270322 - Worker mm9-tss-centered-10kb-7species(6): motif annotations loaded in memory.
+2018-02-09 21:27:48.289370 - Worker mm9-500bp-upstream-10species(3): motif annotations loaded in memory.
+2018-02-09 21:27:48.297336 - Worker mm9-500bp-upstream-10species(2): motif annotations loaded in memory.
+2018-02-09 21:27:48.305585 - Worker mm9-tss-centered-10kb-7species(8): motif annotations loaded in memory.
+2018-02-09 21:27:48.309313 - Worker mm9-tss-centered-10kb-7species(2): motif annotations loaded in memory.
+2018-02-09 21:27:48.359405 - Worker mm9-500bp-upstream-10species(4): motif annotations loaded in memory.
+2018-02-09 21:27:48.360107 - Worker mm9-tss-centered-10kb-7species(5): motif annotations loaded in memory.
+2018-02-09 21:27:48.360405 - Worker mm9-500bp-upstream-10species(5): motif annotations loaded in memory.
+2018-02-09 21:27:48.490418 - Worker mm9-tss-centered-10kb-10species(3): motif annotations loaded in memory.
+2018-02-09 21:27:48.516295 - Worker mm9-tss-centered-10kb-10species(7): motif annotations loaded in memory.
+2018-02-09 21:27:48.523545 - Worker mm9-tss-centered-10kb-7species(3): motif annotations loaded in memory.
+2018-02-09 21:27:48.536461 - Worker mm9-tss-centered-10kb-10species(6): motif annotations loaded in memory.
+2018-02-09 21:27:48.537891 - Worker mm9-tss-centered-10kb-10species(4): motif annotations loaded in memory.
+2018-02-09 21:27:48.541425 - Worker mm9-500bp-upstream-10species(6): motif annotations loaded in memory.
+2018-02-09 21:27:48.541455 - Worker mm9-500bp-upstream-10species(7): motif annotations loaded in memory.
+2018-02-09 21:27:48.565637 - Worker mm9-500bp-upstream-10species(1): motif annotations loaded in memory.
+2018-02-09 21:27:48.610676 - Worker mm9-tss-centered-10kb-10species(2): motif annotations loaded in memory.
+2018-02-09 21:27:48.821125 - Worker mm9-tss-centered-10kb-10species(8): motif annotations loaded in memory.
+2018-02-09 21:27:48.828335 - Worker mm9-tss-centered-5kb-7species(7): motif annotations loaded in memory.
+2018-02-09 21:27:49.339683 - Worker mm9-tss-centered-10kb-10species(5): motif annotations loaded in memory.
+2018-02-09 21:27:48.174008 - Worker mm9-tss-centered-10kb-7species(4): motif annotations loaded in memory.
+2018-02-09 21:27:48.180982 - Worker mm9-tss-centered-10kb-7species(7): motif annotations loaded in memory.
+2018-02-09 21:27:48.238786 - Worker mm9-tss-centered-5kb-7species(5): motif annotations loaded in memory.
+2018-02-09 21:27:48.242096 - Worker mm9-tss-centered-5kb-7species(4): motif annotations loaded in memory.
+2018-02-09 21:27:48.270322 - Worker mm9-tss-centered-10kb-7species(6): motif annotations loaded in memory.
+2018-02-09 21:27:48.289370 - Worker mm9-500bp-upstream-10species(3): motif annotations loaded in memory.
+2018-02-09 21:27:48.297336 - Worker mm9-500bp-upstream-10species(2): motif annotations loaded in memory.
+2018-02-09 21:27:48.305585 - Worker mm9-tss-centered-10kb-7species(8): motif annotations loaded in memory.
+2018-02-09 21:27:48.309313 - Worker mm9-tss-centered-10kb-7species(2): motif annotations loaded in memory.
+2018-02-09 21:27:48.359405 - Worker mm9-500bp-upstream-10species(4): motif annotations loaded in memory.
+2018-02-09 21:27:48.360107 - Worker mm9-tss-centered-10kb-7species(5): motif annotations loaded in memory.
+2018-02-09 21:27:48.360405 - Worker mm9-500bp-upstream-10species(5): motif annotations loaded in memory.
+2018-02-09 21:27:48.490418 - Worker mm9-tss-centered-10kb-10species(3): motif annotations loaded in memory.
+2018-02-09 21:27:48.516295 - Worker mm9-tss-centered-10kb-10species(7): motif annotations loaded in memory.
+2018-02-09 21:27:48.523545 - Worker mm9-tss-centered-10kb-7species(3): motif annotations loaded in memory.
+2018-02-09 21:27:48.536461 - Worker mm9-tss-centered-10kb-10species(6): motif annotations loaded in memory.
+2018-02-09 21:27:48.537891 - Worker mm9-tss-centered-10kb-10species(4): motif annotations loaded in memory.
+2018-02-09 21:27:48.541425 - Worker mm9-500bp-upstream-10species(6): motif annotations loaded in memory.
+2018-02-09 21:27:48.541455 - Worker mm9-500bp-upstream-10species(7): motif annotations loaded in memory.
+2018-02-09 21:27:48.565637 - Worker mm9-500bp-upstream-10species(1): motif annotations loaded in memory.
+2018-02-09 21:27:48.610676 - Worker mm9-tss-centered-10kb-10species(2): motif annotations loaded in memory.
+2018-02-09 21:27:48.821125 - Worker mm9-tss-centered-10kb-10species(8): motif annotations loaded in memory.
+2018-02-09 21:27:48.828335 - Worker mm9-tss-centered-5kb-7species(7): motif annotations loaded in memory.
+2018-02-09 21:27:49.339683 - Worker mm9-tss-centered-10kb-10species(5): motif annotations loaded in memory.
+2018-02-09 21:34:14.819114 - Worker mm9-500bp-upstream-10species(2): All regulomes derived.
+2018-02-09 21:34:16.349431 - Worker mm9-500bp-upstream-7species(8): All regulomes derived.
+2018-02-09 21:34:22.726647 - Worker mm9-500bp-upstream-7species(2): All regulomes derived.
+2018-02-09 21:34:44.831563 - Worker mm9-500bp-upstream-10species(8): All regulomes derived.
+2018-02-09 21:35:13.879025 - Worker mm9-500bp-upstream-10species(1): All regulomes derived.
+2018-02-09 21:35:14.448292 - Worker mm9-tss-centered-10kb-7species(2): All regulomes derived.
+2018-02-09 21:35:19.081970 - Worker mm9-tss-centered-5kb-10species(2): All regulomes derived.
+2018-02-09 21:35:28.530493 - Worker mm9-500bp-upstream-7species(1): All regulomes derived.
+2018-02-09 21:35:30.011315 - Worker mm9-500bp-upstream-7species(7): All regulomes derived.
+2018-02-09 21:35:31.644645 - Worker mm9-500bp-upstream-7species(1): Done.
+2018-02-09 21:35:32.088970 - Worker mm9-tss-centered-5kb-7species(2): All regulomes derived.
+2018-02-09 21:35:32.131216 - Worker mm9-500bp-upstream-7species(2): Done.
+2018-02-09 21:35:36.052886 - Worker mm9-500bp-upstream-7species(6): All regulomes derived.
+2018-02-09 21:35:36.306887 - Worker mm9-tss-centered-10kb-10species(2): All regulomes derived.
+2018-02-09 21:35:50.970935 - Worker mm9-tss-centered-5kb-10species(1): All regulomes derived.
+2018-02-09 21:35:55.876399 - Worker mm9-500bp-upstream-10species(7): All regulomes derived.
+2018-02-09 21:36:05.992040 - Worker mm9-tss-centered-5kb-10species(8): All regulomes derived.
+2018-02-09 21:36:13.138847 - Worker mm9-tss-centered-10kb-7species(8): All regulomes derived.
+2018-02-09 21:36:14.631357 - Worker mm9-500bp-upstream-10species(6): All regulomes derived.
+2018-02-09 21:36:15.001943 - Worker mm9-tss-centered-10kb-10species(8): All regulomes derived.
+2018-02-09 21:36:19.034978 - Worker mm9-tss-centered-5kb-7species(8): All regulomes derived.
+2018-02-09 21:36:25.148640 - Worker mm9-tss-centered-10kb-10species(1): All regulomes derived.
+2018-02-09 21:36:35.337545 - Worker mm9-tss-centered-5kb-10species(7): All regulomes derived.
+2018-02-09 21:36:35.430751 - Worker mm9-tss-centered-10kb-7species(1): All regulomes derived.
+2018-02-09 21:36:37.096413 - Worker mm9-tss-centered-5kb-7species(1): All regulomes derived.
+2018-02-09 21:36:45.787504 - Worker mm9-tss-centered-5kb-7species(7): All regulomes derived.
+2018-02-09 21:36:47.300057 - Worker mm9-500bp-upstream-10species(3): All regulomes derived.
+2018-02-09 21:36:49.411638 - Worker mm9-tss-centered-5kb-7species(6): All regulomes derived.
+2018-02-09 21:36:52.570303 - Worker mm9-500bp-upstream-7species(3): All regulomes derived.
+2018-02-09 21:36:54.395765 - Worker mm9-500bp-upstream-7species(3): Done.
+2018-02-09 21:37:13.981918 - Worker mm9-tss-centered-5kb-10species(6): All regulomes derived.
+2018-02-09 21:37:15.478246 - Worker mm9-tss-centered-10kb-7species(7): All regulomes derived.
+2018-02-09 21:37:26.602319 - Worker mm9-tss-centered-10kb-7species(6): All regulomes derived.
+2018-02-09 21:37:33.254697 - Worker mm9-tss-centered-10kb-10species(7): All regulomes derived.
+2018-02-09 21:37:40.434560 - Worker mm9-tss-centered-10kb-10species(6): All regulomes derived.
+2018-02-09 21:37:41.982367 - Worker mm9-tss-centered-5kb-10species(3): All regulomes derived.
+2018-02-09 21:38:09.259817 - Worker mm9-tss-centered-5kb-7species(3): All regulomes derived.
+2018-02-09 21:38:31.194491 - Worker mm9-tss-centered-10kb-7species(3): All regulomes derived.
+2018-02-09 21:39:19.101694 - Worker mm9-tss-centered-10kb-10species(3): All regulomes derived.
+2018-02-09 21:42:22.693163 - Worker mm9-500bp-upstream-10species(4): All regulomes derived.
+2018-02-09 21:42:33.234526 - Worker mm9-500bp-upstream-7species(4): All regulomes derived.
+2018-02-09 21:42:39.021213 - Worker mm9-500bp-upstream-7species(4): Done.
+2018-02-09 21:44:30.813141 - Worker mm9-500bp-upstream-10species(5): All regulomes derived.
+2018-02-09 21:44:56.199507 - Worker mm9-500bp-upstream-7species(5): All regulomes derived.
+2018-02-09 21:44:58.556746 - Worker mm9-500bp-upstream-7species(5): Done.
+2018-02-09 21:44:58.948338 - Worker mm9-500bp-upstream-7species(6): Done.
+2018-02-09 21:44:59.211514 - Worker mm9-500bp-upstream-7species(7): Done.
+2018-02-09 21:44:59.520358 - Worker mm9-500bp-upstream-7species(8): Done.
+2018-02-09 21:44:59.810959 - Worker mm9-tss-centered-5kb-7species(1): Done.
+2018-02-09 21:45:00.215797 - Worker mm9-tss-centered-5kb-7species(2): Done.
+2018-02-09 21:45:00.535056 - Worker mm9-tss-centered-5kb-7species(3): Done.
+2018-02-09 21:46:47.518230 - Worker mm9-tss-centered-10kb-7species(4): All regulomes derived.
+2018-02-09 21:47:13.114817 - Worker mm9-tss-centered-5kb-10species(4): All regulomes derived.
+2018-02-09 21:47:17.201773 - Worker mm9-tss-centered-5kb-7species(4): All regulomes derived.
+2018-02-09 21:47:25.118657 - Worker mm9-tss-centered-5kb-7species(4): Done.
+2018-02-09 21:48:34.219931 - Worker mm9-tss-centered-5kb-7species(5): All regulomes derived.
+2018-02-09 21:48:38.613649 - Worker mm9-tss-centered-5kb-7species(5): Done.
+2018-02-09 21:48:39.237829 - Worker mm9-tss-centered-5kb-7species(6): Done.
+2018-02-09 21:48:39.517624 - Worker mm9-tss-centered-5kb-7species(7): Done.
+2018-02-09 21:48:39.905813 - Worker mm9-tss-centered-5kb-7species(8): Done.
+2018-02-09 21:48:40.256638 - Worker mm9-tss-centered-10kb-7species(1): Done.
+2018-02-09 21:48:40.621874 - Worker mm9-tss-centered-10kb-7species(2): Done.
+2018-02-09 21:48:40.901587 - Worker mm9-tss-centered-10kb-7species(3): Done.
+2018-02-09 21:48:41.327052 - Worker mm9-tss-centered-10kb-7species(4): Done.
+2018-02-09 21:48:44.145582 - Worker mm9-tss-centered-10kb-10species(4): All regulomes derived.
+2018-02-09 21:50:17.411817 - Worker mm9-tss-centered-5kb-10species(5): All regulomes derived.
+2018-02-09 21:51:21.327697 - Worker mm9-tss-centered-10kb-7species(5): All regulomes derived.
+2018-02-09 21:51:25.587169 - Worker mm9-tss-centered-10kb-7species(5): Done.
+2018-02-09 21:51:26.219155 - Worker mm9-tss-centered-10kb-7species(6): Done.
+2018-02-09 21:51:26.495875 - Worker mm9-tss-centered-10kb-7species(7): Done.
+2018-02-09 21:51:26.852602 - Worker mm9-tss-centered-10kb-7species(8): Done.
+2018-02-09 21:51:27.164982 - Worker mm9-tss-centered-10kb-10species(1): Done.
+2018-02-09 21:51:27.518194 - Worker mm9-tss-centered-10kb-10species(2): Done.
+2018-02-09 21:51:27.829718 - Worker mm9-tss-centered-10kb-10species(3): Done.
+2018-02-09 21:51:28.249523 - Worker mm9-tss-centered-10kb-10species(4): Done.
+2018-02-09 21:54:58.448695 - Worker mm9-tss-centered-10kb-10species(5): All regulomes derived.
+2018-02-09 21:55:03.156811 - Worker mm9-tss-centered-10kb-10species(5): Done.
+2018-02-09 21:55:03.833759 - Worker mm9-tss-centered-10kb-10species(6): Done.
+2018-02-09 21:55:04.114463 - Worker mm9-tss-centered-10kb-10species(7): Done.
+2018-02-09 21:55:04.469702 - Worker mm9-tss-centered-10kb-10species(8): Done.
+2018-02-09 21:55:04.773701 - Worker mm9-500bp-upstream-10species(1): Done.
+2018-02-09 21:55:05.062058 - Worker mm9-500bp-upstream-10species(2): Done.
+2018-02-09 21:55:05.299036 - Worker mm9-500bp-upstream-10species(3): Done.
+2018-02-09 21:55:05.582577 - Worker mm9-500bp-upstream-10species(4): Done.
+2018-02-09 21:55:06.206026 - Worker mm9-500bp-upstream-10species(5): Done.
+2018-02-09 21:55:06.556737 - Worker mm9-500bp-upstream-10species(6): Done.
+2018-02-09 21:55:06.787089 - Worker mm9-500bp-upstream-10species(7): Done.
+2018-02-09 21:55:07.090231 - Worker mm9-500bp-upstream-10species(8): Done.
+2018-02-09 21:55:07.348330 - Worker mm9-tss-centered-5kb-10species(1): Done.
+2018-02-09 21:55:07.671543 - Worker mm9-tss-centered-5kb-10species(2): Done.
+2018-02-09 21:55:07.962800 - Worker mm9-tss-centered-5kb-10species(3): Done.
+2018-02-09 21:55:08.318716 - Worker mm9-tss-centered-5kb-10species(4): Done.
+2018-02-09 21:55:09.140498 - Worker mm9-tss-centered-5kb-10species(5): Done.
+2018-02-09 21:55:09.752241 - Worker mm9-tss-centered-5kb-10species(6): Done.
+2018-02-09 21:55:10.026661 - Worker mm9-tss-centered-5kb-10species(7): Done.
+2018-02-09 21:55:10.362424 - Worker mm9-tss-centered-5kb-10species(8): Done.
+2018-02-09 21:55:13.470048 - Writing results to file.
