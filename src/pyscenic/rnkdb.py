@@ -16,6 +16,8 @@ class RankingDatabase(metaclass=ABCMeta):
     """
     A class of a database of whole genome rankings. The whole genome is ranked for regulatory features of interest, e.g.
     motifs for a transcription factor.
+
+    The rankings of the genes are 0-based.
     """
 
     def __init__(self, fname: str, name: str, nomenclature: str):

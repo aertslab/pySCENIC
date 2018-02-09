@@ -4,8 +4,10 @@ import os
 import glob
 from pyscenic.rnkdb import FeatherRankingDatabase as RankingDatabase
 from pyscenic.utils import load_motif_annotations
-from pyscenic.regulome import module2df
+from pyscenic.regulome import modules2df, module2features_numba_impl
 from pyscenic.genesig import Regulome
+from functools import partial
+
 
 DATA_FOLDER = "/Users/bramvandesande/Projects/lcb/tmp"
 DATABASE_FOLDER = "/Users/bramvandesande/Projects/lcb/databases/"
@@ -162,7 +164,7 @@ MODULE1 = Regulome(name='Regulome for Bhlhe41', nomenclature='MGI',
                                  'Nfkbiz': 1086, '0610030E20Rik': 1091, 'Dync1i2': 1109, 'Rnf10': 1117, 'Etfdh': 1126,
                                  'Ldb2': 1143, 'Mettl3': 1168, 'Cyld': 1170, 'Smad5': 1183, 'Fbrsl1': 1184,
                                  'Ube4b': 1191, 'Coq6': 1194, 'Nt5c': 1196}, transcription_factor='Bhlhe41',
-                   context=frozenset({'target weight >= 0.001', 'mm9-500bp-upstream-7species'}),
+                   context=frozenset({'target weight >= 0.001'}),
                    score=0.17450369340686275)
 MODULE2 = Regulome(name='Regulome for Ahr',
                    nomenclature='MGI',
@@ -200,7 +202,7 @@ MODULE2 = Regulome(name='Regulome for Ahr',
                                  '3110002H16Rik': 0.28325916910551197, 'Slc25a31': 0.4155416912611951,
                                  'Get4': 0.1246366302020446, 'Atxn3': 4.154750518729518},
                    transcription_factor='Ahr',
-                   context=frozenset({'mm9-tss-centered-10kb-10species', 'target weight >= 0.001'}),
+                   context=frozenset({'target weight >= 0.001'}),
                    score=3.3525298840246283)
 
 
@@ -218,7 +220,12 @@ MOTIF_ANNOTATIONS = load_motif_annotations(MOTIF_ANNOTATIONS_FNAME)
 
 
 def recovery():
-    module2df(DATABASE, MODULE2, MOTIF_ANNOTATIONS, nes_threshold=2.0)
+    module2features = partial(module2features_numba_impl,
+                              rank_threshold = 1500, auc_threshold = 0.05, nes_threshold=2.0,
+                              avgrcc_sample_frac = None)
+    df = modules2df(DATABASE, [MODULE1, MODULE2], MOTIF_ANNOTATIONS, module2features_func=module2features,
+                    return_recovery_curves=True)
+    print(df)
 
 
 if __name__ == "__main__":

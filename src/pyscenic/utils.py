@@ -10,15 +10,18 @@ from typing import Sequence, Type
 import yaml
 
 
-COLUMN_NAME_MOTIF_SIMILARITY_QVALUE = 'motif_similarity_qvalue'
-COLUMN_NAME_ORTHOLOGOUS_IDENTITY = 'orthologous_identity'
+COLUMN_NAME_TF = "TF"
+COLUMN_NAME_MOTIF_ID = "MotifID"
+COLUMN_NAME_MOTIF_SIMILARITY_QVALUE = 'MotifSimilarityQvalue'
+COLUMN_NAME_ORTHOLOGOUS_IDENTITY = 'OrthologousIdentity'
+COLUMN_NAME_ANNOTATION = 'Annotation'
 
 
 def load_motif_annotations(fname: str,
                            column_names=('#motif_id', 'gene_name',
-                                         COLUMN_NAME_MOTIF_SIMILARITY_QVALUE, COLUMN_NAME_ORTHOLOGOUS_IDENTITY,
-                                         'description'),
-                           motif_similarity_fdr: float = 0.001, orthologuous_identity_threshold: float = 0.0) -> pd.DataFrame:
+                                         'motif_similarity_qvalue', 'orthologous_identity', 'description'),
+                           motif_similarity_fdr: float = 0.001,
+                           orthologous_identity_threshold: float = 0.0) -> pd.DataFrame:
     """
     Load motif annotations from a motif2TF snapshot.
 
@@ -32,8 +35,12 @@ def load_motif_annotations(fname: str,
     # Create a MultiIndex for the index combining unique gene name and motif ID. This should facilitate
     # later merging.
     df = pd.read_csv(fname, sep='\t', index_col=[1,0], usecols=column_names)
+    df.index.names = [COLUMN_NAME_TF, COLUMN_NAME_MOTIF_ID]
+    df.rename(columns={'motif_similarity_qvalue': COLUMN_NAME_MOTIF_SIMILARITY_QVALUE,
+                       'orthologous_identity': COLUMN_NAME_ORTHOLOGOUS_IDENTITY,
+                       'description': COLUMN_NAME_ANNOTATION }, inplace=True)
     df = df[(df[COLUMN_NAME_MOTIF_SIMILARITY_QVALUE] <= motif_similarity_fdr) &
-            (df[COLUMN_NAME_ORTHOLOGOUS_IDENTITY] >= orthologuous_identity_threshold)]
+            (df[COLUMN_NAME_ORTHOLOGOUS_IDENTITY] >= orthologous_identity_threshold)]
     return df
 
 
