@@ -57,7 +57,7 @@ setuptools.setup(
     version=versioneer.get_version(),
     cmdclass=versioneer.get_cmdclass(),
     description="Python implementation of the SCENIC pipeline.",
-    long_description=read('README.rst'),
+    long_description=read('README.md'),
     classifiers=[
         # Get strings from http://pypi.python.org/pypi?%3Aaction=list_classifiers
         'Development Status :: 4 - Beta',

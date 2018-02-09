@@ -25,6 +25,7 @@ from cytoolz import first
 from multiprocessing import cpu_count
 from multiprocessing_on_dill.connection import Pipe
 from multiprocessing_on_dill.context import Process
+import datetime
 
 
 COLUMN_NAME_NES = "NES"
@@ -255,7 +256,7 @@ def module2regulome(db: Type[RankingDatabase], module: Regulome, motif_annotatio
     """
 
     """
-    # TODO: First calculating a dataframe and then derive the regulomes from them introduces a performance penalty!
+    # First calculating a dataframe and then derive the regulomes from them introduces a performance penalty.
     df = module2df(db, module, motif_annotations, weighted_recovery=weighted_recovery,
                                                 return_recovery_curves=return_recovery_curves,
                                                 module2features_func=module2features_func)
@@ -332,28 +333,28 @@ class Worker(Process):
     def run(self):
         # Load ranking database in memory.
         rnkdb = MemoryDecorator(self.database)
-        print("Worker {}: database loaded in memory.".format(self.name))
+        print("{} - Worker {}: database loaded in memory.".format(datetime.datetime.now(), self.name))
 
         # Load motif annotations in memory.
         motif_annotations = load_motif_annotations(self.motif_annotations_fname,
                                                    motif_similarity_fdr=self.motif_similarity_fdr,
                                                    orthologous_identity_threshold=self.orthologuous_identity_threshold)
-        print("Worker {}: motif annotations loaded in memory.".format(self.name))
+        print("{} - Worker {}: motif annotations loaded in memory.".format(datetime.datetime.now(), self.name))
 
         # Apply module2regulome on all modules.
         def module2obj(module):
             return self.transformation_func(rnkdb, module, motif_annotations)
         is_not_none = lambda r: r is not None
         regulomes = list(filter(is_not_none, map(module2obj, self.modules)))
-        print("Worker {}: All regulomes derived.".format(self.name))
+        print("{} - Worker {}: All regulomes derived.".format(datetime.datetime.now(), self.name))
 
         # Sending information back to parent process.
         # Another approach might be to write a CSV file (for dataframes) or YAML file (for regulomes) to a temp.
         # file and share the name of the file with the parent process.
-        # TODO: Serialization introduces a performance penalty!
+        # Serialization introduces a performance penalty!
         self.sender.send(regulomes)
         self.sender.close()
-        print("Worker {}: Done.".format(self.name))
+        print("{} - Worker {}: Done.".format(datetime.datetime.now(), self.name))
 
 
 def derive_regulomes(rnkdbs: Sequence[Type[RankingDatabase]], modules: Sequence[Regulome],
