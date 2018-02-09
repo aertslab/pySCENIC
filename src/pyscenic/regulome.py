@@ -245,6 +245,7 @@ def df2regulomes(df, nomenclature, gene2weight=None) -> Sequence[Regulome]:
 
     """
     #TODO: The gene2weight only works when the dataframe contains the information of only one module.
+    #TODO: Use unique ID of modules/regulomes to resolve this issue.
     not_none = lambda r: r is not None
     return list(filter(not_none, (regulome4group(tf_name, frozenset(), df_grp['Enrichment'], nomenclature, gene2weight)
             for tf_name, df_grp in df.groupby(by=COLUMN_NAME_TF))))
