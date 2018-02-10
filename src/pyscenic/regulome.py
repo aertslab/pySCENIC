@@ -430,6 +430,8 @@ def derive_regulomes(rnkdbs: Sequence[Type[RankingDatabase]], modules: Sequence[
                                                orthologous_identity_threshold=orthologuous_identity_threshold)
 
         # Create dask graph.
+        # TODO: For performance reasons it might be better to analyze multiple modules for a database in a single
+        # TODO: node of the dask graph.
         from cytoolz.curried import filter as filtercur
         is_not_none = lambda r: r is not None
         aggregation_func = compose(list, filtercur(is_not_none)) if output == "regulomes" else pd.concat
