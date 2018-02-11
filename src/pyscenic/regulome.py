@@ -31,7 +31,6 @@ COLUMN_NAME_NES = "NES"
 COLUMN_NAME_AUC = "AUC"
 COLUMN_NAME_CONTEXT = "Context"
 COLUMN_NAME_TARGET_GENES = "TargetGenes"
-DASK_N_MODULES = 100
 
 
 __all__ = ["module2features", "module2df", "modules2df", "df2regulomes", "module2regulome", "modules2regulomes", "derive_regulomes"]
@@ -354,8 +353,7 @@ class Worker(Process):
         print("{} - Worker {}: motif annotations loaded in memory.".format(datetime.datetime.now(), self.name))
 
         # Apply transformation on all modules.
-        transform = partial(self.transform_fnc, db=rnkdb, motif_annotations=motif_annotations)
-        output = transform(self.modules)
+        output = self.transform_fnc(rnkdb, self.modules, motif_annotations=motif_annotations)
         print("{} - Worker {}: All regulomes derived.".format(datetime.datetime.now(), self.name))
 
         # Sending information back to parent process.
@@ -373,7 +371,7 @@ def derive_regulomes(rnkdbs: Sequence[Type[RankingDatabase]], modules: Sequence[
                          motif_similarity_fdr: float = 0.001, orthologuous_identity_threshold: float = 0.0,
                          avgrcc_sample_frac: float = None,
                          weighted_recovery=False, client_or_address='custom_multiprocessing',
-                         num_workers=None, output="regulomes") -> Sequence[Regulome]:
+                         num_workers=None, module_chunksize=100, output="regulomes") -> Sequence[Regulome]:
     """
     Calculate all regulomes for a given sequence of ranking databases and a sequence of co-expression modules.
 
@@ -390,8 +388,11 @@ def derive_regulomes(rnkdbs: Sequence[Type[RankingDatabase]], modules: Sequence[
     :param avgrcc_sample_frac: The fraction of the features to use for the calculation of the average curve, If None
         then all features are used.
     :param weighted_recovery: Use weights of a gene signature when calculating recovery curves?
-    :param num_workers: If not using a cluster, the number of workers to use for the calculation. None of all available CPUs need to be used.
-    :param client_or_address: The client of IP address of the scheduler when working with dask.
+    :param num_workers: If not using a cluster, the number of workers to use for the calculation.
+        None of all available CPUs need to be used.
+    :param module_chunksize: The size of the chunk to use when using the dask framework.
+    :param client_or_address: The client of IP address of the scheduler when working with dask. For local multi-core
+        systems 'custom_multiprocessing' or 'dask_multiprocessing' can be supplied.
     :param output: The type of output requested, i.e. regulomes or a dataframe.
     :return: A sequence of regulomes.
     """
@@ -442,7 +443,7 @@ def derive_regulomes(rnkdbs: Sequence[Type[RankingDatabase]], modules: Sequence[
         # For performance reasons we analyze multiple modules for a database in a single node of the dask graph.
         dask_graph = delayed(aggregation_func)(
                  (delayed(transformation_func)
-                    (db, gs_chunk, motif_annotations) for db in rnkdbs for gs_chunk in chunked_iter(modules, DASK_N_MODULES)))
+                    (db, gs_chunk, motif_annotations) for db in rnkdbs for gs_chunk in chunked_iter(modules, module_chunksize)))
 
         # Compute dask graph.
         if client_or_address == "dask_multiprocessing":

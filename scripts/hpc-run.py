@@ -18,6 +18,7 @@ def run():
     cfg.read(CONFIG_FILENAME)
 
     print("{} - Loading modules.".format(datetime.datetime.now()))
+    # Loading from YAML is extremely slow. Therefore this is a potential performance improvement.
     modules = load_from_yaml(cfg['data']['modules'])
 
     print("{} - Loading databases.".format(datetime.datetime.now()))
@@ -32,7 +33,8 @@ def run():
     mode= cfg['parameters']['mode']
     if mode == "dask_multiprocessing":
         with ProgressBar():
-            df = derive_regulomes(dbs, modules, motif_annotations_fname, output="df", client_or_address=mode)
+            df = derive_regulomes(dbs, modules, motif_annotations_fname, output="df",
+                                  client_or_address=mode, module_chunksize=cfg['parameters']['chunk_size'])
     else:
         df = derive_regulomes(dbs, modules, motif_annotations_fname, output="df", client_or_address=mode)
 
