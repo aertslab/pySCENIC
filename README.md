@@ -14,7 +14,7 @@ The successfully use this pipeline you also need auxilliary datasets:
 1. Databases ranking the whole genome of your species of interest based on regulatory features (i.e. transcription factor).
 2. Motif annotation database.
 
-To acquire these  contact [LCB](https://aertslab.org).
+To acquire these datasets please contact [LCB](https://aertslab.org).
 
 ## Tutorial
 

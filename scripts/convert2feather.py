@@ -16,4 +16,4 @@ def convert(out_folder, nomenclature, *in_fnames):
 
 
 if __name__ == "__main__":
-    convert(os.getcwd(), sys.argv[1], *sys.argv[2:])
+    convert(os.getcwd(), *sys.argv[2:])

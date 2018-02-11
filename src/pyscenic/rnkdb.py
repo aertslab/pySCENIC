@@ -294,7 +294,7 @@ class MemoryDecorator(RankingDatabase):
         return self._df.loc[:, self._df.columns.isin(gs.genes)]
 
 
-def convert2feather(fname: str, out_folder: str, name: str, nomenclature: str, extension: str="feather") -> str:
+def convert2feather(fname: str, out_folder: str, name: str, extension: str="feather") -> str:
     """
     Convert a whole genome rankings database to a feather format based database.
 
@@ -304,7 +304,6 @@ def convert2feather(fname: str, out_folder: str, name: str, nomenclature: str, e
     :param fname: The filename of the legacy
     :param out_folder: The name of the folder to write the new database to.
     :param name: The name of the rankings database.
-    :param nomenclature: The nomenclature used for the genes.
     :param extension: The extension of the new database file.
     :return: The filename of the new database.
     """
@@ -317,7 +316,8 @@ def convert2feather(fname: str, out_folder: str, name: str, nomenclature: str, e
     # Load original database into memory.
     # Caveat: the original storage format of whole genome rankings does not store the metadata, i.e. name and gene
     # nomenclature.
-    db = SQLiteRankingDatabase(fname=fname, name=name, nomenclature=nomenclature)
+    # The avoid having to specify nomenclature it is set as unknown.
+    db = SQLiteRankingDatabase(fname=fname, name=name, nomenclature="UNKNOWN")
     df = db.load_full()
     df.index.name = INDEX_NAME
     df.reset_index(inplace=True) # Index is not stored in feather format. https://github.com/wesm/feather/issues/200
