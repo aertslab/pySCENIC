@@ -19,3 +19,4 @@ snakeviz
 line-profiler
 pyyaml
 boltons
+twine
