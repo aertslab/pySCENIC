@@ -170,7 +170,7 @@ module2features = partial(module2features_numba_impl,
 
 
 def module2df(db: Type[RankingDatabase], module: Regulome, motif_annotations: pd.DataFrame,
-              weighted_recovery=False, return_recovery_curves=False, module2features_func=module2features):
+              weighted_recovery=False, return_recovery_curves=False, module2features_func=module2features) -> pd.DataFrame:
     """
 
     """
@@ -192,8 +192,8 @@ def module2df(db: Type[RankingDatabase], module: Regulome, motif_annotations: pd
                            data=rccs)
     df = pd.concat([df_annotated_features, df_rccs, df_rnks], axis=1)
 
-    # Calculate the leading edges for each row.
-    weights = np.array([module[gene] for gene in genes]) if weighted_recovery else None
+    # Calculate the leading edges for each row. Rank is discarded.
+    weights = np.array([module[gene] for gene in genes]) if weighted_recovery else np.ones(len(genes))
     df[("Enrichment", COLUMN_NAME_TARGET_GENES)] = df.apply(partial(leading_edge4row,
                                                           avg2stdrcc=avg2stdrcc, genes=genes, weights=weights), axis=1)
 
@@ -205,7 +205,7 @@ def module2df(db: Type[RankingDatabase], module: Regulome, motif_annotations: pd
 
 
 def modules2df(db: Type[RankingDatabase], modules: Sequence[Regulome], motif_annotations: pd.DataFrame,
-               weighted_recovery=False, return_recovery_curves=False, module2features_func=module2features):
+               weighted_recovery=False, return_recovery_curves=False, module2features_func=module2features) -> pd.DataFrame:
     """
 
     """
@@ -213,7 +213,7 @@ def modules2df(db: Type[RankingDatabase], modules: Sequence[Regulome], motif_ann
                       for module in modules])
 
 
-def regulome4group(tf_name, context, df_group, nomenclature, gene2weight=None) -> Optional[Regulome]:
+def regulome4group(tf_name, context, df_group, nomenclature) -> Optional[Regulome]:
     """
 
     """
@@ -223,31 +223,27 @@ def regulome4group(tf_name, context, df_group, nomenclature, gene2weight=None) -
         score = nes * -math.log(motif_similarity_qval)/MAX_VALUE if not math.isnan(motif_similarity_qval) and motif_similarity_qval != 0.0 else nes
         return score if math.isnan(orthologuous_identity) else score * orthologuous_identity
 
-    regulomes = []
-    for _, row in df_group.iterrows():
-        genes = list(map(first, row[COLUMN_NAME_TARGET_GENES]))
-        gene_weight = list(zip(genes, [gene2weight[gene] for gene in genes])) if gene2weight else genes
-        regulomes.append(Regulome(name=tf_name,
-                                      score=score(row[COLUMN_NAME_NES],
-                                                  row[COLUMN_NAME_MOTIF_SIMILARITY_QVALUE],
-                                                  row[COLUMN_NAME_ORTHOLOGOUS_IDENTITY]),
-                                      nomenclature=nomenclature,
-                                      context=context,
-                                      transcription_factor=tf_name,
-                                      gene2weights=gene_weight))
+    def row2regulome(row):
+        # The target genes as well as their weights/importances are directly taken from the dataframe.
+        return Regulome(name=tf_name,
+                 score=score(row[COLUMN_NAME_NES],
+                             row[COLUMN_NAME_MOTIF_SIMILARITY_QVALUE],
+                             row[COLUMN_NAME_ORTHOLOGOUS_IDENTITY]),
+                 nomenclature=nomenclature,
+                 context=context,
+                 transcription_factor=tf_name,
+                 gene2weights=row[COLUMN_NAME_TARGET_GENES])
 
     # Aggregate these regulomes into a single one using the union operator.
-    return reduce(Regulome.union, regulomes)
+    return reduce(Regulome.union, (row2regulome(row) for _, row in df_group.iterrows()))
 
 
-def df2regulomes(df, nomenclature, gene2weight=None) -> Sequence[Regulome]:
+def df2regulomes(df, nomenclature) -> Sequence[Regulome]:
     """
 
     """
-    #TODO: The gene2weight only works when the dataframe contains the information of only one module.
-    #TODO: Use unique ID of modules/regulomes to resolve this issue.
     not_none = lambda r: r is not None
-    return list(filter(not_none, (regulome4group(tf_name, frozenset(), df_grp['Enrichment'], nomenclature, gene2weight)
+    return list(filter(not_none, (regulome4group(tf_name, frozenset(), df_grp['Enrichment'], nomenclature)
             for tf_name, df_grp in df.groupby(by=COLUMN_NAME_TF))))
 
 
@@ -263,8 +259,23 @@ def module2regulome(db: Type[RankingDatabase], module: Regulome, motif_annotatio
                                                 module2features_func=module2features_func)
     if len(df) == 0:
         return None
-    regulomes = df2regulomes(df, module.nomenclature, module if weighted_recovery else None)
+    regulomes = df2regulomes(df, module.nomenclature)
     return first(regulomes) if len(regulomes) > 0 else None
+
+
+def modules2regulome(db: Type[RankingDatabase], modules: Sequence[Regulome], motif_annotations: pd.DataFrame,
+                    weighted_recovery=False, return_recovery_curves=False,
+                    module2features_func=module2features) -> Sequence[Regulome]:
+    """
+
+    """
+    assert len(modules) > 0
+
+    nomenclature = modules[0].nomenclature
+    df = modules2df(db, modules, motif_annotations, weighted_recovery=weighted_recovery,
+                   return_recovery_curves=return_recovery_curves,
+                   module2features_func=module2features_func)
+    return [] if len(df) == 0 else df2regulomes(df, nomenclature)
 
 
 def _prepare_client(client_or_address):
@@ -328,7 +339,7 @@ class Worker(Process):
         self.motif_annotations_fname = motif_annotations_fname
         self.motif_similarity_fdr = motif_similarity_fdr
         self.orthologuous_identity_threshold = orthologuous_identity_threshold
-        self.transformation_func = transformation_func
+        self.transform_fnc = transformation_func
         self.sender = sender
 
     def run(self):
@@ -342,18 +353,16 @@ class Worker(Process):
                                                    orthologous_identity_threshold=self.orthologuous_identity_threshold)
         print("{} - Worker {}: motif annotations loaded in memory.".format(datetime.datetime.now(), self.name))
 
-        # Apply module2regulome on all modules.
-        def module2obj(module):
-            return self.transformation_func(rnkdb, module, motif_annotations)
-        is_not_none = lambda r: r is not None
-        regulomes = list(filter(is_not_none, map(module2obj, self.modules)))
+        # Apply transformation on all modules.
+        transform = partial(self.transform_fnc, db=rnkdb, motif_annotations=motif_annotations)
+        output = transform(self.modules)
         print("{} - Worker {}: All regulomes derived.".format(datetime.datetime.now(), self.name))
 
         # Sending information back to parent process.
         # Another approach might be to write a CSV file (for dataframes) or YAML file (for regulomes) to a temp.
         # file and share the name of the file with the parent process.
         # Serialization introduces a performance penalty!
-        self.sender.send(regulomes)
+        self.sender.send(output)
         self.sender.close()
         print("{} - Worker {}: Done.".format(datetime.datetime.now(), self.name))
 
@@ -402,8 +411,10 @@ def derive_regulomes(rnkdbs: Sequence[Type[RankingDatabase]], modules: Sequence[
                               auc_threshold=auc_threshold,
                               nes_threshold=nes_threshold,
                               avgrcc_sample_frac=avgrcc_sample_frac)
-    transformation_func = partial(module2regulome, module2features_func=module2features, weighted_recovery=weighted_recovery) \
-        if output == "regulomes" else partial(module2df, module2features_func=module2features, weighted_recovery=weighted_recovery)
+    transformation_func = partial(modules2regulome, module2features_func=module2features, weighted_recovery=weighted_recovery) \
+        if output == "regulomes" else partial(modules2df, module2features_func=module2features, weighted_recovery=weighted_recovery)
+    from toolz.curried import reduce
+    aggregation_func = reduce(concat) if output == "regulomes" else pd.concat
 
     if client_or_address == 'custom_multiprocessing':
         # This implementation overcomes the I/O-bounded performance by the dask-based parallelized/distributed version.
@@ -413,7 +424,6 @@ def derive_regulomes(rnkdbs: Sequence[Type[RankingDatabase]], modules: Sequence[
         assert len(rnkdbs) <= num_workers if num_workers else cpu_count(), "The number of databases is larger than the number of cores."
         amplifier = int((num_workers if num_workers else cpu_count())/len(rnkdbs))
         print("Using {} workers.".format(len(rnkdbs) * amplifier))
-
         receivers = []
         for db in rnkdbs:
             for idx, chunk in enumerate(chunked_iter(modules, ceil(len(modules)/float(amplifier)))):
@@ -421,8 +431,7 @@ def derive_regulomes(rnkdbs: Sequence[Type[RankingDatabase]], modules: Sequence[
                 receivers.append(receiver)
                 Worker("{}({})".format(db.name, idx+1), db, chunk, motif_annotations_fname, sender,
                    motif_similarity_fdr, orthologuous_identity_threshold, transformation_func).start()
-        results = [recv.recv() for recv in receivers]
-        return reduce(concat, results) if output == "regulomes" else pd.concat(list(map(pd.concat, results)))
+        return aggregation_func([recv.recv() for recv in receivers])
     else:
         # Load motif annotations.
         motif_annotations = load_motif_annotations(motif_annotations_fname,
@@ -430,14 +439,10 @@ def derive_regulomes(rnkdbs: Sequence[Type[RankingDatabase]], modules: Sequence[
                                                orthologous_identity_threshold=orthologuous_identity_threshold)
 
         # Create dask graph.
-        # TODO: For performance reasons it might be better to analyze multiple modules for a database in a single
-        # TODO: node of the dask graph.
-        from cytoolz.curried import filter as filtercur
-        is_not_none = lambda r: r is not None
-        aggregation_func = compose(list, filtercur(is_not_none)) if output == "regulomes" else pd.concat
+        # For performance reasons we analyze multiple modules for a database in a single node of the dask graph.
         dask_graph = delayed(aggregation_func)(
                  (delayed(transformation_func)
-                    (db, gs, motif_annotations) for db in rnkdbs for gs in modules))
+                    (db, gs_chunk, motif_annotations) for db in rnkdbs for gs_chunk in chunked_iter(modules, 100)))
 
         # Compute dask graph.
         if client_or_address == "dask_multiprocessing":
