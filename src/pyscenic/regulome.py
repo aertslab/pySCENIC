@@ -16,7 +16,6 @@ from typing import Type, Sequence, Optional
 from .genesig import Regulome
 from .recovery import leading_edge4row
 import math
-from cytoolz import compose
 from itertools import chain
 from math import ceil
 from functools import partial
@@ -32,9 +31,10 @@ COLUMN_NAME_NES = "NES"
 COLUMN_NAME_AUC = "AUC"
 COLUMN_NAME_CONTEXT = "Context"
 COLUMN_NAME_TARGET_GENES = "TargetGenes"
+DASK_N_MODULES = 100
 
 
-__all__ = ["module2features", "module2df", "modules2df", "df2regulomes", "module2regulome", "derive_regulomes"]
+__all__ = ["module2features", "module2df", "modules2df", "df2regulomes", "module2regulome", "modules2regulomes", "derive_regulomes"]
 
 
 def module2features_bincount_impl(db: Type[RankingDatabase], module: Regulome, motif_annotations: pd.DataFrame,
@@ -263,7 +263,7 @@ def module2regulome(db: Type[RankingDatabase], module: Regulome, motif_annotatio
     return first(regulomes) if len(regulomes) > 0 else None
 
 
-def modules2regulome(db: Type[RankingDatabase], modules: Sequence[Regulome], motif_annotations: pd.DataFrame,
+def modules2regulomes(db: Type[RankingDatabase], modules: Sequence[Regulome], motif_annotations: pd.DataFrame,
                     weighted_recovery=False, return_recovery_curves=False,
                     module2features_func=module2features) -> Sequence[Regulome]:
     """
@@ -411,7 +411,7 @@ def derive_regulomes(rnkdbs: Sequence[Type[RankingDatabase]], modules: Sequence[
                               auc_threshold=auc_threshold,
                               nes_threshold=nes_threshold,
                               avgrcc_sample_frac=avgrcc_sample_frac)
-    transformation_func = partial(modules2regulome, module2features_func=module2features, weighted_recovery=weighted_recovery) \
+    transformation_func = partial(modules2regulomes, module2features_func=module2features, weighted_recovery=weighted_recovery) \
         if output == "regulomes" else partial(modules2df, module2features_func=module2features, weighted_recovery=weighted_recovery)
     from toolz.curried import reduce
     aggregation_func = reduce(concat) if output == "regulomes" else pd.concat
@@ -442,7 +442,7 @@ def derive_regulomes(rnkdbs: Sequence[Type[RankingDatabase]], modules: Sequence[
         # For performance reasons we analyze multiple modules for a database in a single node of the dask graph.
         dask_graph = delayed(aggregation_func)(
                  (delayed(transformation_func)
-                    (db, gs_chunk, motif_annotations) for db in rnkdbs for gs_chunk in chunked_iter(modules, 100)))
+                    (db, gs_chunk, motif_annotations) for db in rnkdbs for gs_chunk in chunked_iter(modules, DASK_N_MODULES)))
 
         # Compute dask graph.
         if client_or_address == "dask_multiprocessing":

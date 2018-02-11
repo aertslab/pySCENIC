@@ -3,18 +3,18 @@
 pySCENIC is a lightning-fast python implementation of the SCENIC pipeline (Single-CEll regulatory Network Inference and
 Clustering) which enables biologists to infer Gene Regulatory Networks and cell types from single-cell RNA-seq data.
 pySCENIC can be run on a single desktop machine but easily scales to multi-core clusters to analyze thousands of cells
-in no time. 
+in no time.
 
 ## Installation
 
-The package itself can be installed via `pip install pyscenic` 
+The package itself can be installed via `pip install pyscenic`.
 
 The successfully use this pipeline you also need auxilliary datasets:
 
 1. Databases ranking the whole genome of your species of interest based on regulatory features (i.e. transcription factor).
 2. Motif annotation database.
 
-Please contact [LCB](https://aertslab.org).
+To acquire these  contact [LCB](https://aertslab.org).
 
 ## Tutorial
 
@@ -22,18 +22,17 @@ For this tutorial 3005 single cell transcriptomes taken from the mouse brain (so
 hippocampal regions) are used as an example (cf. references).
 
 ```python
+import os
 import pandas as pd
 import numpy as np
-import os, glob
 
 from arboretum.utils import load_tf_names
 from arboretum.algo import genie3
 
-from pyscenic.rnkdb import FeatherRankingDatabase as RankingDatabase, convert2feather
+from pyscenic.rnkdb import FeatherRankingDatabase as RankingDatabase
 from pyscenic.utils import add_correlation, modules_from_genie3, save_to_yaml
 from pyscenic.regulome import derive_regulomes
 from pyscenic.aucell import create_rankings, enrichment
-
 
 DATA_FOLDER="~/tmp"
 RESOURCES_FOLDER="~/resources"
@@ -42,8 +41,8 @@ FEATHER_GLOB = os.path.join(DATABASE_FOLDER, "mm9-*.feather")
 MOTIF_ANNOTATIONS_FNAME = os.path.join(RESOURCES_FOLDER, "motifs-v9-nr.mgi-m0.001-o0.0.tbl")
 MM_TFS_FNAME = os.path.join(RESOURCES_FOLDER, 'mm_tfs.txt')
 SC_EXP_FNAME = os.path.join(RESOURCES_FOLDER, "GSE60361_C1-3005-Expression.txt")
-NOMENCLATURE = "MGI"
 REGULOMES_FNAME = os.path.join(DATA_FOLDER, "regulomes.yaml")
+NOMENCLATURE = "MGI"
 ```
 
 #### Preliminary work
@@ -96,8 +95,6 @@ dbs
      FeatherRankingDatabase(name="mm9-tss-centered-5kb-10species",nomenclature=MGI),
      FeatherRankingDatabase(name="mm9-tss-centered-10kb-7species",nomenclature=MGI),
      FeatherRankingDatabase(name="mm9-tss-centered-5kb-7species",nomenclature=MGI)]
-
-
 
 #### Phase I: Inference of co-expression modules
 
@@ -183,9 +180,8 @@ df = derive_regulomes(dbs, modules, MOTIF_ANNOTATIONS_FNAME, output="df", client
 
 #### Phase III: Cellular regulome enrichment matrix (aka AUCell)
 
-Characterize the different cells in a single-cell transcriptomics experiment by the enrichment of the regulomes.
-Enrichment of a regulome is measures as AUC of the recovery curve of the genes that define this regulome.
-
+Characterize the different cells in a single-cell transcriptomics experiment by the enrichment of the previously discovered
+regulomes. Enrichment of a regulome is measures as AUC of the recovery curve of the genes that define this regulome.
 
 ```python
 rnk_mtx = create_rankings(ex_matrix)
@@ -196,7 +192,6 @@ auc_mtx = pd.concat([enrichment(rnk_mtx.T, regulome) for regulome in regulomes])
 ## Website
 
 For more information, please visit http://scenic.aertslab.org .
-
 
 ## License
 
