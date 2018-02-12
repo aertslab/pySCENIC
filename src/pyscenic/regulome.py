@@ -407,13 +407,13 @@ def derive_regulomes(rnkdbs: Sequence[Type[RankingDatabase]], modules: Sequence[
     assert is_valid(client_or_address), "\"{}\"is not valid for parameter client_or_address.".format(client_or_address)
     assert output in {"regulomes", "df"}, "Invalid output type."
 
-    module2features = partial(module2features_numba_impl,
+    module2features_func = partial(module2features_numba_impl,
                               rank_threshold=rank_threshold,
                               auc_threshold=auc_threshold,
                               nes_threshold=nes_threshold,
                               avgrcc_sample_frac=avgrcc_sample_frac)
-    transformation_func = partial(modules2regulomes, module2features_func=module2features, weighted_recovery=weighted_recovery) \
-        if output == "regulomes" else partial(modules2df, module2features_func=module2features, weighted_recovery=weighted_recovery)
+    transformation_func = partial(modules2regulomes, module2features_func=module2features_func, weighted_recovery=weighted_recovery) \
+        if output == "regulomes" else partial(modules2df, module2features_func=module2features_func, weighted_recovery=weighted_recovery)
     from toolz.curried import reduce
     aggregation_func = reduce(concat) if output == "regulomes" else pd.concat
 

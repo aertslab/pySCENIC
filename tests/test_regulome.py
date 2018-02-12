@@ -5,7 +5,7 @@ from pyscenic.regulome import module2regulome, module2features_numba_impl, modul
 import os, yaml, glob
 from functools import partial
 from configparser import ConfigParser
-from pyscenic.rnkdb import SQLiteRankingDatabase as RankingDatabase
+from pyscenic.rnkdb import FeatherRankingDatabase as RankingDatabase, SQLiteRankingDatabase
 from pyscenic.genesig import GeneSignature, Regulome
 from pyscenic.utils import load_motif_annotations
 
@@ -234,7 +234,7 @@ def load_gs_info(section):
 
 def test_module2regulome():
     gs = GeneSignature.from_gmt(gene_separator="\t", field_separator="\t", **load_gs_info(TEST_SIGNATURE))[3]
-    db = RankingDatabase(**load_db_info(TEST_DATABASE))
+    db = SQLiteRankingDatabase(**load_db_info(TEST_DATABASE))
     module = Regulome(gs.name, gs.nomenclature, gs.gene2weights, "TP53")
     motif_annotations = load_motif_annotations(MOTIF_ANNOTATIONS_FNAME)
     reg = module2regulome(db, module, motif_annotations)
