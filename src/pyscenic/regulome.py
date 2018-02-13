@@ -12,8 +12,8 @@ from boltons.iterutils import chunked_iter
 from dask.multiprocessing import get
 from dask import delayed
 from dask.distributed import LocalCluster, Client
-from typing import Type, Sequence, Optional
-from .genesig import Regulome
+from typing import Type, Sequence, Optional, Union
+from .genesig import Regulome, GeneSignature
 from .recovery import leading_edge4row
 import math
 from itertools import chain
@@ -34,12 +34,14 @@ COLUMN_NAME_TARGET_GENES = "TargetGenes"
 COLUMN_NAME_RANK_AT_MAX = "RankAtMax"
 
 
-__all__ = ["module2features", "module2df", "modules2df", "df2regulomes", "module2regulome", "modules2regulomes", "derive_regulomes"]
+__all__ = ["module2features", "module2df", "modules2df", "df2regulomes", "module2regulome", "modules2regulomes",
+           "prune_targets", "find_motifs"]
 
 
 def module2features_bincount_impl(db: Type[RankingDatabase], module: Regulome, motif_annotations: pd.DataFrame,
                                   rank_threshold: int = 1500, auc_threshold: float = 0.05, nes_threshold=3.0,
-                                  avgrcc_sample_frac: float = None, weighted_recovery=False):
+                                  avgrcc_sample_frac: float = None, weighted_recovery=False,
+                                  filter_for_annotation=True):
     """
     Create a dataframe of enriched and annotated features a given ranking database and a co-expression module.
 
@@ -76,7 +78,7 @@ def module2features_bincount_impl(db: Type[RankingDatabase], module: Regulome, m
 
     # Find motif annotations for enriched features.
     annotated_features = pd.merge(enriched_features, motif_annotations, how="left", left_index=True, right_index=True)
-    annotated_features_idx = pd.notnull(annotated_features[COLUMN_NAME_ANNOTATION])
+    annotated_features_idx = pd.notnull(annotated_features[COLUMN_NAME_ANNOTATION]) if filter_for_annotation else np.full((len(enriched_features),), True)
     if len(annotated_features[annotated_features_idx]) == 0:
         return pd.DataFrame(), None, None, genes, None
 
@@ -102,7 +104,8 @@ def module2features_bincount_impl(db: Type[RankingDatabase], module: Regulome, m
 
 def module2features_numba_impl(db: Type[RankingDatabase], module: Regulome, motif_annotations: pd.DataFrame,
                                rank_threshold: int = 1500, auc_threshold: float = 0.05, nes_threshold=3.0,
-                               avgrcc_sample_frac: float = None, weighted_recovery=False):
+                               avgrcc_sample_frac: float = None, weighted_recovery=False,
+                               filter_for_annotation=True):
     """
     Create a dataframe of enriched and annotated features a given ranking database and a co-expression module.
 
@@ -140,7 +143,7 @@ def module2features_numba_impl(db: Type[RankingDatabase], module: Regulome, moti
 
     # Find motif annotations for enriched features.
     annotated_features = pd.merge(enriched_features, motif_annotations, how="left", left_index=True, right_index=True)
-    annotated_features_idx = pd.notnull(annotated_features[COLUMN_NAME_ANNOTATION])
+    annotated_features_idx = pd.notnull(annotated_features[COLUMN_NAME_ANNOTATION]) if filter_for_annotation else np.full((len(enriched_features),), True)
     if len(annotated_features[annotated_features_idx]) == 0:
         return pd.DataFrame(), None, None, genes, None
 
@@ -166,7 +169,7 @@ def module2features_numba_impl(db: Type[RankingDatabase], module: Regulome, moti
 
 module2features = partial(module2features_numba_impl,
                           rank_threshold = 1500, auc_threshold = 0.05, nes_threshold=3.0,
-                          avgrcc_sample_frac = None)
+                          avgrcc_sample_frac = None, filter_for_annotation=True)
 
 
 def module2df(db: Type[RankingDatabase], module: Regulome, motif_annotations: pd.DataFrame,
@@ -374,13 +377,89 @@ class Worker(Process):
         print("{} - Worker {}: Done.".format(datetime.datetime.now(), self.name))
 
 
-def derive_regulomes(rnkdbs: Sequence[Type[RankingDatabase]], modules: Sequence[Regulome],
+def _distributed_calc(rnkdbs: Sequence[Type[RankingDatabase]], modules: Sequence[Type[GeneSignature]],
+                      motif_annotations_fname: str,
+                      transform_func, aggregate_func,
+                      motif_similarity_fdr: float = 0.001, orthologuous_identity_threshold: float = 0.0,
+                      client_or_address='custom_multiprocessing',
+                      num_workers=None, module_chunksize=100) -> Union[Sequence[Regulome], pd.DataFrame]:
+    def is_valid(client_or_address):
+        if isinstance(client_or_address, int):
+            return True
+        elif isinstance(client_or_address, str) and client_or_address in {"custom_multiprocessing", "dask_multiprocessing", "local"}:
+            return True
+        elif isinstance(client_or_address, Client):
+            return True
+        return False
+    assert is_valid(client_or_address), "\"{}\"is not valid for parameter client_or_address.".format(client_or_address)
+
+    if client_or_address == 'custom_multiprocessing':
+        # This implementation overcomes the I/O-bounded performance by the dask-based parallelized/distributed version.
+        # Each worker (subprocess) loads a dedicated ranking database and motif annotation table into its own memory
+        # space before consuming module. The implementation of each worker uses the AUC-first numba JIT based implementation
+        # of the algorithm.
+        assert len(rnkdbs) <= num_workers if num_workers else cpu_count(), "The number of databases is larger than the number of cores."
+        amplifier = int((num_workers if num_workers else cpu_count())/len(rnkdbs))
+        print("Using {} workers.".format(len(rnkdbs) * amplifier))
+        receivers = []
+        for db in rnkdbs:
+            for idx, chunk in enumerate(chunked_iter(modules, ceil(len(modules)/float(amplifier)))):
+                sender, receiver = Pipe()
+                receivers.append(receiver)
+                Worker("{}({})".format(db.name, idx+1), db, chunk, motif_annotations_fname, sender,
+                       motif_similarity_fdr, orthologuous_identity_threshold, transform_func).start()
+        return aggregate_func([recv.recv() for recv in receivers])
+    else:
+        # Load motif annotations.
+        motif_annotations = load_motif_annotations(motif_annotations_fname,
+                                                   motif_similarity_fdr=motif_similarity_fdr,
+                                                   orthologous_identity_threshold=orthologuous_identity_threshold)
+
+        # Create dask graph.
+        # For performance reasons we analyze multiple modules for a database in a single node of the dask graph.
+        dask_graph = delayed(aggregate_func)(
+            (delayed(transform_func)
+             (db, gs_chunk, motif_annotations) for db in rnkdbs for gs_chunk in chunked_iter(modules, module_chunksize)))
+
+        # Compute dask graph.
+        if client_or_address == "dask_multiprocessing":
+            return dask_graph.compute(get=get, num_workers=num_workers if num_workers else cpu_count())
+        else:
+            # Run via dask.distributed framework.
+            client, shutdown_callback = _prepare_client(client_or_address)
+            try:
+                return client.compute(dask_graph)
+            finally:
+                shutdown_callback(False)
+
+
+def find_motifs(rnkdbs: Sequence[Type[RankingDatabase]], signatures: Sequence[Type[GeneSignature]],
+                motif_annotations_fname: str,
+                rank_threshold: int = 1500, auc_threshold: float = 0.05, nes_threshold=3.0,
+                motif_similarity_fdr: float = 0.001, orthologuous_identity_threshold: float = 0.0,
+                avgrcc_sample_frac: float = None,
+                weighted_recovery=False, client_or_address='custom_multiprocessing',
+                num_workers=None, module_chunksize=100) -> pd.DataFrame:
+    module2features_func = partial(module2features_numba_impl,
+                                   rank_threshold=rank_threshold,
+                                   auc_threshold=auc_threshold,
+                                   nes_threshold=nes_threshold,
+                                   avgrcc_sample_frac=avgrcc_sample_frac,
+                                   filter_for_annotation=False)
+    transformation_func = partial(modules2df, module2features_func=module2features_func, weighted_recovery=weighted_recovery)
+    aggregation_func = pd.concat
+    return _distributed_calc(rnkdbs, signatures, motif_annotations_fname, transformation_func, aggregation_func,
+                      motif_similarity_fdr, orthologuous_identity_threshold, client_or_address,
+                      num_workers, module_chunksize)
+
+
+def prune_targets(rnkdbs: Sequence[Type[RankingDatabase]], modules: Sequence[Regulome],
                          motif_annotations_fname: str,
                          rank_threshold: int = 1500, auc_threshold: float = 0.05, nes_threshold=3.0,
                          motif_similarity_fdr: float = 0.001, orthologuous_identity_threshold: float = 0.0,
                          avgrcc_sample_frac: float = None,
                          weighted_recovery=False, client_or_address='custom_multiprocessing',
-                         num_workers=None, module_chunksize=100, output="regulomes") -> Sequence[Regulome]:
+                         num_workers=None, module_chunksize=100, output="regulomes") -> Union[Sequence[Regulome], pd.DataFrame]:
     """
     Calculate all regulomes for a given sequence of ranking databases and a sequence of co-expression modules.
 
@@ -405,62 +484,18 @@ def derive_regulomes(rnkdbs: Sequence[Type[RankingDatabase]], modules: Sequence[
     :param output: The type of output requested, i.e. regulomes or a dataframe.
     :return: A sequence of regulomes.
     """
-    def is_valid(client_or_address):
-        if isinstance(client_or_address, int):
-            return True
-        elif isinstance(client_or_address, str) and client_or_address in {"custom_multiprocessing", "dask_multiprocessing", "local"}:
-            return True
-        elif isinstance(client_or_address, Client):
-            return True
-        return False
-    assert is_valid(client_or_address), "\"{}\"is not valid for parameter client_or_address.".format(client_or_address)
     assert output in {"regulomes", "df"}, "Invalid output type."
 
     module2features_func = partial(module2features_numba_impl,
                               rank_threshold=rank_threshold,
                               auc_threshold=auc_threshold,
                               nes_threshold=nes_threshold,
-                              avgrcc_sample_frac=avgrcc_sample_frac)
+                              avgrcc_sample_frac=avgrcc_sample_frac,
+                              filter_for_annotation=True)
     transformation_func = partial(modules2regulomes, module2features_func=module2features_func, weighted_recovery=weighted_recovery) \
         if output == "regulomes" else partial(modules2df, module2features_func=module2features_func, weighted_recovery=weighted_recovery)
     from toolz.curried import reduce
     aggregation_func = reduce(concat) if output == "regulomes" else pd.concat
-
-    if client_or_address == 'custom_multiprocessing':
-        # This implementation overcomes the I/O-bounded performance by the dask-based parallelized/distributed version.
-        # Each worker (subprocess) loads a dedicated ranking database and motif annotation table into its own memory
-        # space before consuming module. The implementation of each worker uses the AUC-first numba JIT based implementation
-        # of the algorithm.
-        assert len(rnkdbs) <= num_workers if num_workers else cpu_count(), "The number of databases is larger than the number of cores."
-        amplifier = int((num_workers if num_workers else cpu_count())/len(rnkdbs))
-        print("Using {} workers.".format(len(rnkdbs) * amplifier))
-        receivers = []
-        for db in rnkdbs:
-            for idx, chunk in enumerate(chunked_iter(modules, ceil(len(modules)/float(amplifier)))):
-                sender, receiver = Pipe()
-                receivers.append(receiver)
-                Worker("{}({})".format(db.name, idx+1), db, chunk, motif_annotations_fname, sender,
-                   motif_similarity_fdr, orthologuous_identity_threshold, transformation_func).start()
-        return aggregation_func([recv.recv() for recv in receivers])
-    else:
-        # Load motif annotations.
-        motif_annotations = load_motif_annotations(motif_annotations_fname,
-                                               motif_similarity_fdr=motif_similarity_fdr,
-                                               orthologous_identity_threshold=orthologuous_identity_threshold)
-
-        # Create dask graph.
-        # For performance reasons we analyze multiple modules for a database in a single node of the dask graph.
-        dask_graph = delayed(aggregation_func)(
-                 (delayed(transformation_func)
-                    (db, gs_chunk, motif_annotations) for db in rnkdbs for gs_chunk in chunked_iter(modules, module_chunksize)))
-
-        # Compute dask graph.
-        if client_or_address == "dask_multiprocessing":
-            return dask_graph.compute(get=get, num_workers=num_workers if num_workers else cpu_count())
-        else:
-            # Run via dask.distributed framework.
-            client, shutdown_callback = _prepare_client(client_or_address)
-            try:
-                return client.compute(dask_graph)
-            finally:
-                shutdown_callback(False)
+    return _distributed_calc(rnkdbs, modules, motif_annotations_fname, transformation_func, aggregation_func,
+                      motif_similarity_fdr, orthologuous_identity_threshold, client_or_address,
+                      num_workers, module_chunksize)
