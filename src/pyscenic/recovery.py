@@ -5,12 +5,36 @@ import numpy as np
 from itertools import repeat
 from typing import Type, Optional, List, Tuple
 from numba import *
+from math import ceil
 
 from .rnkdb import RankingDatabase
 from .genesig import GeneSignature, Regulome
 
 
 __all__ = ["recovery", "aucs", "enrichment4features", "enrichment4cells", "leading_edge4row"]
+
+
+def derive_rank_cutoff(auc_threshold, rank_threshold, total_genes):
+    """
+
+    :param auc_threshold:
+    :param rank_threshold:
+    :param total_genes:
+    :return:
+    """
+    assert 0 < rank_threshold < total_genes, \
+        "Rank threshold must be an integer between 1 and {0:d}".format(total_genes)
+    assert 0.0 < auc_threshold <= 1.0, "AUC threshold must be a fraction between 0.0 and 1.0"
+
+    # In the R implementation the cutoff is kept as a floating point number. This is effectively the same as rounding.
+    rank_cutoff = int(ceil(auc_threshold * total_genes))
+    assert rank_cutoff <= rank_threshold, \
+        "An AUC threshold of {0:f} corresponds to {1:d} top ranked genes/regions in the database. " \
+        "Please increase the rank threshold or decrease the AUC threshold.".format(auc_threshold, rank_cutoff)
+    # Make sure we have exacly the same AUC values as the R-SCENIC pipeline.
+    # In the latter the rank threshold is not included in AUC calculation.
+    rank_cutoff -= 1
+    return rank_cutoff
 
 
 # Do not use numba as it dwarfs the performance.
@@ -44,16 +68,8 @@ def recovery(rnk: pd.DataFrame, total_genes: int, weights: np.ndarray, rank_thre
     :return: A tuple of numpy arrays. The first array contains the recovery curves (n_features/n_cells x rank_threshold),
         the second array the AUC values (n_features/n_cells).
     """
-    assert 0 < rank_threshold < total_genes, \
-        "Rank threshold must be an integer between 1 and {0:d}".format(total_genes)
-    assert 0.0 < auc_threshold <= 1.0, "AUC threshold must be a fraction between 0.0 and 1.0"
-    rank_cutoff = int(round(auc_threshold * total_genes))
-    assert rank_cutoff <= rank_threshold, \
-        "An AUC threshold of {0:f} corresponds to {1:d} top ranked genes/regions in the database. " \
-        "Please increase the rank threshold or decrease the AUC threshold.".format(auc_threshold, rank_cutoff)
-
+    rank_cutoff = derive_rank_cutoff(auc_threshold, rank_threshold, total_genes)
     features, genes, rankings = rnk.index.values, rnk.columns.values, rnk.values
-    # TODO: It was requested to show/log a warning when not all genes in the signature have a ranking in the database.
     weights = np.insert(weights, len(weights), 0.0)
     n_features = len(features)
     rankings = np.append(rankings, np.full(shape=(n_features, 1), fill_value=total_genes), axis=1)
@@ -130,7 +146,7 @@ def enrichment4features(rnkdb: Type[RankingDatabase], gs: Type[GeneSignature], r
 
 def leading_edge(rcc: np.ndarray, avg2stdrcc: np.ndarray,
                  ranking: np.ndarray, genes: np.ndarray,
-                 weights: Optional[np.array] = None) -> List[Tuple[str,float]]:
+                 weights: Optional[np.array] = None) -> Tuple[List[Tuple[str,float]], int]:
     """
     Calculate the leading edge for a given recovery curve.
 
@@ -140,7 +156,8 @@ def leading_edge(rcc: np.ndarray, avg2stdrcc: np.ndarray,
     :param genes: The genes corresponding to the ranking available in the aforementioned parameter.
     :param weights: The weights for these genes.
     :return: The leading edge returned as a list of tuple. Each tuple associates a gene part of the leading edge with
-        its rank or with its importance (if gene signature supplied).
+        its rank or with its importance (if gene signature supplied). In addition, the rank at maximum difference is
+        returned
     """
     rank_threshold = len(rcc)
 
@@ -160,8 +177,8 @@ def leading_edge(rcc: np.ndarray, avg2stdrcc: np.ndarray,
         filtered_gene_ids = gene_ids[filtered_idx]
         return list(zip(filtered_gene_ids, weights[filtered_idx] if weights is not None else sranking[filtered_idx]))
 
-    rank, n_recovered_genes = critical_point()
-    return get_genes(rank)
+    rank_at_max, n_recovered_genes = critical_point()
+    return get_genes(rank_at_max), rank_at_max
 
 
 def leading_edge4row(row: pd.Series, avg2stdrcc: np.ndarray, genes: np.ndarray,
@@ -177,7 +194,7 @@ def leading_edge4row(row: pd.Series, avg2stdrcc: np.ndarray, genes: np.ndarray,
     :return: The leading edge returned as a list of tuple. Each tuple associates a gene part of the leading edge with
         its rank or with its importance (if gene signature supplied).
     """
-    return pd.Series(data=[leading_edge(row['Recovery'].as_matrix(), avg2stdrcc, row['Ranking'].as_matrix(), genes, weights)])
+    return pd.Series(data=leading_edge(row['Recovery'].as_matrix(), avg2stdrcc, row['Ranking'].as_matrix(), genes, weights))
 
 
 # Giving numba a signature makes the code marginally faster but with losing flexibility (only being able to use one
@@ -252,14 +269,7 @@ def aucs(rnk: pd.DataFrame, total_genes: int, weights: Optional[np.ndarray], ran
         Area Under the recovery Curve.
     :return: An array with the AUCs.
     """
-    assert 0 < rank_threshold < total_genes, \
-        "Rank threshold must be an integer between 1 and {0:d}".format(total_genes)
-    assert 0.0 < auc_threshold <= 1.0, "AUC threshold must be a fraction between 0.0 and 1.0"
-    rank_cutoff = int(round(auc_threshold * total_genes))
-    assert rank_cutoff <= rank_threshold, \
-        "An AUC threshold of {0:f} corresponds to {1:d} top ranked genes/regions in the database. " \
-        "Please increase the rank threshold or decrease the AUC threshold.".format(auc_threshold, rank_cutoff)
-
+    rank_cutoff = derive_rank_cutoff(auc_threshold, rank_threshold, total_genes)
     features, genes, rankings = rnk.index.values, rnk.columns.values, rnk.values
     y_max = weights.sum() if weights else len(genes)
     # The rankings are 0-based. The position at the rank threshold is included in the calculation.

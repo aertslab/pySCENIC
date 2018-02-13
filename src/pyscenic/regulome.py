@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-from .recovery import recovery, leading_edge, aucs as calc_aucs
+from .recovery import recovery, aucs as calc_aucs
 import pandas as pd
 import numpy as np
 from .utils import load_motif_annotations, COLUMN_NAME_MOTIF_SIMILARITY_QVALUE, COLUMN_NAME_ORTHOLOGOUS_IDENTITY, COLUMN_NAME_MOTIF_ID, COLUMN_NAME_TF, COLUMN_NAME_ANNOTATION
@@ -31,6 +31,7 @@ COLUMN_NAME_NES = "NES"
 COLUMN_NAME_AUC = "AUC"
 COLUMN_NAME_CONTEXT = "Context"
 COLUMN_NAME_TARGET_GENES = "TargetGenes"
+COLUMN_NAME_RANK_AT_MAX = "RankAtMax"
 
 
 __all__ = ["module2features", "module2df", "modules2df", "df2regulomes", "module2regulome", "modules2regulomes", "derive_regulomes"]
@@ -176,6 +177,14 @@ def module2df(db: Type[RankingDatabase], module: Regulome, motif_annotations: pd
     # Derive enriched and TF-annotated features for module.
     df_annotated_features, rccs, rankings, genes, avg2stdrcc = module2features_func(db, module, motif_annotations,
                                                                                     weighted_recovery=weighted_recovery)
+    # If less than 80% of the genes are mapped to the ranking database, the module is skipped.
+    n_missing = len(module) - len(genes)
+    frac_missing = float(n_missing)/len(module)
+    if frac_missing >= 0.20:
+        print("Less than 80% of the genes in {} could be mapped to {}. Skipping this module.".format(module.name, db.name))
+        return pd.DataFrame()
+
+    # If no annotated enriched features could be found, skip module.
     if len(df_annotated_features) == 0:
         return pd.DataFrame()
     rank_threshold = rccs.shape[1]
@@ -193,7 +202,7 @@ def module2df(db: Type[RankingDatabase], module: Regulome, motif_annotations: pd
 
     # Calculate the leading edges for each row. Rank is discarded.
     weights = np.array([module[gene] for gene in genes]) if weighted_recovery else np.ones(len(genes))
-    df[("Enrichment", COLUMN_NAME_TARGET_GENES)] = df.apply(partial(leading_edge4row,
+    df[[("Enrichment", COLUMN_NAME_TARGET_GENES), ("Enrichment", COLUMN_NAME_RANK_AT_MAX)]] = df.apply(partial(leading_edge4row,
                                                           avg2stdrcc=avg2stdrcc, genes=genes, weights=weights), axis=1)
 
     # Remove unnecessary data from dataframe.
