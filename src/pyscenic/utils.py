@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 
 import pandas as pd
+from urllib.parse import urljoin
 from .genesig import Regulome, GeneSignature
 from collections import defaultdict, Counter
 from itertools import chain
@@ -12,6 +13,7 @@ import yaml
 
 COLUMN_NAME_TF = "TF"
 COLUMN_NAME_MOTIF_ID = "MotifID"
+COLUMN_NAME_MOTIF_URL = "MotifURL"
 COLUMN_NAME_MOTIF_SIMILARITY_QVALUE = 'MotifSimilarityQvalue'
 COLUMN_NAME_ORTHOLOGOUS_IDENTITY = 'OrthologousIdentity'
 COLUMN_NAME_ANNOTATION = 'Annotation'
@@ -166,3 +168,14 @@ def load_from_yaml(fname: str) -> Sequence[Type[GeneSignature]]:
     """
     with open(fname, 'r') as f:
         return yaml.load(f.read())
+
+
+def add_motif_url(df: pd.DataFrame, base_url: str):
+    """
+
+    :param df:
+    :param base_url:
+    :return:
+    """
+    df[("Enrichment", COLUMN_NAME_MOTIF_URL)] = list(map(partial(urljoin, base=base_url), df.index.get_level_values(COLUMN_NAME_MOTIF_ID)))
+    return df

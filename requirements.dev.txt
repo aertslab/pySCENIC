@@ -20,3 +20,4 @@ line-profiler
 pyyaml
 boltons
 twine
+docopt

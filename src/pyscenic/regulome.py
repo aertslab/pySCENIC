@@ -25,6 +25,7 @@ from multiprocessing import cpu_count
 from multiprocessing_on_dill.connection import Pipe
 from multiprocessing_on_dill.context import Process
 import datetime
+from .utils import add_motif_url
 
 
 COLUMN_NAME_NES = "NES"
@@ -439,7 +440,8 @@ def find_motifs(rnkdbs: Sequence[Type[RankingDatabase]], signatures: Sequence[Ty
                 motif_similarity_fdr: float = 0.001, orthologuous_identity_threshold: float = 0.0,
                 avgrcc_sample_frac: float = None,
                 weighted_recovery=False, client_or_address='custom_multiprocessing',
-                num_workers=None, module_chunksize=100) -> pd.DataFrame:
+                num_workers=None, module_chunksize=100,
+                motif_base_url: str = "http://motifcollections.aertslab.org/v9/") -> pd.DataFrame:
     module2features_func = partial(module2features_numba_impl,
                                    rank_threshold=rank_threshold,
                                    auc_threshold=auc_threshold,
@@ -448,9 +450,10 @@ def find_motifs(rnkdbs: Sequence[Type[RankingDatabase]], signatures: Sequence[Ty
                                    filter_for_annotation=False)
     transformation_func = partial(modules2df, module2features_func=module2features_func, weighted_recovery=weighted_recovery)
     aggregation_func = pd.concat
-    return _distributed_calc(rnkdbs, signatures, motif_annotations_fname, transformation_func, aggregation_func,
+    df = _distributed_calc(rnkdbs, signatures, motif_annotations_fname, transformation_func, aggregation_func,
                       motif_similarity_fdr, orthologuous_identity_threshold, client_or_address,
                       num_workers, module_chunksize)
+    return add_motif_url(df, base_url=motif_base_url)
 
 
 def prune_targets(rnkdbs: Sequence[Type[RankingDatabase]], modules: Sequence[Regulome],

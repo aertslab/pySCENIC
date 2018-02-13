@@ -11,3 +11,4 @@ pyyaml
 boltons
 cloudpickle
 distributed
+docopt
