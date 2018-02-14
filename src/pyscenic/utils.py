@@ -3,12 +3,15 @@
 import pandas as pd
 from urllib.parse import urljoin
 from .genesig import Regulome, GeneSignature
-from collections import defaultdict, Counter
 from itertools import chain
 import numpy as np
 from functools import partial
 from typing import Sequence, Type
-import yaml
+from yaml import load, dump
+try:
+    from yaml import CLoader as Loader, CDumper as Dumper
+except ImportError:
+    from yaml import Loader, Dumper
 
 
 COLUMN_NAME_TF = "TF"
@@ -157,7 +160,7 @@ def save_to_yaml(signatures: Sequence[Type[GeneSignature]], fname: str):
     :return:
     """
     with open(fname, 'w') as f:
-        f.write(yaml.dump(signatures, default_flow_style=False))
+        f.write(dump(signatures, default_flow_style=False, Dumper=Dumper))
 
 
 def load_from_yaml(fname: str) -> Sequence[Type[GeneSignature]]:
@@ -167,7 +170,7 @@ def load_from_yaml(fname: str) -> Sequence[Type[GeneSignature]]:
     :return:
     """
     with open(fname, 'r') as f:
-        return yaml.load(f.read())
+        return load(f.read(), Loader=Loader)
 
 
 def add_motif_url(df: pd.DataFrame, base_url: str):
