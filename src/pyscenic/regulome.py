@@ -300,7 +300,8 @@ def _prepare_client(client_or_address):
     :return: a tuple: (Client instance, shutdown callback function).
     :raises: ValueError if no valid client input was provided.
     """
-    # Credits to Thomas Moerman (arboretum package).
+    # Credits to Thomas Moerman (arboretum package):
+    # https://github.com/tmoerman/arboretum/blob/b065c6eade325ace104b2bb772ad15c78d573b1b/arboretum/algo.py#L139-L185
 
     if client_or_address is None or str(client_or_address).lower() == 'local':
         local_cluster = LocalCluster(diagnostics_port=None)
