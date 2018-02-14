@@ -1,4 +1,5 @@
 cytoolz
+arboretum
 multiprocessing_on_dill
 numba
 attrs
@@ -17,7 +18,6 @@ pytest
 yappi
 snakeviz
 line-profiler
-pyyaml
 boltons
 twine
 docopt

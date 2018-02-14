@@ -49,9 +49,6 @@ def read_requirements(fname):
         return [line.rstrip() for line in file]
 
 
-version = '0.1.1'
-
-
 setuptools.setup(
     name='pyscenic',
     version=versioneer.get_version(),
@@ -82,6 +79,6 @@ setuptools.setup(
     include_package_data=True,
     install_requires=read_requirements('requirements.txt'),
     entry_points = {
-        'console_scripts': ['pyscenic = pyscenic.cli:scenic'],
+        'console_scripts': ['pyscenic = pyscenic.scenic:scenic'],
     }
 )

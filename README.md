@@ -161,7 +161,7 @@ For pySCENIC this is not required._
 #### Phase II: Prune modules for targets with cis regulatory footprints (aka RcisTarget)
 
 ```python
-df = derive_regulomes(dbs, modules, MOTIF_ANNOTATIONS_FNAME, output="df")
+df = prune_targets(dbs, modules, MOTIF_ANNOTATIONS_FNAME, output="df")
 
 regulomes = df2regulomes(df, NOMENCLATURE)
 
@@ -172,10 +172,10 @@ Multi-core systems and clusters can leveraged in the following way:
 
 ```python
 # The fastest multi-core implementation:
-df = derive_regulomes(dbs, modules, MOTIF_ANNOTATIONS_FNAME, output="df", client_or_address="custom_multiprocessing", num_workers=8)
+df = prune_targets(dbs, modules, MOTIF_ANNOTATIONS_FNAME, output="df", client_or_address="custom_multiprocessing", num_workers=8)
 
 # The clusters can be leveraged via the dask framework:
-df = derive_regulomes(dbs, modules, MOTIF_ANNOTATIONS_FNAME, output="df", client_or_address="local")
+df = prune_targets(dbs, modules, MOTIF_ANNOTATIONS_FNAME, output="df", client_or_address="local")
 ```
 
 #### Phase III: Cellular regulome enrichment matrix (aka AUCell)

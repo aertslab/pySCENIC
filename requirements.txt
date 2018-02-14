@@ -7,7 +7,7 @@ numpy
 pandas
 dask
 feather-format
-pyyaml
+arboretum
 boltons
 cloudpickle
 distributed
