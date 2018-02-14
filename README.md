@@ -5,6 +5,12 @@ Clustering) which enables biologists to infer Gene Regulatory Networks and cell 
 pySCENIC can be run on a single desktop machine but easily scales to multi-core clusters to analyze thousands of cells
 in no time.
 
+***
+
+<img src="https://upload.wikimedia.org/wikipedia/commons/e/ef/En_construccion.jpg" height="42">This project is still under development.</img> 
+
+***
+
 ## Installation
 
 The package itself can be installed via `pip install pyscenic`.
@@ -31,7 +37,7 @@ from arboretum.algo import genie3
 
 from pyscenic.rnkdb import FeatherRankingDatabase as RankingDatabase
 from pyscenic.utils import add_correlation, modules_from_genie3, save_to_yaml
-from pyscenic.regulome import derive_regulomes
+from pyscenic.regulome import prune_targets
 from pyscenic.aucell import create_rankings, enrichment
 
 DATA_FOLDER="~/tmp"
