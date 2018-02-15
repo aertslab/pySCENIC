@@ -20,4 +20,4 @@ snakeviz
 line-profiler
 boltons
 twine
-docopt
+fabric3
