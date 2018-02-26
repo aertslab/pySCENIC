@@ -11,4 +11,4 @@ arboretum
 boltons
 cloudpickle
 distributed
-docopt
+arboretum
