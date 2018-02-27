@@ -418,7 +418,13 @@ def _distributed_calc(rnkdbs: Sequence[Type[RankingDatabase]], modules: Sequence
                                                    orthologous_identity_threshold=orthologuous_identity_threshold)
 
         # Create dask graph.
-        # For performance reasons we analyze multiple modules for a database in a single node of the dask graph.
+        # For performance reasons we analyze multiple modules for a database in a single node of the dask graph:
+        # One combination of a rankings database with a single gene signature takes approximate 1 sec to complete
+        # in an isolated environment (cf. notebooks). Using dask with a dask graph where one node/task in the graph
+        # corresponds to processing one single database and a single signature results in dire performance. When
+        # resorting to a dask graph where a single node/task corresponds to processing multiple signatures on a database
+        # greatly boost performance: emperically we noticed a drop in overall duration from +4h:30m to +30m.
+        # Current (unvalidated) explanation: the overhead of the scheduler for a 1 second task is too high.
         dask_graph = delayed(aggregate_func)(
             (delayed(transform_func)
              (db, gs_chunk, motif_annotations) for db in rnkdbs for gs_chunk in chunked_iter(modules, module_chunksize)))
