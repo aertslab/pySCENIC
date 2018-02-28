@@ -21,3 +21,4 @@ line-profiler
 boltons
 twine
 fabric3
+matplotlib-venn

@@ -230,6 +230,8 @@ def create_argument_parser():
 
 
 def scenic(argv=None):
+    # TODO: Work In Progress
+    raise NotImplementedError
     parser = create_argument_parser()
     parser.parse_args(args=argv)
 

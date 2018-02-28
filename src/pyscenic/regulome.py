@@ -424,7 +424,9 @@ def _distributed_calc(rnkdbs: Sequence[Type[RankingDatabase]], modules: Sequence
         # corresponds to processing one single database and a single signature results in dire performance. When
         # resorting to a dask graph where a single node/task corresponds to processing multiple signatures on a database
         # greatly boost performance: emperically we noticed a drop in overall duration from +4h:30m to +30m.
-        # Current (unvalidated) explanation: the overhead of the scheduler for a 1 second task is too high.
+        # Current (unvalidated) explanation: the overhead of the scheduler for a 1 second task is too high. But
+        # this is refuted by this blog: http://matthewrocklin.com/blog/work/2016/05/05/performant-task-scheduling (overhead
+        # of sceduler is neglectable even if tasks/nodes take only 1s to complete.
         dask_graph = delayed(aggregate_func)(
             (delayed(transform_func)
              (db, gs_chunk, motif_annotations) for db in rnkdbs for gs_chunk in chunked_iter(modules, module_chunksize)))
