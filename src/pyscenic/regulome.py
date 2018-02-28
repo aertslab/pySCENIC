@@ -3,6 +3,7 @@
 from .recovery import recovery, aucs as calc_aucs
 import pandas as pd
 import numpy as np
+import re
 from .utils import load_motif_annotations, COLUMN_NAME_MOTIF_SIMILARITY_QVALUE, COLUMN_NAME_ORTHOLOGOUS_IDENTITY, COLUMN_NAME_MOTIF_ID, COLUMN_NAME_TF, COLUMN_NAME_ANNOTATION
 from itertools import repeat
 from .rnkdb import RankingDatabase, MemoryDecorator
@@ -37,6 +38,11 @@ COLUMN_NAME_RANK_AT_MAX = "RankAtMax"
 
 __all__ = ["module2features", "module2df", "modules2df", "df2regulomes", "module2regulome", "modules2regulomes",
            "prune_targets", "find_motifs"]
+
+
+# TODO: Rename Regulome class to Targetome class to avoid confusion.
+# TODO: Make abstraction level each function equal for better readability.
+# TODO: Rethink the names of the modules.
 
 
 def module2features_bincount_impl(db: Type[RankingDatabase], module: Regulome, motif_annotations: pd.DataFrame,
@@ -378,6 +384,9 @@ class Worker(Process):
         self.sender.close()
         print("{} - Worker {}: Done.".format(datetime.datetime.now(), self.name))
 
+# Taken from: https://www.regular-expressions.info/ip.html
+IP_PATTERN = re.compile(r"""(25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[1-9]?[0-9])\.(25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[1-9]?[0-9])\.(25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[1-9]?[0-9])\.(25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[1-9]?[0-9])""")
+
 
 def _distributed_calc(rnkdbs: Sequence[Type[RankingDatabase]], modules: Sequence[Type[GeneSignature]],
                       motif_annotations_fname: str,
@@ -385,21 +394,41 @@ def _distributed_calc(rnkdbs: Sequence[Type[RankingDatabase]], modules: Sequence
                       motif_similarity_fdr: float = 0.001, orthologuous_identity_threshold: float = 0.0,
                       client_or_address='custom_multiprocessing',
                       num_workers=None, module_chunksize=100) -> Union[Sequence[Regulome], pd.DataFrame]:
+    """
+    Perform a parallelized or distributed calculation.
+
+    :param rnkdbs: A sequence of ranking databases.
+    :param modules: A sequence of gene signatures.
+    :param motif_annotations_fname: The filename of the motif annotations to use.
+    :param transform_func: A function having a signature (Type[RankingDatabase], Sequence[Type[GeneSignature]], str) and
+        that returns Union[Sequence[Regulome]],pandas.DataFrame].
+    :param aggregate_func: A function having a signature:
+        - (Sequence[pandas.DataFrame]) => pandas.DataFrame
+        - (Sequence[Sequence[Regulome]]) => Sequence[Regulome]
+    :param motif_similarity_fdr: The maximum False Discovery Rate to find factor annotations for enriched motifs.
+    :param orthologuous_identity_threshold: The minimum orthologuous identity to find factor annotations
+        for enriched motifs.
+    :param client_or_address: The client of IP address of the scheduler when working with dask. For local multi-core
+        systems 'custom_multiprocessing' or 'dask_multiprocessing' can be supplied.
+    :param num_workers: If not using a cluster, the number of workers to use for the calculation.
+        None of all available CPUs need to be used.
+    :param module_chunksize: The size of the chunk in signatures to use when using the dask framework.
+    :return:
+    """
     def is_valid(client_or_address):
-        if isinstance(client_or_address, int):
-            return True
-        elif isinstance(client_or_address, str) and client_or_address in {"custom_multiprocessing", "dask_multiprocessing", "local"}:
+        if isinstance(client_or_address, str) and ((client_or_address in
+                                                    {"custom_multiprocessing", "dask_multiprocessing", "local"})
+                                                   or IP_PATTERN.fullmatch(client_or_address)):
             return True
         elif isinstance(client_or_address, Client):
             return True
         return False
     assert is_valid(client_or_address), "\"{}\"is not valid for parameter client_or_address.".format(client_or_address)
 
-    if client_or_address == 'custom_multiprocessing':
-        # This implementation overcomes the I/O-bounded performance by the dask-based parallelized/distributed version.
-        # Each worker (subprocess) loads a dedicated ranking database and motif annotation table into its own memory
-        # space before consuming module. The implementation of each worker uses the AUC-first numba JIT based implementation
-        # of the algorithm.
+    if client_or_address == 'custom_multiprocessing': # CUSTOM parallelized implementation.
+        # This implementation overcomes the I/O-bounded performance. Each worker (subprocess) loads a dedicated ranking
+        # database and motif annotation table into its own memory space before consuming module. The implementation of
+        # each worker uses the AUC-first numba JIT based implementation of the algorithm.
         assert len(rnkdbs) <= num_workers if num_workers else cpu_count(), "The number of databases is larger than the number of cores."
         amplifier = int((num_workers if num_workers else cpu_count())/len(rnkdbs))
         print("Using {} workers.".format(len(rnkdbs) * amplifier))
@@ -411,34 +440,50 @@ def _distributed_calc(rnkdbs: Sequence[Type[RankingDatabase]], modules: Sequence
                 Worker("{}({})".format(db.name, idx+1), db, chunk, motif_annotations_fname, sender,
                        motif_similarity_fdr, orthologuous_identity_threshold, transform_func).start()
         return aggregate_func([recv.recv() for recv in receivers])
-    else:
+    else: # DASK framework.
         # Load motif annotations.
         motif_annotations = load_motif_annotations(motif_annotations_fname,
                                                    motif_similarity_fdr=motif_similarity_fdr,
                                                    orthologous_identity_threshold=orthologuous_identity_threshold)
 
         # Create dask graph.
-        # For performance reasons we analyze multiple modules for a database in a single node of the dask graph:
-        # One combination of a rankings database with a single gene signature takes approximate 1 sec to complete
-        # in an isolated environment (cf. notebooks). Using dask with a dask graph where one node/task in the graph
-        # corresponds to processing one single database and a single signature results in dire performance. When
-        # resorting to a dask graph where a single node/task corresponds to processing multiple signatures on a database
-        # greatly boost performance: emperically we noticed a drop in overall duration from +4h:30m to +30m.
-        # Current (unvalidated) explanation: the overhead of the scheduler for a 1 second task is too high. But
-        # this is refuted by this blog: http://matthewrocklin.com/blog/work/2016/05/05/performant-task-scheduling (overhead
-        # of sceduler is neglectable even if tasks/nodes take only 1s to complete.
-        dask_graph = delayed(aggregate_func)(
-            (delayed(transform_func)
-             (db, gs_chunk, motif_annotations) for db in rnkdbs for gs_chunk in chunked_iter(modules, module_chunksize)))
+        def create_graph(client=None):
+            # In a cluster the motif annotations need to be broadcasted to all nodes. Otherwise
+            # the motif annotations need to wrapped in a delayed() construct to avoid needless pickling and
+            # unpicking between processes.
+            delayed_or_future_annotations = client.scatter(motif_annotations, broadcast=True) if client \
+                                                else delayed(motif_annotations, pure=True)
 
-        # Compute dask graph.
+            # Chunking the gene signatures might not be necessary anymore because the overhead of the dask
+            # scheduler is minimal (cf. blog http://matthewrocklin.com/blog/work/2016/05/05/performant-task-scheduling).
+            # The original behind the decision to implement this was the refuted assumption that fast executing tasks
+            # would greatly be impacted by scheduler overhead. The chunking of signatures seemed to corroborate
+            # this assumption. However, the benefit was through less pickling and unpickling of the motif annotations
+            # dataframe as this was not wrapped in a delayed() construct.
+
+            # Remark on sharing ranking databases across a cluster. Because the frontnodes of the VSC for the LCB share
+            # a file server and have a common home folder configured, these database (stored on this shared drive)
+            # can be accessed from all nodes in the cluster and can all use the same path in the configuration file.
+
+            # TODO: A potential improvement to reduce I/O contention for this shared drive (accessing the ranking
+            # TODO: database) would be to load the database in memory (using the available decorator) for each task.
+            # TODO: The penalty of loading the database in memory should be shared across multiple gene signature so
+            # TODO: in this case chunking of gene signatures is mandatory to avoid severe performance penalties.
+            return delayed(aggregate_func)(
+                        (delayed(transform_func)
+                            (db, gs_chunk, delayed_or_future_annotations)
+                                for db in rnkdbs
+                                    for gs_chunk in chunked_iter(modules, module_chunksize)))
+
+        # Compute dask graph ...
         if client_or_address == "dask_multiprocessing":
-            return dask_graph.compute(get=get, num_workers=num_workers if num_workers else cpu_count())
+            # ... via multiprocessing.
+            return create_graph().compute(get=get, num_workers=num_workers if num_workers else cpu_count())
         else:
-            # Run via dask.distributed framework.
+            # ... via dask.distributed framework.
             client, shutdown_callback = _prepare_client(client_or_address)
             try:
-                return client.compute(dask_graph)
+                return client.compute(create_graph(client))
             finally:
                 shutdown_callback(False)
 
