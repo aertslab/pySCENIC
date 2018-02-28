@@ -8,7 +8,7 @@ from arboretum.algo import grnboost2
 from arboretum.utils import load_tf_names
 from .utils import load_from_yaml, save_to_yaml
 from .rnkdb import open
-from .regulome import prune_targets as prune, find_motifs as motifs
+from .prune import prune_targets as prune, find_motifs as motifs
 from .aucell import create_rankings, enrichment
 from .genesig import GeneSignature
 import pandas as pd

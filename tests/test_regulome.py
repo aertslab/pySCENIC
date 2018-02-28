@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-from pyscenic.regulome import module2regulome, module2features_numba_impl, modules2df
+from pyscenic.algo import module2regulome, module2features_numba_impl, modules2df
 
 import os, yaml, glob
 from functools import partial
