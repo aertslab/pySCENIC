@@ -57,3 +57,33 @@ def test_weighted_auc1d():
     auc_max = 1.0 # Disable normalization.
     assert 15.0 == weighted_auc1d(ranking, weights, auc_rank_threshold, auc_max)
 
+
+def test_weighted_auc1d_batch():
+    # The assumption taken here is that for weights uniformely being set to 1.0, auc1d and
+    # weighted_auc1d should always have the same output.
+    N = 100000
+    total_genes = 100
+    for _ in range(N):
+        auc_rank_threshold = np.random.randint(2, high=total_genes)
+        n_genes = np.random.randint(20, high=total_genes)
+        ranking = np.random.randint(low=0, high=total_genes, size=n_genes)
+        weights = np.ones(n_genes)
+        auc_max = 1.0 # Disable normalization.
+        assert auc1d(ranking, auc_rank_threshold, auc_max) == weighted_auc1d(ranking, weights, auc_rank_threshold, auc_max)
+
+def test_weighted_rcc2d_batch():
+    # The assumption taken here is that for weights uniformely being set to 1.0, auc1d and
+    # weighted_auc1d should always have the same output.
+    N = 100000
+    total_genes = 100
+    for _ in range(N):
+        #rccs[row_idx, :] = np.cumsum(np.bincount(curranking, weights=weights)[:rank_threshold])
+        #ValueError: could not broadcast input array from shape (89) into shape (97)
+        auc_rank_threshold = np.random.randint(2, high=total_genes)
+        n_genes = np.random.randint(20, high=total_genes)
+        ranking = np.random.randint(low=0, high=total_genes, size=n_genes)
+        rankings = ranking.reshape((1, n_genes))
+        rankings = np.append(rankings, np.full(shape=(1, 1), fill_value=total_genes), axis=1)
+        weights = np.ones(n_genes)
+        auc_max = 1.0 # Disable normalization.
+        assert rcc2d(rankings, np.insert(weights, len(weights), 0.0), total_genes)[:, :auc_rank_threshold].sum(axis=1) == weighted_auc1d(ranking, weights, auc_rank_threshold, auc_max)
