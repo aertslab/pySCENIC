@@ -5,7 +5,6 @@ import numpy as np
 from itertools import repeat
 from typing import Type, Optional, List, Tuple
 from numba import *
-from math import ceil
 
 from .rnkdb import RankingDatabase
 from .genesig import GeneSignature, Regulome
@@ -26,8 +25,8 @@ def derive_rank_cutoff(auc_threshold, rank_threshold, total_genes):
         "Rank threshold must be an integer between 1 and {0:d}".format(total_genes)
     assert 0.0 < auc_threshold <= 1.0, "AUC threshold must be a fraction between 0.0 and 1.0"
 
-    # In the R implementation the cutoff is kept as a floating point number. This is effectively the same as rounding.
-    rank_cutoff = int(ceil(auc_threshold * total_genes))
+    # In the R implementation the cutoff is rounded.
+    rank_cutoff = int(round(auc_threshold * total_genes))
     assert rank_cutoff <= rank_threshold, \
         "An AUC threshold of {0:f} corresponds to {1:d} top ranked genes/regions in the database. " \
         "Please increase the rank threshold or decrease the AUC threshold.".format(auc_threshold, rank_cutoff)
@@ -80,7 +79,9 @@ def recovery(rnk: pd.DataFrame, total_genes: int, weights: np.ndarray, rank_thre
         return rccs, np.array([])
 
     # Calculate AUC.
-    maxauc = float(rank_cutoff * weights.sum())
+    # For reason of generating the same results as in R we introduce an error by adding one to the rank_cutoff
+    # for calculationg the maximum AUC.
+    maxauc = float((rank_cutoff+1) * weights.sum())
     # The rankings are 0-based. The position at the rank threshold is included in the calculation.
     # The maximum AUC takes this into account.
     aucs = rccs[:, :rank_cutoff].sum(axis=1) / maxauc
@@ -274,5 +275,7 @@ def aucs(rnk: pd.DataFrame, total_genes: int, weights: Optional[np.ndarray], ran
     y_max = weights.sum() if weights else len(genes)
     # The rankings are 0-based. The position at the rank threshold is included in the calculation.
     # The maximum AUC takes this into account.
-    maxauc = float(rank_cutoff * y_max)
+    # For reason of generating the same results as in R we introduce an error by adding one to the rank_cutoff
+    # for calculationg the maximum AUC.
+    maxauc = float((rank_cutoff+1) * y_max)
     return auc2d(rankings, weighted_auc1d if weights else auc1d, rank_cutoff, maxauc)
