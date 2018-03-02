@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-from pyscenic.algo import module2regulome, module2features_numba_impl, modules2df
+from pyscenic.algo import module2regulome, module2features_auc1st_impl, modules2df
 
 import os, yaml, glob
 from functools import partial
@@ -240,7 +240,7 @@ def test_module2regulome():
     reg = module2regulome(db, module, motif_annotations)
 
 def test_modules2df():
-    module2features = partial(module2features_numba_impl,
+    module2features = partial(module2features_auc1st_impl,
                               rank_threshold = 1500, auc_threshold = 0.05, nes_threshold=2.0,
                               avgrcc_sample_frac = None)
     df = modules2df(DATABASE, [MODULE1, MODULE2], MOTIF_ANNOTATIONS, module2features_func=module2features,

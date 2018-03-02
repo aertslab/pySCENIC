@@ -160,25 +160,23 @@ def leading_edge(rcc: np.ndarray, avg2stdrcc: np.ndarray,
         its rank or with its importance (if gene signature supplied). In addition, the rank at maximum difference is
         returned
     """
-    rank_threshold = len(rcc)
-
     def critical_point():
-        """ Returns (x,y). """
-        x_values = np.arange(1, rank_threshold + 1)
-        y_values = rcc - avg2stdrcc
-        y_max = y_values.max()
-        x_max = int(x_values[y_values == y_max][0])
-        return x_max, rcc[x_max - 1]
+        """ Returns (rank_at_max, max_recovery). """
+        rank_at_max = np.argmax(rcc - avg2stdrcc)
+        return rank_at_max, rcc[rank_at_max]
 
-    def get_genes(rank):
+    def get_genes(rank_at_max):
         sorted_idx = np.argsort(ranking)
         sranking = ranking[sorted_idx]
         gene_ids = genes[sorted_idx]
-        filtered_idx = sranking < rank
+        # Make sure to include the gene at the leading edge itself. This is different from the i-cisTarget implementation
+        # but is inline with the RcisTarget implementation.
+        filtered_idx = sranking <= rank_at_max
         filtered_gene_ids = gene_ids[filtered_idx]
         return list(zip(filtered_gene_ids, weights[filtered_idx] if weights is not None else sranking[filtered_idx]))
 
     rank_at_max, n_recovered_genes = critical_point()
+    # noinspection PyTypeChecker
     return get_genes(rank_at_max), rank_at_max
 
 

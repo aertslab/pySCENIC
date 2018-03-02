@@ -19,7 +19,7 @@ from multiprocessing_on_dill.connection import Pipe
 from multiprocessing_on_dill.context import Process
 import datetime
 from .utils import add_motif_url
-from .algo import module2features_numba_impl, modules2regulomes, modules2df
+from .algo import module2features_auc1st_impl, modules2regulomes, modules2df
 
 
 # Taken from: https://www.regular-expressions.info/ip.html
@@ -223,7 +223,7 @@ def find_motifs(rnkdbs: Sequence[Type[RankingDatabase]], signatures: Sequence[Ty
                 weighted_recovery=False, client_or_address='custom_multiprocessing',
                 num_workers=None, module_chunksize=100,
                 motif_base_url: str = "http://motifcollections.aertslab.org/v9/") -> pd.DataFrame:
-    module2features_func = partial(module2features_numba_impl,
+    module2features_func = partial(module2features_auc1st_impl,
                                    rank_threshold=rank_threshold,
                                    auc_threshold=auc_threshold,
                                    nes_threshold=nes_threshold,
@@ -270,12 +270,12 @@ def prune_targets(rnkdbs: Sequence[Type[RankingDatabase]], modules: Sequence[Reg
     """
     assert output in {"regulomes", "df"}, "Invalid output type."
 
-    module2features_func = partial(module2features_numba_impl,
-                              rank_threshold=rank_threshold,
-                              auc_threshold=auc_threshold,
-                              nes_threshold=nes_threshold,
-                              avgrcc_sample_frac=avgrcc_sample_frac,
-                              filter_for_annotation=True)
+    module2features_func = partial(module2features_auc1st_impl,
+                                   rank_threshold=rank_threshold,
+                                   auc_threshold=auc_threshold,
+                                   nes_threshold=nes_threshold,
+                                   avgrcc_sample_frac=avgrcc_sample_frac,
+                                   filter_for_annotation=True)
     transformation_func = partial(modules2regulomes, module2features_func=module2features_func, weighted_recovery=weighted_recovery) \
         if output == "regulomes" else partial(modules2df, module2features_func=module2features_func, weighted_recovery=weighted_recovery)
     from toolz.curried import reduce

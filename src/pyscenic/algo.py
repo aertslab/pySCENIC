@@ -26,10 +26,10 @@ COLUMN_NAME_RANK_AT_MAX = "RankAtMax"
 __all__ = ["module2features", "module2df", "modules2df", "df2regulomes", "module2regulome", "modules2regulomes"]
 
 
-def module2features_bincount_impl(db: Type[RankingDatabase], module: Regulome, motif_annotations: pd.DataFrame,
-                                  rank_threshold: int = 1500, auc_threshold: float = 0.05, nes_threshold=3.0,
-                                  avgrcc_sample_frac: float = None, weighted_recovery=False,
-                                  filter_for_annotation=True):
+def module2features_rcc4all_impl(db: Type[RankingDatabase], module: Regulome, motif_annotations: pd.DataFrame,
+                                 rank_threshold: int = 1500, auc_threshold: float = 0.05, nes_threshold=3.0,
+                                 avgrcc_sample_frac: float = None, weighted_recovery=False,
+                                 filter_for_annotation=True):
     """
     Create a dataframe of enriched and annotated features a given ranking database and a co-expression module.
 
@@ -90,10 +90,10 @@ def module2features_bincount_impl(db: Type[RankingDatabase], module: Regulome, m
     return annotated_features, rccs, rankings, genes, avg2stdrcc
 
 
-def module2features_numba_impl(db: Type[RankingDatabase], module: Regulome, motif_annotations: pd.DataFrame,
-                               rank_threshold: int = 1500, auc_threshold: float = 0.05, nes_threshold=3.0,
-                               avgrcc_sample_frac: float = None, weighted_recovery=False,
-                               filter_for_annotation=True):
+def module2features_auc1st_impl(db: Type[RankingDatabase], module: Regulome, motif_annotations: pd.DataFrame,
+                                rank_threshold: int = 1500, auc_threshold: float = 0.05, nes_threshold=3.0,
+                                avgrcc_sample_frac: float = None, weighted_recovery=False,
+                                filter_for_annotation=True):
     """
     Create a dataframe of enriched and annotated features a given ranking database and a co-expression module.
 
@@ -155,7 +155,7 @@ def module2features_numba_impl(db: Type[RankingDatabase], module: Regulome, moti
     return annotated_features, rccs, rankings, genes, avg2stdrcc
 
 
-module2features = partial(module2features_numba_impl,
+module2features = partial(module2features_auc1st_impl,
                           rank_threshold = 1500, auc_threshold = 0.05, nes_threshold=3.0,
                           avgrcc_sample_frac = None, filter_for_annotation=True)
 
