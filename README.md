@@ -37,7 +37,7 @@ from arboretum.algo import genie3
 
 from pyscenic.rnkdb import FeatherRankingDatabase as RankingDatabase
 from pyscenic.utils import add_correlation, modules_from_genie3, save_to_yaml
-from pyscenic.regulome import prune_targets
+from pyscenic.prune import prune_targets
 from pyscenic.aucell import create_rankings, enrichment
 
 DATA_FOLDER="~/tmp"
@@ -73,12 +73,9 @@ ex_matrix.shape
 
     (19970, 3005)
 
-
-_Caveat: Either the raw counts can be used, or a `log2(count+1)` transformation can be used._
-
 ##### Derive list of Transcription Factors(TF) for _Mus musculus_
 
-List of known TFs for Mm was prepared (cf. notebook).
+List of known TFs for Mm was prepared from TFCat (cf. notebook).
 
 ```python
 tf_names = load_tf_names(MM_TFS_FNAME)
@@ -104,11 +101,13 @@ dbs
 
 #### Phase I: Inference of co-expression modules
 
-In the initial phase of the pySCENIC pipeline the single cell expression profiles are used to infer co-expression modules from.
+In the initial phase of the pySCENIC pipeline the single cell expression profiles are used to infer 
+co-expression modules from.
 
 ##### Run GENIE3 from `arboretum` to infer co-expression modules
 
-The arboretum package is used for this phase of the pipeline. For this notebook only a sample of 1,000 cells is used for the co-expression module inference is used.
+The arboretum package is used for this phase of the pipeline. For this notebook only a sample of 1,000 cells is used
+for the co-expression module inference is used.
 
 
 ```python
@@ -178,7 +177,8 @@ Multi-core systems and clusters can leveraged in the following way:
 
 ```python
 # The fastest multi-core implementation:
-df = prune_targets(dbs, modules, MOTIF_ANNOTATIONS_FNAME, output="df", client_or_address="custom_multiprocessing", num_workers=8)
+df = prune_targets(dbs, modules, MOTIF_ANNOTATIONS_FNAME, output="df", 
+                    client_or_address="custom_multiprocessing", num_workers=8)
 
 # The clusters can be leveraged via the dask framework:
 df = prune_targets(dbs, modules, MOTIF_ANNOTATIONS_FNAME, output="df", client_or_address="local")

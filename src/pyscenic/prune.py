@@ -140,7 +140,7 @@ def _distributed_calc(rnkdbs: Sequence[Type[RankingDatabase]], modules: Sequence
     :param num_workers: If not using a cluster, the number of workers to use for the calculation.
         None of all available CPUs need to be used.
     :param module_chunksize: The size of the chunk in signatures to use when using the dask framework.
-    :return:
+    :return: A pandas dataframe or a sequence of regulomes (depends on aggregate function supplied).
     """
     def is_valid(client_or_address):
         if isinstance(client_or_address, str) and ((client_or_address in
@@ -223,6 +223,30 @@ def find_motifs(rnkdbs: Sequence[Type[RankingDatabase]], signatures: Sequence[Ty
                 weighted_recovery=False, client_or_address='custom_multiprocessing',
                 num_workers=None, module_chunksize=100,
                 motif_base_url: str = "http://motifcollections.aertslab.org/v9/") -> pd.DataFrame:
+    """
+    Find enriched motifs for gene signatures.
+
+    :param rnkdbs: The sequence of databases.
+    :param signatures: The sequence of gene signatures.
+    :param motif_annotations_fname: The name of the file that contains the motif annotations to use.
+    :param rank_threshold: The total number of ranked genes to take into account when creating a recovery curve.
+    :param auc_threshold: The fraction of the ranked genome to take into account for the calculation of the
+        Area Under the recovery Curve.
+    :param nes_threshold: The Normalized Enrichment Score (NES) threshold to select enriched features.
+    :param motif_similarity_fdr: The maximum False Discovery Rate to find factor annotations for enriched motifs.
+    :param orthologuous_identity_threshold: The minimum orthologuous identity to find factor annotations
+        for enriched motifs.
+    :param avgrcc_sample_frac: The fraction of the features to use for the calculation of the average curve, If None
+        then all features are used.
+    :param weighted_recovery: Use weights of a gene signature when calculating recovery curves?
+    :param client_or_address: The client of IP address of the scheduler when working with dask. For local multi-core
+        systems 'custom_multiprocessing' or 'dask_multiprocessing' can be supplied.
+    :param num_workers:  If not using a cluster, the number of workers to use for the calculation.
+        None of all available CPUs need to be used.
+    :param module_chunksize: The size of the chunk to use when using the dask framework.
+    :param motif_base_url:
+    :return: A dataframe with the enriched features.
+    """
     module2features_func = partial(module2features_auc1st_impl,
                                    rank_threshold=rank_threshold,
                                    auc_threshold=auc_threshold,
