@@ -261,6 +261,7 @@ def find_motifs(rnkdbs: Sequence[Type[RankingDatabase]], signatures: Sequence[Ty
     return add_motif_url(df, base_url=motif_base_url)
 
 
+# TODO: remove option and make different function signatures.
 def prune_targets(rnkdbs: Sequence[Type[RankingDatabase]], modules: Sequence[Regulome],
                          motif_annotations_fname: str,
                          rank_threshold: int = 1500, auc_threshold: float = 0.05, nes_threshold=3.0,
