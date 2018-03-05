@@ -9,7 +9,7 @@ from boltons.iterutils import chunked_iter
 from dask.multiprocessing import get
 from dask import delayed
 from dask.distributed import LocalCluster, Client
-from typing import Type, Sequence, Union
+from typing import Type, Sequence, Union, TypeVar, Callable
 from .genesig import Regulome, GeneSignature
 from math import ceil
 from functools import partial
@@ -20,6 +20,9 @@ from multiprocessing_on_dill.context import Process
 import datetime
 from .utils import add_motif_url
 from .algo import module2features_auc1st_impl, modules2regulomes, modules2df
+
+
+__all__ = ['prune', 'prune2df', 'find_features']
 
 
 # Taken from: https://www.regular-expressions.info/ip.html
@@ -115,14 +118,18 @@ class Worker(Process):
         print("{} - Worker {}: Done.".format(datetime.datetime.now(), self.name))
 
 
+T = TypeVar('T')
+
+
 def _distributed_calc(rnkdbs: Sequence[Type[RankingDatabase]], modules: Sequence[Type[GeneSignature]],
                       motif_annotations_fname: str,
-                      transform_func, aggregate_func,
+                      transform_func: Callable[(Type[RankingDatabase], Sequence[Type[GeneSignature]], str), T],
+                      aggregate_func: Callable[Sequence[T], T],
                       motif_similarity_fdr: float = 0.001, orthologuous_identity_threshold: float = 0.0,
                       client_or_address='custom_multiprocessing',
-                      num_workers=None, module_chunksize=100) -> Union[Sequence[Regulome], pd.DataFrame]:
+                      num_workers=None, module_chunksize=100) -> T:
     """
-    Perform a parallelized or distributed calculation.
+    Perform a parallelized or distributed calculation, either pruning targets or finding enriched motifs.
 
     :param rnkdbs: A sequence of ranking databases.
     :param modules: A sequence of gene signatures.
@@ -215,7 +222,7 @@ def _distributed_calc(rnkdbs: Sequence[Type[RankingDatabase]], modules: Sequence
                 shutdown_callback(False)
 
 
-def find_motifs(rnkdbs: Sequence[Type[RankingDatabase]], signatures: Sequence[Type[GeneSignature]],
+def find_features(rnkdbs: Sequence[Type[RankingDatabase]], signatures: Sequence[Type[GeneSignature]],
                 motif_annotations_fname: str,
                 rank_threshold: int = 1500, auc_threshold: float = 0.05, nes_threshold=3.0,
                 motif_similarity_fdr: float = 0.001, orthologuous_identity_threshold: float = 0.0,
@@ -224,7 +231,7 @@ def find_motifs(rnkdbs: Sequence[Type[RankingDatabase]], signatures: Sequence[Ty
                 num_workers=None, module_chunksize=100,
                 motif_base_url: str = "http://motifcollections.aertslab.org/v9/") -> pd.DataFrame:
     """
-    Find enriched motifs for gene signatures.
+    Find enriched features for gene signatures.
 
     :param rnkdbs: The sequence of databases.
     :param signatures: The sequence of gene signatures.
@@ -261,16 +268,17 @@ def find_motifs(rnkdbs: Sequence[Type[RankingDatabase]], signatures: Sequence[Ty
     return add_motif_url(df, base_url=motif_base_url)
 
 
-# TODO: remove option and make different function signatures.
-def prune_targets(rnkdbs: Sequence[Type[RankingDatabase]], modules: Sequence[Regulome],
+def prune(rnkdbs: Sequence[Type[RankingDatabase]], modules: Sequence[Regulome],
                          motif_annotations_fname: str,
                          rank_threshold: int = 1500, auc_threshold: float = 0.05, nes_threshold=3.0,
                          motif_similarity_fdr: float = 0.001, orthologuous_identity_threshold: float = 0.0,
                          avgrcc_sample_frac: float = None,
                          weighted_recovery=False, client_or_address='custom_multiprocessing',
-                         num_workers=None, module_chunksize=100, output="regulomes") -> Union[Sequence[Regulome], pd.DataFrame]:
+                         num_workers=None, module_chunksize=100) -> Sequence[Regulome]:
     """
     Calculate all regulomes for a given sequence of ranking databases and a sequence of co-expression modules.
+    The number of regulomes derived from the supplied modules is usually much lower. In addition, the targets of the
+    retained modules is reduced to only these ones for which a cis-regulatory footprint is present.
 
     :param rnkdbs: The sequence of databases.
     :param modules: The sequence of modules.
@@ -290,21 +298,62 @@ def prune_targets(rnkdbs: Sequence[Type[RankingDatabase]], modules: Sequence[Reg
     :param module_chunksize: The size of the chunk to use when using the dask framework.
     :param client_or_address: The client of IP address of the scheduler when working with dask. For local multi-core
         systems 'custom_multiprocessing' or 'dask_multiprocessing' can be supplied.
-    :param output: The type of output requested, i.e. regulomes or a dataframe.
     :return: A sequence of regulomes.
     """
-    assert output in {"regulomes", "df"}, "Invalid output type."
-
     module2features_func = partial(module2features_auc1st_impl,
                                    rank_threshold=rank_threshold,
                                    auc_threshold=auc_threshold,
                                    nes_threshold=nes_threshold,
                                    avgrcc_sample_frac=avgrcc_sample_frac,
                                    filter_for_annotation=True)
-    transformation_func = partial(modules2regulomes, module2features_func=module2features_func, weighted_recovery=weighted_recovery) \
-        if output == "regulomes" else partial(modules2df, module2features_func=module2features_func, weighted_recovery=weighted_recovery)
+    transformation_func = partial(modules2regulomes, module2features_func=module2features_func, weighted_recovery=weighted_recovery)
     from toolz.curried import reduce
-    aggregation_func = reduce(concat) if output == "regulomes" else pd.concat
+    aggregation_func = reduce(concat)
     return _distributed_calc(rnkdbs, modules, motif_annotations_fname, transformation_func, aggregation_func,
                       motif_similarity_fdr, orthologuous_identity_threshold, client_or_address,
                       num_workers, module_chunksize)
+
+
+def prune2df(rnkdbs: Sequence[Type[RankingDatabase]], modules: Sequence[Regulome],
+             motif_annotations_fname: str,
+             rank_threshold: int = 1500, auc_threshold: float = 0.05, nes_threshold=3.0,
+             motif_similarity_fdr: float = 0.001, orthologuous_identity_threshold: float = 0.0,
+             avgrcc_sample_frac: float = None,
+             weighted_recovery=False, client_or_address='custom_multiprocessing',
+             num_workers=None, module_chunksize=100) -> pd.DataFrame:
+    """
+    Calculate all regulomes for a given sequence of ranking databases and a sequence of co-expression modules.
+    The number of regulomes derived from the supplied modules is usually much lower. In addition, the targets of the
+    retained modules is reduced to only these ones for which a cis-regulatory footprint is present.
+
+    :param rnkdbs: The sequence of databases.
+    :param modules: The sequence of modules.
+    :param motif_annotations_fname: The name of the file that contains the motif annotations to use.
+    :param rank_threshold: The total number of ranked genes to take into account when creating a recovery curve.
+    :param auc_threshold: The fraction of the ranked genome to take into account for the calculation of the
+        Area Under the recovery Curve.
+    :param nes_threshold: The Normalized Enrichment Score (NES) threshold to select enriched features.
+    :param motif_similarity_fdr: The maximum False Discovery Rate to find factor annotations for enriched motifs.
+    :param orthologuous_identity_threshold: The minimum orthologuous identity to find factor annotations
+        for enriched motifs.
+    :param avgrcc_sample_frac: The fraction of the features to use for the calculation of the average curve, If None
+        then all features are used.
+    :param weighted_recovery: Use weights of a gene signature when calculating recovery curves?
+    :param num_workers: If not using a cluster, the number of workers to use for the calculation.
+        None of all available CPUs need to be used.
+    :param module_chunksize: The size of the chunk to use when using the dask framework.
+    :param client_or_address: The client of IP address of the scheduler when working with dask. For local multi-core
+        systems 'custom_multiprocessing' or 'dask_multiprocessing' can be supplied.
+    :return: A dataframe.
+    """
+    module2features_func = partial(module2features_auc1st_impl,
+                                   rank_threshold=rank_threshold,
+                                   auc_threshold=auc_threshold,
+                                   nes_threshold=nes_threshold,
+                                   avgrcc_sample_frac=avgrcc_sample_frac,
+                                   filter_for_annotation=True)
+    transformation_func = partial(modules2df, module2features_func=module2features_func, weighted_recovery=weighted_recovery)
+    aggregation_func = pd.concat
+    return _distributed_calc(rnkdbs, modules, motif_annotations_fname, transformation_func, aggregation_func,
+                             motif_similarity_fdr, orthologuous_identity_threshold, client_or_address,
+                             num_workers, module_chunksize)
