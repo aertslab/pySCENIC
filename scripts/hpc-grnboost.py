@@ -15,7 +15,7 @@ from functools import partial
 
 # Setting the root logger for this entire project.
 LOGGER = logging.getLogger(__name__.split(".")[0])
-CONFIG_FILENAME = os.path.join(os.path.dirname(__file__), "grnboost.ini")
+CONFIG_FILENAME = os.path.join(os.path.dirname(__file__), "hpc-grnboost.ini")
 
 
 def create_logging_handler(debug: bool) -> logging.Handler:
