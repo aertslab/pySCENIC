@@ -5,12 +5,6 @@ Clustering) which enables biologists to infer Gene Regulatory Networks and cell 
 pySCENIC can be run on a single desktop machine but easily scales to multi-core clusters to analyze thousands of cells
 in no time.
 
-***
-
-<img src="https://upload.wikimedia.org/wikipedia/commons/e/ef/En_construccion.jpg" height="42">This project is still under development.</img> 
-
-***
-
 ## Installation
 
 The package itself can be installed via `pip install pyscenic`.
@@ -18,7 +12,9 @@ The package itself can be installed via `pip install pyscenic`.
 The successfully use this pipeline you also need auxilliary datasets:
 
 1. Databases ranking the whole genome of your species of interest based on regulatory features (i.e. transcription factor).
-2. Motif annotation database.
+Ranking databases are typically stored in the [feather format](https://github.com/wesm/feather).
+2. Motif annotation database providing the missing link between an enriched motif and the transcription factor that binds
+this motif. This pipeline needs a TSV text file where every line represents a particular annotation.
 
 To acquire these datasets please contact [LCB](https://aertslab.org).
 
@@ -33,12 +29,14 @@ import pandas as pd
 import numpy as np
 
 from arboretum.utils import load_tf_names
-from arboretum.algo import genie3
+from arboretum.algo import grnboost2
 
 from pyscenic.rnkdb import FeatherRankingDatabase as RankingDatabase
 from pyscenic.utils import add_correlation, modules_from_genie3, save_to_yaml
-from pyscenic.prune import prune_targets
+from pyscenic.prune import prune, prune2df
 from pyscenic.aucell import create_rankings, enrichment
+
+import seaborn as sns
 
 DATA_FOLDER="~/tmp"
 RESOURCES_FOLDER="~/resources"
@@ -104,7 +102,7 @@ dbs
 In the initial phase of the pySCENIC pipeline the single cell expression profiles are used to infer 
 co-expression modules from.
 
-##### Run GENIE3 from `arboretum` to infer co-expression modules
+##### Run GENIE3 or GRNBoost from `arboretum` to infer co-expression modules
 
 The arboretum package is used for this phase of the pipeline. For this notebook only a sample of 1,000 cells is used
 for the co-expression module inference is used.
@@ -113,7 +111,7 @@ for the co-expression module inference is used.
 ```python
 N_SAMPLES = ex_matrix.shape[1] # Full dataset
 
-adjancencies = genie3(expression_data=ex_matrix.T.sample(n=N_SAMPLES, replace=False),
+adjancencies = grnboost2(expression_data=ex_matrix.T.sample(n=N_SAMPLES, replace=False),
                     tf_names=tf_names, verbose=True)
 ```
 
@@ -166,22 +164,34 @@ For pySCENIC this is not required._
 #### Phase II: Prune modules for targets with cis regulatory footprints (aka RcisTarget)
 
 ```python
-df = prune_targets(dbs, modules, MOTIF_ANNOTATIONS_FNAME, output="df")
+df = prune2df(dbs, modules, MOTIF_ANNOTATIONS_FNAME)
 
 regulomes = df2regulomes(df, NOMENCLATURE)
+```
+
+Directly calculating regulomes without the intermediate dataframe of enriched features is also possible.
+
+```python
+regulomes = prune(dbs, modules, MOTIF_ANNOTATIONS_FNAME)
 
 save_to_yaml(regulomes, REGULOMES_FNAME)
 ```
+
 
 Multi-core systems and clusters can leveraged in the following way:
 
 ```python
 # The fastest multi-core implementation:
-df = prune_targets(dbs, modules, MOTIF_ANNOTATIONS_FNAME, output="df", 
+df = prune2df(dbs, modules, MOTIF_ANNOTATIONS_FNAME, 
+                    client_or_address="custom_multiprocessing", num_workers=8)
+# or alternatively:
+regulomes = prune(dbs, modules, MOTIF_ANNOTATIONS_FNAME, 
                     client_or_address="custom_multiprocessing", num_workers=8)
 
 # The clusters can be leveraged via the dask framework:
-df = prune_targets(dbs, modules, MOTIF_ANNOTATIONS_FNAME, output="df", client_or_address="local")
+df = prune2df(dbs, modules, MOTIF_ANNOTATIONS_FNAME, client_or_address="local")
+# or alternatively:
+regulomes = prune(dbs, modules, MOTIF_ANNOTATIONS_FNAME, client_or_address="local")
 ```
 
 #### Phase III: Cellular regulome enrichment matrix (aka AUCell)
@@ -193,6 +203,8 @@ regulomes. Enrichment of a regulome is measures as AUC of the recovery curve of 
 rnk_mtx = create_rankings(ex_matrix)
 
 auc_mtx = pd.concat([enrichment(rnk_mtx.T, regulome) for regulome in regulomes]).unstack("Regulome")
+
+sns.clustermap(auc_mtx, figsize=(8,8))
 ```
 
 ## Website
