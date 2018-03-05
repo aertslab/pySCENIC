@@ -4,10 +4,11 @@ import os
 import sys
 import glob
 import logging
+import argparse
 from configparser import ConfigParser
 from pyscenic.utils import load_from_yaml
 from pyscenic.rnkdb import FeatherRankingDatabase as RankingDatabase
-from pyscenic.prune import prune_targets
+from pyscenic.prune import prune2df
 from dask.diagnostics import ProgressBar
 from cytoolz import mapcat
 
@@ -44,16 +45,30 @@ class NoProgressBar:
         pass
 
 
-def run(cfg_fname):
-    LOGGER.info("Using configuration {}.".format(cfg_fname))
+def create_argument_parser():
+    parser = argparse.ArgumentParser(prog='hpc-prune')
+    parser.add_argument('config_filename',
+                        type=str, default=CONFIG_FILENAME,
+                        help='Name of configuration file to use.')
+    parser.add_argument('-i', '--input',
+                        type=str,
+                        help='Intput file/stream.')
+    parser.add_argument('-o', '--output',
+                        type=str,
+                        help='Output file/stream.')
+    return parser
+
+
+def run(args):
+    LOGGER.info("Using configuration {}.".format(args.cfg_filename))
     cfg = ConfigParser()
-    cfg.read(cfg_fname)
+    cfg.read(args.cfg_filename)
 
     LOGGER.info("Loading modules.")
     # Loading from YAML is extremely slow. Therefore this is a potential performance improvement.
     # Potential improvements are switching to JSON or to use a CLoader:
     # https://stackoverflow.com/questions/27743711/can-i-speedup-yaml
-    modules = load_from_yaml(cfg['data']['modules'])
+    modules = load_from_yaml(cfg['data']['modules'] if not args.input else args.input)
 
     LOGGER.info("Loading databases.")
     nomenclature = cfg['parameters']['nomenclature']
@@ -66,18 +81,18 @@ def run(cfg_fname):
     motif_annotations_fname = cfg['data']['motif_annotations']
     mode= cfg['parameters']['mode']
     with ProgressBar() if mode == "dask_multiprocessing" else NoProgressBar():
-        df = prune_targets(dbs, modules, motif_annotations_fname,
+        df = prune2df(dbs, modules, motif_annotations_fname,
                                   rank_threshold=int(cfg['parameters']['rank_threshold']),
                                   auc_threshold=float(cfg['parameters']['auc_threshold']),
                                   nes_threshold=float(cfg['parameters']['nes_threshold']),
-                                  output="df",
                                   client_or_address=mode,
                                   module_chunksize=cfg['parameters']['chunk_size'],
                                   num_workers=int(cfg['parameters']['num_cores']))
 
     LOGGER.info("Writing results to file.")
-    df.to_csv(cfg['parameters']['output'])
+    df.to_csv(cfg['parameters']['output'] if not args.output else args.output)
 
 
 if __name__ == "__main__":
-    run(sys.argv[1] if len(sys.argv) == 2 else CONFIG_FILENAME)
+    parser = create_argument_parser()
+    run(parser.parse_args())
