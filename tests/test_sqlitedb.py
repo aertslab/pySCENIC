@@ -1,45 +1,38 @@
 # -*- coding: utf-8 -*-
 
 import pytest
-import os
-from configparser import ConfigParser
 from pyscenic.rnkdb import SQLiteRankingDatabase as RankingDatabase
 from pyscenic.genesig import GeneSignature
 
 
-TEST_DATABASE = "hg19-500bp-upstream-10species"
-TEST_SIGNATURE = "msigdb_cancer_c6"
 
+NOMENCLATURE = "HGNC"
+TEST_DATABASE_FNAME = "../resources/hg19-tss-centered-5kb-10species.mc9nr.db"
+TEST_DATABASE_NAME = "hg19-tss-centered-5kb-10species"
+TEST_SIGNATURE_FNAME = "../resources/c6.all.v6.1.symbols.gmt.txt"
 
-def load_db_info(section):
-    config = ConfigParser()
-    config.read(os.path.join(os.path.dirname(__file__), 'test_sqlitedb.ini'))
-    return config[section]
 
 @pytest.fixture
 def db():
-    return RankingDatabase(**load_db_info(TEST_DATABASE))
-
-def load_gs_info(section):
-    config = ConfigParser()
-    config.read(os.path.join(os.path.dirname(__file__), 'test_genesig.ini'))
-    return config[section]
+    return RankingDatabase(TEST_DATABASE_FNAME, TEST_DATABASE_NAME, NOMENCLATURE)
 
 @pytest.fixture
 def gs():
-    return GeneSignature.from_gmt(gene_separator="\t", field_separator="\t", **load_gs_info(TEST_SIGNATURE))[0]
+    return GeneSignature.from_gmt(TEST_SIGNATURE_FNAME, NOMENCLATURE,
+                                  gene_separator="\t", field_separator="\t", )[0]
+
 
 def test_init(db):
-    assert db.name == "hg19-500bp-upstream-10species"
-    assert db.nomenclature == "HGNC"
+    assert db.name == TEST_DATABASE_NAME
+    assert db.nomenclature == NOMENCLATURE
 
 def test_total_genes(db):
-    assert db.total_genes == 22284
+    assert db.total_genes == 29
 
 def test_load_full(db):
     rankings = db.load_full()
     assert len(rankings.index) == 24453
-    assert len(rankings.columns) == 22284
+    assert len(rankings.columns) == 29
 
 def test_load(db, gs):
     rankings = db.load(gs)

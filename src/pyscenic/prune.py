@@ -1,32 +1,41 @@
 # -*- coding: utf-8 -*-
 
-import pandas as pd
+import datetime
 import re
-from .utils import load_motif_annotations
-from .rnkdb import RankingDatabase, MemoryDecorator
-from operator import concat
-from boltons.iterutils import chunked_iter
-from dask.multiprocessing import get
-from dask import delayed
-from dask.distributed import LocalCluster, Client
-from typing import Type, Sequence, Union, TypeVar, Callable
-from .genesig import Regulome, GeneSignature
 from math import ceil
 from functools import partial
+from operator import concat
+from typing import Type, Sequence, TypeVar, Callable
+
+import pandas as pd
+
 # Using multiprocessing using dill package for pickling to avoid strange bugs.
 from multiprocessing import cpu_count
 from multiprocessing_on_dill.connection import Pipe
 from multiprocessing_on_dill.context import Process
-import datetime
+
+from boltons.iterutils import chunked_iter
+
+from dask.multiprocessing import get
+from dask import delayed
+from dask.distributed import LocalCluster, Client
+
+from .genesig import Regulome, GeneSignature
+from .utils import load_motif_annotations
+from .rnkdb import RankingDatabase, MemoryDecorator
 from .utils import add_motif_url
-from .algo import module2features_auc1st_impl, modules2regulomes, modules2df
+from .transform import module2features_auc1st_impl, modules2regulomes, modules2df, df2regulomes
 
 
-__all__ = ['prune', 'prune2df', 'find_features']
+__all__ = ['prune', 'prune2df', 'find_features', 'df2regulomes']
 
 
 # Taken from: https://www.regular-expressions.info/ip.html
-IP_PATTERN = re.compile(r"""(25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[1-9]?[0-9])\.(25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[1-9]?[0-9])\.(25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[1-9]?[0-9])\.(25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[1-9]?[0-9])""")
+IP_PATTERN = re.compile(
+    r"""(25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[1-9]?[0-9])\.""" 
+    r"""(25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[1-9]?[0-9])\."""
+    r"""(25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[1-9]?[0-9])\."""
+    r"""(25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[1-9]?[0-9])""")
 
 
 def _prepare_client(client_or_address):
@@ -123,8 +132,8 @@ T = TypeVar('T')
 
 def _distributed_calc(rnkdbs: Sequence[Type[RankingDatabase]], modules: Sequence[Type[GeneSignature]],
                       motif_annotations_fname: str,
-                      transform_func: Callable[(Type[RankingDatabase], Sequence[Type[GeneSignature]], str), T],
-                      aggregate_func: Callable[Sequence[T], T],
+                      transform_func: Callable[[Type[RankingDatabase], Sequence[Type[GeneSignature]], str], T],
+                      aggregate_func: Callable[[Sequence[T]], T],
                       motif_similarity_fdr: float = 0.001, orthologuous_identity_threshold: float = 0.0,
                       client_or_address='custom_multiprocessing',
                       num_workers=None, module_chunksize=100) -> T:
@@ -357,3 +366,4 @@ def prune2df(rnkdbs: Sequence[Type[RankingDatabase]], modules: Sequence[Regulome
     return _distributed_calc(rnkdbs, modules, motif_annotations_fname, transformation_func, aggregation_func,
                              motif_similarity_fdr, orthologuous_identity_threshold, client_or_address,
                              num_workers, module_chunksize)
+

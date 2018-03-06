@@ -2,31 +2,32 @@
 
 from pyscenic.recovery import enrichment4features as enrichment, auc1d, weighted_auc1d, rcc2d
 
-import os
+import pytest
 import numpy as np
-from configparser import ConfigParser
-from pyscenic.rnkdb import SQLiteRankingDatabase as RankingDatabase
+from pyscenic.rnkdb import FeatherRankingDatabase as RankingDatabase
 from pyscenic.genesig import GeneSignature
 
 
-TEST_DATABASE = "hg19-500bp-upstream-10species"
-TEST_SIGNATURE = "msigdb_cancer_c6"
+NOMENCLATURE = "HGNC"
+TEST_DATABASE_FNAME = "../resources/hg19-tss-centered-10kb-10species.mc9nr.feather"
+TEST_DATABASE_NAME = "hg19-tss-centered-10kb-10species"
+TEST_SIGNATURE_FNAME = "../resources/c6.all.v6.1.symbols.gmt.txt"
 
 
-def load_db_info(section):
-    config = ConfigParser()
-    config.read(os.path.join(os.path.dirname(__file__), 'test_sqlitedb.ini'))
-    return config[section]
+@pytest.fixture
+def db():
+    return RankingDatabase(TEST_DATABASE_FNAME, TEST_DATABASE_NAME, NOMENCLATURE)
 
-def load_gs_info(section):
-    config = ConfigParser()
-    config.read(os.path.join(os.path.dirname(__file__), 'test_genesig.ini'))
-    return config[section]
+
+@pytest.fixture
+def gs():
+    return GeneSignature.from_gmt(TEST_SIGNATURE_FNAME, NOMENCLATURE,
+                                  gene_separator="\t", field_separator="\t", )[0]
+
 
 def test_enrichment():
-    gs = GeneSignature.from_gmt(gene_separator="\t", field_separator="\t", **load_gs_info(TEST_SIGNATURE))[0]
-    db = RankingDatabase(**load_db_info(TEST_DATABASE))
-    df = enrichment(db, gs)
+    df = enrichment(db(), gs())
+
 
 def test_auc1d_1():
     # Check if AUC is calculated correctly when a gene is recovered at the rank threshold.
@@ -38,6 +39,7 @@ def test_auc1d_1():
     auc_max = auc_rank_threshold * total_genes
     assert 16.0/800 == auc1d(ranking, auc_rank_threshold, auc_max)
 
+
 def test_auc1d_2():
     # For the current gene list the non-normalized AUC should be (2*1)+(2*2)+(3*3) = 15.
     total_genes = 100
@@ -45,6 +47,7 @@ def test_auc1d_2():
     ranking = np.asarray([2, 4, 6]) - 1 # The databases have a zero-based ranking system
     auc_max = auc_rank_threshold * total_genes
     assert 15.0/800 == auc1d(ranking, auc_rank_threshold, auc_max)
+
 
 def test_weighted_auc1d():
     # CAVE: In python the ranking databases are 0-based. The only difference a 1-based system has on the calc
@@ -70,6 +73,7 @@ def test_weighted_auc1d_batch():
         weights = np.ones(n_genes)
         auc_max = 1.0 # Disable normalization.
         assert auc1d(ranking, auc_rank_threshold, auc_max) == weighted_auc1d(ranking, weights, auc_rank_threshold, auc_max)
+
 
 def test_weighted_rcc2d_batch():
     # The assumption taken here is that for weights uniformely being set to 1.0, auc1d and

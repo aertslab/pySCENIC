@@ -20,19 +20,16 @@ class RankingDatabase(metaclass=ABCMeta):
     The rankings of the genes are 0-based.
     """
 
-    def __init__(self, fname: str, name: str, nomenclature: str):
+    def __init__(self, name: str, nomenclature: str):
         """
         Create a new instance.
 
-        :param fname: The name of the database file.
         :param nomenclature: The gene nomenclature.
         :param name: The name of the database.
         """
-        assert os.path.isfile(fname), "Database {0:s} doesn't exist.".format(fname)
         assert name, "Name must be specified."
         assert nomenclature, "Nomenclature must be specified."
 
-        self._fname = fname
         self._name = name
         self._nomenclature = nomenclature
 
@@ -135,8 +132,11 @@ class SQLiteRankingDatabase(RankingDatabase):
         :param nomenclature: The gene nomenclature.
         :param name: The name of the database.
         """
-        super().__init__(fname, name, nomenclature)
+        assert os.path.isfile(fname), "Database {0:s} doesn't exist.".format(fname)
 
+        super().__init__(name, nomenclature)
+
+        self._fname = fname
         # Read-only view on SQLite database.
         self._uri = 'file:{}?mode=ro'.format(os.path.abspath(fname))
 
@@ -246,7 +246,8 @@ class FeatherRankingDatabase(RankingDatabase):
         :param name: The name of the database.
         :param nomenclature: The nomenclature used for the genes that are being ranked.
         """
-        super().__init__(fname, name=name, nomenclature=nomenclature)
+        assert os.path.isfile(fname), "Database {0:s} doesn't exist.".format(fname)
+        super().__init__(name=name, nomenclature=nomenclature)
         # FeatherReader cannot be pickle (important for dask framework) so filename is field instead.
         self._fname = fname
 
@@ -292,6 +293,41 @@ class MemoryDecorator(RankingDatabase):
 
     def load(self, gs: Type[GeneSignature]) -> pd.DataFrame:
         return self._df.loc[:, self._df.columns.isin(gs.genes)]
+
+
+class DataFrameRankingDatabase(RankingDatabase):
+    """
+    A ranking database from a dataframe.
+    """
+    def __init__(self, df: pd.DataFrame, name: str, nomenclature: str):
+        self._df = df
+        super().__init__(name, nomenclature)
+
+    @property
+    def total_genes(self) -> int:
+        return len(self._df.columns)
+
+    @property
+    def genes(self) -> Tuple[str]:
+        return tuple(self._df.columns)
+
+    def load_full(self) -> pd.DataFrame:
+        return self._df
+
+    def load(self, gs: Type[GeneSignature]) -> pd.DataFrame:
+        return self._df.loc[:, self._df.columns.isin(gs.genes)]
+
+    def save(self, fname: str):
+        """
+        Save database as feather file.
+
+        :param fname: The name of the file to create.
+        """
+        assert not os.path.exists(fname)
+        df = self._df.copy()
+        df.index.name = INDEX_NAME
+        df.reset_index(inplace=True) # Index is not stored in feather format. https://github.com/wesm/feather/issues/200
+        write_dataframe(df, fname)
 
 
 def convert2feather(fname: str, out_folder: str, name: str, extension: str="feather") -> str:
