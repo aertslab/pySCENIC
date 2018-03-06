@@ -27,7 +27,7 @@ def derive_rank_cutoff(auc_threshold, rank_threshold, total_genes):
 
     # In the R implementation the cutoff is rounded.
     rank_cutoff = int(round(auc_threshold * total_genes))
-    assert rank_cutoff <= rank_threshold, \
+    assert 0 < rank_cutoff <= rank_threshold, \
         "An AUC threshold of {0:f} corresponds to {1:d} top ranked genes/regions in the database. " \
         "Please increase the rank threshold or decrease the AUC threshold.".format(auc_threshold, rank_cutoff)
     # Make sure we have exacly the same AUC values as the R-SCENIC pipeline.
@@ -82,6 +82,7 @@ def recovery(rnk: pd.DataFrame, total_genes: int, weights: np.ndarray, rank_thre
     # For reason of generating the same results as in R we introduce an error by adding one to the rank_cutoff
     # for calculationg the maximum AUC.
     maxauc = float((rank_cutoff+1) * weights.sum())
+    assert maxauc > 0
     # The rankings are 0-based. The position at the rank threshold is included in the calculation.
     # The maximum AUC takes this into account.
     aucs = rccs[:, :rank_cutoff].sum(axis=1) / maxauc
@@ -276,4 +277,5 @@ def aucs(rnk: pd.DataFrame, total_genes: int, weights: Optional[np.ndarray], ran
     # For reason of generating the same results as in R we introduce an error by adding one to the rank_cutoff
     # for calculationg the maximum AUC.
     maxauc = float((rank_cutoff+1) * y_max)
+    assert maxauc > 0
     return auc2d(rankings, weighted_auc1d if weights else auc1d, rank_cutoff, maxauc)
