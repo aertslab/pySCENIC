@@ -3,13 +3,14 @@
 import pytest
 from pyscenic.rnkdb import SQLiteRankingDatabase as RankingDatabase
 from pyscenic.genesig import GeneSignature
+from pkg_resources import resource_filename
 
 
 
 NOMENCLATURE = "HGNC"
-TEST_DATABASE_FNAME = "../resources/hg19-tss-centered-5kb-10species.mc9nr.db"
+TEST_DATABASE_FNAME = resource_filename('resources', "hg19-tss-centered-5kb-10species.mc9nr.db")
 TEST_DATABASE_NAME = "hg19-tss-centered-5kb-10species"
-TEST_SIGNATURE_FNAME = "../resources/c6.all.v6.1.symbols.gmt.txt"
+TEST_SIGNATURE_FNAME = resource_filename('resources', "c6.all.v6.1.symbols.gmt.txt")
 
 
 @pytest.fixture

@@ -12,3 +12,4 @@ boltons
 cloudpickle
 distributed
 arboretum
+setuptools

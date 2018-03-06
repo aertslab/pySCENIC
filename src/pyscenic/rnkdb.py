@@ -102,8 +102,8 @@ class RankingDatabase(metaclass=ABCMeta):
         """
         return "{}(name=\"{}\",nomenclature={})".format(
             self.__class__.__name__,
-            self.name,
-            self.nomenclature)
+            self._name,
+            self._nomenclature)
 
 
 # SQL query to get the total number of genes in the database.
@@ -132,9 +132,9 @@ class SQLiteRankingDatabase(RankingDatabase):
         :param nomenclature: The gene nomenclature.
         :param name: The name of the database.
         """
-        assert os.path.isfile(fname), "Database {0:s} doesn't exist.".format(fname)
-
         super().__init__(name, nomenclature)
+
+        assert os.path.isfile(fname), "Database {0:s} doesn't exist.".format(fname)
 
         self._fname = fname
         # Read-only view on SQLite database.
@@ -246,8 +246,9 @@ class FeatherRankingDatabase(RankingDatabase):
         :param name: The name of the database.
         :param nomenclature: The nomenclature used for the genes that are being ranked.
         """
-        assert os.path.isfile(fname), "Database {0:s} doesn't exist.".format(fname)
         super().__init__(name=name, nomenclature=nomenclature)
+
+        assert os.path.isfile(fname), "Database {0:s} doesn't exist.".format(fname)
         # FeatherReader cannot be pickle (important for dask framework) so filename is field instead.
         self._fname = fname
 
@@ -278,7 +279,7 @@ class MemoryDecorator(RankingDatabase):
         assert db, "Database should be supplied."
         self._db = db
         self._df = db.load_full()
-        super().__init__(db._fname, db.name, db.nomenclature)
+        super().__init__(db.name, db.nomenclature)
 
     @property
     def total_genes(self) -> int:

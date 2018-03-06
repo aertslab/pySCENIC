@@ -5,15 +5,12 @@ from configparser import ConfigParser
 import os
 import pytest
 import attr
+from pkg_resources import resource_filename
 
 
 TEST_SIGNATURE = "msigdb_cancer_c6"
-
-
-def load_info(section):
-    config = ConfigParser()
-    config.read(os.path.join(os.path.dirname(__file__), 'test_genesig.ini'))
-    return config[section]
+TEST_SIGNATURE_FNAME = resource_filename('resources', "c6.all.v6.1.symbols.gmt.txt")
+NOMENCLATURE = "HGNC"
 
 
 def test_init1():
@@ -172,7 +169,8 @@ def test_regulome():
 
 
 def test_load_gmt():
-    gss = GeneSignature.from_gmt(field_separator='\t', gene_separator='\t', **load_info(TEST_SIGNATURE))
+    gss = GeneSignature.from_gmt(field_separator='\t', gene_separator='\t', nomenclature=NOMENCLATURE,
+                                 fname=TEST_SIGNATURE_FNAME)
     # http://software.broadinstitute.org/gsea/msigdb/collections.jsp#C6
     assert len(gss) == 189
     assert gss[0].name == "GLI1_UP.V1_DN"
@@ -181,7 +179,8 @@ def test_load_gmt():
 
 
 def test_add():
-    gss = GeneSignature.from_gmt(field_separator='\t', gene_separator='\t', **load_info(TEST_SIGNATURE))
+    gss = GeneSignature.from_gmt(field_separator='\t', gene_separator='\t', nomenclature=NOMENCLATURE,
+                                 fname=TEST_SIGNATURE_FNAME)
     res = gss[0].add("MEF2")
     assert "MEF2" in res
 

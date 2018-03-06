@@ -14,6 +14,7 @@ import io
 import os
 import setuptools
 import versioneer
+from os.path import join
 
 
 def read(*names, **kwargs):
@@ -73,7 +74,7 @@ setuptools.setup(
     author_email="vandesande.bram@gmail.com",
     url='http://pyscenic.readthedocs.io/en/latest/',
     license='GPL-3.0+',
-    packages=setuptools.find_packages('src'),
+    packages=setuptools.find_packages(where='src'),
     package_dir={'': 'src'},
     py_modules=[os.path.splitext(os.path.basename(path))[0] for path in glob.glob('src/*.py')],
     include_package_data=True,

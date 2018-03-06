@@ -1,0 +1,9 @@
+--rank_threshold 5000
+--auc_threshold 0.01
+--nes_threshold 3.0
+--min_orthologous_identity 0.0
+--max_similarity_fdr 0.001
+--annotations_fname ~/resources/motifs-v9-nr.hgnc-m0.001-o0.0.tbl
+--num_workers 48
+--chunk_size 100
+--mode dask_multiprocessing
