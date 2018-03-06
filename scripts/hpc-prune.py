@@ -60,9 +60,14 @@ def create_argument_parser():
 
 
 def run(args):
-    LOGGER.info("Using configuration {}.".format(args.cfg_filename))
+    LOGGER.info("Using configuration {}.".format(args.config_filename))
     cfg = ConfigParser()
-    cfg.read(args.cfg_filename)
+    cfg.read(args.config_filename)
+
+    # Set logging level.
+    logging_debug_opt = False
+    LOGGER.addHandler(create_logging_handler(logging_debug_opt))
+    LOGGER.setLevel(logging.DEBUG)
 
     LOGGER.info("Loading modules.")
     # Loading from YAML is extremely slow. Therefore this is a potential performance improvement.

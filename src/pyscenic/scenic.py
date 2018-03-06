@@ -2,6 +2,7 @@
 
 import argparse
 import os
+import logging
 from dask.diagnostics import ProgressBar
 from multiprocessing import cpu_count
 from arboretum.algo import grnboost2
@@ -12,8 +13,28 @@ from .prune import prune, prune2df, find_features
 from .aucell import create_rankings, enrichment
 from .genesig import GeneSignature
 import pandas as pd
-import datetime
 import sys
+
+
+# Setting the root logger for this entire project.
+LOGGER = logging.getLogger(__name__.split(".")[0])
+
+
+def create_logging_handler(debug: bool) -> logging.Handler:
+    """
+    Create a handler for logging purposes.
+
+    :param debug: Does debug information need to be logged?
+    :return: The logging handler.
+    """
+    # By default stderr is used as the stream for logging.
+    ch = logging.StreamHandler(stream=sys.stderr)
+    # Logging level DEBUG is less severe than INFO. Therefore when the logging level is set
+    # to DEBUG, information will still be outputted. In addition, errors and warnings are more
+    # severe than info and therefore will always be outputted to the log.
+    ch.setLevel(logging.DEBUG if debug else logging.INFO)
+    ch.setFormatter(logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s'))
+    return ch
 
 
 class NoProgressBar:
@@ -71,18 +92,19 @@ def add_computation_parameters(parser):
 
 
 def find_modules(args):
-    print("{} - Loading datasets.".format(datetime.datetime.now()))
+    LOGGER.info("{} - Loading datasets.")
     ex_matrix = pd.read_csv(args.expression_mtx_fname, sep='\t', header=0, index_col=0).T
     tf_names = load_tf_names(args.tfs_fname.name)
 
-    print("{} - Calculating co-expression modules.".format(datetime.datetime.now()))
+    LOGGER.info("{} - Calculating co-expression modules.")
     network = grnboost2(expression_data=ex_matrix, tf_names=tf_names, verbose=True)
 
-    print("{} - Writing results to file.".format(datetime.datetime.now()))
+    LOGGER.info("{} - Writing results to file.")
     network.to_csv(args.output, index=False, sep='\t')
 
 
 def find_motifs(args):
+    LOGGER.info("{} - Loading modules.")
     # Loading from YAML is extremely slow. Therefore this is a potential performance improvement.
     # Potential improvements are switching to JSON or to use a CLoader:
     # https://stackoverflow.com/questions/27743711/can-i-speedup-yaml
@@ -90,15 +112,15 @@ def find_motifs(args):
         else GeneSignature.from_gmt(args.module_fname.name, args.nomenclature)
     nomenclature = modules[0].nomenclature
 
-    print("{} - Loading databases.".format(datetime.datetime.now()))
+    LOGGER.info("{} - Loading databases.")
     def name(fname):
         return os.path.basename(fname).split(".")[0]
     dbs = [open(fname=fname, name=name(fname), nomenclature=nomenclature) for fname in args.database_fname]
 
-    print("{} - Calculating regulomes.".format(datetime.datetime.now()))
+    LOGGER.info("{} - Calculating regulomes.")
     motif_annotations_fname = args.annotations_fname.name
     with ProgressBar() if args.mode == "dask_multiprocessing" else NoProgressBar():
-        df = motifs(dbs, modules, motif_annotations_fname,
+        df = find_features(dbs, modules, motif_annotations_fname,
                    rank_threshold=args.rank_threshold,
                    auc_threshold=args.auc_threshold,
                    nes_threshold=args.nes_threshold,
@@ -106,35 +128,36 @@ def find_motifs(args):
                    module_chunksize=args.chunk_size,
                    num_workers=args.num_workers)
 
-    print("{} - Writing results to file.".format(datetime.datetime.now()))
+    LOGGER.info("{} - Writing results to file.")
     df.to_csv(args.output)
 
 
 def prune_targets(args):
+    LOGGER.info("{} - Loading modules.")
     # Loading from YAML is extremely slow. Therefore this is a potential performance improvement.
     # Potential improvements are switching to JSON or to use a CLoader:
     # https://stackoverflow.com/questions/27743711/can-i-speedup-yaml
     modules = load_from_yaml(args.module_fname.name)
     nomenclature = modules[0].nomenclature
 
-    print("{} - Loading databases.".format(datetime.datetime.now()))
+    LOGGER.info("{} - Loading databases.")
     def name(fname):
         return os.path.basename(fname).split(".")[0]
     dbs = [open(fname=fname, name=name(fname), nomenclature=nomenclature) for fname in args.database_fname]
 
-    print("{} - Calculating regulomes.".format(datetime.datetime.now()))
+    LOGGER.info("{} - Calculating regulomes.")
     motif_annotations_fname = args.annotations_fname.name
+    prune_func = prune if args.output_type == "regulomes" else prune2df
     with ProgressBar() if args.mode == "dask_multiprocessing" else NoProgressBar():
-        out = prune(dbs, modules, motif_annotations_fname,
+        out = prune_func(dbs, modules, motif_annotations_fname,
                            rank_threshold=args.rank_threshold,
                            auc_threshold=args.auc_threshold,
                            nes_threshold=args.nes_threshold,
-                           output=args.output_type,
                            client_or_address=args.mode,
                            module_chunksize=args.chunk_size,
                            num_workers=args.num_workers)
 
-    print("{} - Writing results to file.".format(datetime.datetime.now()))
+    LOGGER.info("{} - Writing results to file.")
     if args.output_type == 'df':
         out.to_csv(args.output)
     else:
@@ -142,23 +165,23 @@ def prune_targets(args):
 
 
 def aucell(args):
-    print("{} - Loading datasets.".format(datetime.datetime.now()))
+    LOGGER.info("{} - Loading datasets.")
     ex_mtx = pd.read_csv(args.expression_mtx_fname, sep='\t', header=0, index_col=0)
     regulomes = load_from_yaml(args.regulomes_fname.name)
 
-    print("{} - Create rankings.".format(datetime.datetime.now()))
+    LOGGER.info("{} - Create rankings.")
     rnk_mtx = create_rankings(ex_mtx)
 
-    print("{} - Calculating enrichment.".format(datetime.datetime.now()))
+    LOGGER.info("{} - Calculating enrichment.")
     auc_heatmap = pd.concat([enrichment(rnk_mtx.T, regulome) for regulome in regulomes]).unstack('Regulome')
 
-    print("{} - Writing results to file.".format(datetime.datetime.now()))
+    LOGGER.info("{} - Writing results to file.")
     auc_heatmap.to_csv(args.output)
 
 
 def create_argument_parser():
     parser = argparse.ArgumentParser(prog='SCENIC - Single-CEll regulatory Network Inference and Clustering',
-                                     fromfile_prefix_chars='@')
+                                     fromfile_prefix_chars='@', add_help=True)
 
     # General options ...
     parser.add_argument('-o', '--output',
@@ -230,10 +253,15 @@ def create_argument_parser():
 
 
 def scenic(argv=None):
-    # TODO: Work In Progress
-    raise NotImplementedError
+    # Set logging level.
+    logging_debug_opt = False
+    LOGGER.addHandler(create_logging_handler(logging_debug_opt))
+    LOGGER.setLevel(logging.DEBUG)
+
+    # Parse arguments.
     parser = create_argument_parser()
     parser.parse_args(args=argv)
+    parser.print_help()
 
 
 if __name__ == "__main__":
