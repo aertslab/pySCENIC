@@ -105,7 +105,7 @@ def enrichment4cells(rnk_mtx: pd.DataFrame, regulome: Regulome, rank_threshold: 
     rnk = rnk_mtx.iloc[:,rnk_mtx.columns.isin(regulome.genes)]
     weights = np.asarray([regulome[gene] if gene in regulome.genes else 1.0 for gene in rnk.columns.values])
     rccs, aucs = recovery(rnk, total_genes, weights, rank_threshold, auc_threshold)
-    index = pd.MultiIndex.from_tuples(list(zip(rnk.index.values, repeat(regulome.transcription_factor))),
+    index = pd.MultiIndex.from_tuples(list(zip(rnk.index.values, repeat(regulome.name))),
                                       names=["Cell", "Regulome"])
     return pd.DataFrame(index=index, data={"AUC": aucs})
 
