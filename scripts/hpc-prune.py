@@ -69,11 +69,12 @@ def run(args):
     cfg = ConfigParser()
     cfg.read(args.config_filename)
 
-    LOGGER.info("Loading modules.")
+    in_fname = cfg['data']['modules'] if not args.input else args.input
+    LOGGER.info("Loading modules from {}.".format(in_fname))
     # Loading from YAML is extremely slow. Therefore this is a potential performance improvement.
     # Potential improvements are switching to JSON or to use a CLoader:
     # https://stackoverflow.com/questions/27743711/can-i-speedup-yaml
-    modules = load_from_yaml(cfg['data']['modules'] if not args.input else args.input)
+    modules = load_from_yaml(in_fname)
     # Filter out modules with to few genes.
     min_genes = int(cfg['parameters']['min_genes'])
     modules = list(filter(lambda m: len(m) >= min_genes, modules))
