@@ -128,7 +128,7 @@ def modules4top_factors(adjacencies, n, nomenclature="MGI", context=frozenset())
     for tf_name, df_grp in df.groupby(by=COLUMN_NAME_TF):
         if len(df_grp) > 0:
             yield Regulome(
-                name="Regulome for {}".format(tf_name),
+                name=tf_name,
                 nomenclature=nomenclature,
                 context=frozenset(["top{}perTarget".format(n)]).union(context),
                 transcription_factor=tf_name,
