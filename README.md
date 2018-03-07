@@ -9,9 +9,9 @@ in no time.
 
 All the functionality of the original R implementation is available and in addition:
 
-1. You can leverage multi-core and multi-node clusters which enable you to expand pruning of targets based on more whole genome rankings database.
-2. We implemented a version of the recovery of input genes that takes into account weights associated with the genes part of the input.
-3. Regulomes with targets that are repressed are now also derived.
+1. You can leverage multi-core and multi-node clusters which enable you to expand pruning of targets based on more whole genome rankings databases.
+2. We implemented a version of the recovery of input genes that takes into account weights associated with these genes.
+3. Regulomes with targets that are repressed are now also derived and used for cell enrichment analysis.
 
 ## Installation
 
