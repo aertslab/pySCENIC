@@ -5,6 +5,7 @@ import sys
 import glob
 import logging
 import argparse
+import pickle
 from configparser import ConfigParser
 from pyscenic.utils import load_from_yaml
 from pyscenic.rnkdb import FeatherRankingDatabase as RankingDatabase
@@ -74,7 +75,11 @@ def run(args):
     # Loading from YAML is extremely slow. Therefore this is a potential performance improvement.
     # Potential improvements are switching to JSON or to use a CLoader:
     # https://stackoverflow.com/questions/27743711/can-i-speedup-yaml
-    modules = load_from_yaml(in_fname)
+    if in_fname.endswith('.yaml'):
+        modules = load_from_yaml(in_fname)
+    else:
+        with open(in_fname, 'rb') as f:
+            modules = pickle.load(f)
     # Filter out modules with to few genes.
     min_genes = int(cfg['parameters']['min_genes'])
     modules = list(filter(lambda m: len(m) >= min_genes, modules))
