@@ -74,6 +74,9 @@ def run(args):
     # Potential improvements are switching to JSON or to use a CLoader:
     # https://stackoverflow.com/questions/27743711/can-i-speedup-yaml
     modules = load_from_yaml(cfg['data']['modules'] if not args.input else args.input)
+    # Filter out modules with to few genes.
+    min_genes = int(cfg['parameters']['min_genes'])
+    modules = list(filter(lambda m: len(m) >= min_genes, modules))
 
     LOGGER.info("Loading databases.")
     nomenclature = cfg['parameters']['nomenclature']
