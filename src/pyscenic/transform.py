@@ -3,7 +3,8 @@
 from .recovery import recovery, aucs as calc_aucs
 import pandas as pd
 import numpy as np
-from .utils import COLUMN_NAME_MOTIF_SIMILARITY_QVALUE, COLUMN_NAME_ORTHOLOGOUS_IDENTITY, COLUMN_NAME_MOTIF_ID, COLUMN_NAME_TF, COLUMN_NAME_ANNOTATION
+from .utils import COLUMN_NAME_MOTIF_SIMILARITY_QVALUE, COLUMN_NAME_ORTHOLOGOUS_IDENTITY, \
+    COLUMN_NAME_MOTIF_ID, COLUMN_NAME_TF, COLUMN_NAME_ANNOTATION, ACTIVATING_MODULE, REPRESSING_MODULE
 from itertools import repeat
 from .rnkdb import RankingDatabase
 from functools import reduce
@@ -222,9 +223,12 @@ def regulome4group(tf_name, context, df_group, nomenclature) -> Optional[Regulom
         score = nes * -math.log(motif_similarity_qval)/MAX_VALUE if not math.isnan(motif_similarity_qval) and motif_similarity_qval != 0.0 else nes
         return score if math.isnan(orthologuous_identity) else score * orthologuous_identity
 
+    def derive_interaction_type(ctx):
+        return "(-)" if REPRESSING_MODULE in ctx else "(+)"
+
     def row2regulome(row):
         # The target genes as well as their weights/importances are directly taken from the dataframe.
-        return Regulome(name=tf_name,
+        return Regulome(name="{}{}".format(tf_name,derive_interaction_type(context)),
                         score=score(row[COLUMN_NAME_NES],
                                     row[COLUMN_NAME_MOTIF_SIMILARITY_QVALUE],
                                     row[COLUMN_NAME_ORTHOLOGOUS_IDENTITY]),
@@ -245,9 +249,18 @@ def df2regulomes(df, nomenclature) -> Sequence[Regulome]:
     :param nomenclature: The nomenclature of the genes.
     :return: A sequence of regulomes.
     """
+
+    def get_type(row):
+        ctx = row[('Enrichment', 'Context')]
+        return ACTIVATING_MODULE if ACTIVATING_MODULE in ctx else REPRESSING_MODULE
+    df[('Enrichment', 'Type')] = df.apply(get_type,axis=1)
+
     not_none = lambda r: r is not None
-    return list(filter(not_none, (regulome4group(tf_name, frozenset(), df_grp['Enrichment'], nomenclature)
-                                  for tf_name, df_grp in df.groupby(by=COLUMN_NAME_TF))))
+    return list(filter(not_none, (regulome4group(tf_name, frozenset([interaction_type]),
+                                                 df_grp['Enrichment'],
+                                                 nomenclature)
+                                  for (tf_name, interaction_type), df_grp in df.groupby(by=[COLUMN_NAME_TF,
+                                                                                            ('Enrichment', 'Type')]))))
 
 
 def module2regulome(db: Type[RankingDatabase], module: Regulome, motif_annotations: pd.DataFrame,

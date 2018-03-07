@@ -79,7 +79,7 @@ def add_correlation(adjacencies: pd.DataFrame, ex_mtx: pd.DataFrame) -> pd.DataF
     return adjacencies
 
 
-def modules4thr(adjacencies, threshold, nomenclature="MGI"):
+def modules4thr(adjacencies, threshold, nomenclature="MGI", context=frozenset()):
     """
 
     :param adjacencies:
@@ -92,12 +92,12 @@ def modules4thr(adjacencies, threshold, nomenclature="MGI"):
             yield Regulome(
                 name="Regulome for {}".format(tf_name),
                 nomenclature=nomenclature,
-                context=frozenset(["weight>{}".format(threshold)]),
+                context=frozenset(["weight>{}".format(threshold)]).union(context),
                 transcription_factor=tf_name,
                 gene2weights=list(zip(df_grp[COLUMN_NAME_TARGET].values, df_grp[COLUMN_NAME_WEIGHT].values)))
 
 
-def modules4top_targets(adjacencies, n, nomenclature="MGI"):
+def modules4top_targets(adjacencies, n, nomenclature="MGI", context=frozenset()):
     """
 
     :param adjacencies:
@@ -111,12 +111,12 @@ def modules4top_targets(adjacencies, n, nomenclature="MGI"):
             yield Regulome(
                 name="Regulome for {}".format(tf_name),
                 nomenclature=nomenclature,
-                context=frozenset(["top{}".format(n)]),
+                context=frozenset(["top{}".format(n)]).union(context),
                 transcription_factor=tf_name,
                 gene2weights=list(zip(module[COLUMN_NAME_TARGET].values, module[COLUMN_NAME_WEIGHT].values)))
 
 
-def modules4top_factors(adjacencies, n, nomenclature="MGI"):
+def modules4top_factors(adjacencies, n, nomenclature="MGI", context=frozenset()):
     """
 
     :param adjacencies:
@@ -130,27 +130,55 @@ def modules4top_factors(adjacencies, n, nomenclature="MGI"):
             yield Regulome(
                 name="Regulome for {}".format(tf_name),
                 nomenclature=nomenclature,
-                context=frozenset(["top{}perTarget".format(n)]),
+                context=frozenset(["top{}perTarget".format(n)]).union(context),
                 transcription_factor=tf_name,
                 gene2weights=list(zip(df_grp[COLUMN_NAME_TARGET].values, df_grp[COLUMN_NAME_WEIGHT].values)))
 
 
-def modules_from_genie3(adjacencies: pd.DataFrame, nomenclature: str,
+ACTIVATING_MODULE = "activating"
+REPRESSING_MODULE = "repressing"
+
+
+def modules_from_adjacencies(adjacencies: pd.DataFrame,
+                             ex_mtx: pd.DataFrame,
+                        nomenclature: str,
                         thresholds=(0.001,0.005),
                         top_n_targets=(50,),
-                        top_n_regulators=(5,10,50)):
+                        top_n_regulators=(5,10,50),
+                        min_genes=20):
     """
+    Create modules from a dataframe containing weighted adjacencies between a TF and a target genes.
     
-    :param adjacencies:
-    :param nomenclature:
-    :param thresholds:
-    :param top_n_targets:
-    :param top_n_regulators:
-    :return:
+    :param adjacencies: The dataframe with the TF-target links.
+    :param ex_mtx: The expression matrix (n_genes x n_cells).
+    :param nomenclature: The nomenclature of the genes.
+    :param thresholds: the first method to create the TF-modules based on the best targets for each transcription factor.
+    :param top_n_targets: the second method is to select the top targets for a given TF.
+    :param top_n_regulators: the alternative way to create the TF-modules is to select the best regulators for each gene.
+    :param min_genes: The required minimum number of genes in a module.
+    :return: A list of Regulomes.
     """
-    yield from chain(chain.from_iterable(modules4thr(adjacencies, thr, nomenclature) for thr in thresholds),
-                     chain.from_iterable(modules4top_targets(adjacencies, n, nomenclature) for n in top_n_targets),
-                     chain.from_iterable(modules4top_factors(adjacencies, n, nomenclature) for n in top_n_regulators))
+    # Relationship between TF and its target, i.e. activator or repressor, is derived using the original expression
+    # profiles. The Pearson product-moment correlation coefficient is used to derive this information.
+
+    # Add correlation column and create two disjoint set of adjacencies.
+    adjacencies = add_correlation(adjacencies.copy(), ex_mtx)
+    activating_modules = adjacencies[adjacencies['correlation'] > 0.0]
+    repressing_modules = adjacencies[adjacencies['correlation'] < 0.0]
+
+    # Derive modules for these two sets of adjacencies
+    # Add the transcription factor to the module.
+    # Filter for minimum number of genes.
+    def iter_modules(adjc, context):
+        yield from chain(chain.from_iterable(modules4thr(adjc, thr, nomenclature, context) for thr in thresholds),
+                         chain.from_iterable(modules4top_targets(adjc, n, nomenclature, context) for n in top_n_targets),
+                         chain.from_iterable(modules4top_factors(adjc, n, nomenclature, context) for n in top_n_regulators))
+    def add_tf(module):
+        return module.add(module.transcription_factor)
+    return list(filter(lambda m: len(m) >= min_genes,
+                    map(add_tf,
+                       chain(iter_modules(activating_modules, frozenset([ACTIVATING_MODULE])),
+                             iter_modules(repressing_modules, frozenset([REPRESSING_MODULE]))))))
 
 
 def save_to_yaml(signatures: Sequence[Type[GeneSignature]], fname: str):

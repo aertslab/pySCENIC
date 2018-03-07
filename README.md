@@ -5,6 +5,14 @@ Clustering) which enables biologists to infer Gene Regulatory Networks and cell 
 pySCENIC can be run on a single desktop machine but easily scales to multi-core clusters to analyze thousands of cells
 in no time.
 
+## Features
+
+All the functionality of the original R implementation is available and in addition:
+
+1. You can leverage multi-core and multi-node clusters which enable you to expand pruning of targets based on more whole genome rankings database.
+2. We implemented a version of the recovery of input genes that takes into account weights associated with the genes part of the input.
+3. Regulomes with targets that are repressed are now also derived.
+
 ## Installation
 
 The package itself can be installed via `pip install pyscenic`.
@@ -32,7 +40,7 @@ from arboretum.utils import load_tf_names
 from arboretum.algo import grnboost2
 
 from pyscenic.rnkdb import FeatherRankingDatabase as RankingDatabase
-from pyscenic.utils import add_correlation, modules_from_genie3, save_to_yaml
+from pyscenic.utils import modules_from_adjacencies, save_to_yaml
 from pyscenic.prune import prune, prune2df
 from pyscenic.aucell import create_rankings, enrichment
 
@@ -117,13 +125,7 @@ adjancencies = grnboost2(expression_data=ex_matrix.T.sample(n=N_SAMPLES, replace
 
 ##### Derive potential regulomes from these co-expression modules
 
-Relationship between TF and its target, i.e. activator or repressor, is derived using the original expression profiles.
-The Pearson product-moment correlation coefficient is used to derive this information.
-
-
-```python
-adjancencies = add_correlation(adjancencies, ex_matrix)
-```
+Regulomes are derived from adjacencies based on three methods:
 
 The first method to create the TF-modules is to select the best targets for each transcription factor:
 1. Targets with weight > 0.001
@@ -137,29 +139,15 @@ The alternative way to create the TF-modules is to select the best regulators fo
 1. Targets for which the TF is within its top 10 regulators
 1. Targets for which the TF is within its top 50 regulators
 
+A distinction is made between modules which contain targets that are being activated and genes that are being repressed. Relationship between TF and its target, i.e. activator or repressor, is derived using the original expression profiles. The Pearson product-moment correlation coefficient is used to derive this information.
+
+In addition, the transcription factor is added to the module and modules that have less than 20 genes are removed.
+
+_Caveat: in the original SCENIC tutorial the genes that are not part of the whole genome ranking are removed from the signature. For pySCENIC this is not required._
 
 ```python
-modules = list(modules_from_genie3(adjacencies[adjacencies['correlation'] > 0.0], NOMENCLATURE))
+modules = list(modules_from_adjacencies(adjacencies, ex_matrix, nomenclature=NOMENCLATURE))
 ```
-
-Add the transcription factor to the module.
-
-
-```python
-def add_tf(module):
-    return module.add(module.transcription_factor)
-modules = list(map(add_tf, modules))
-```
-
-Remove modules that are less than 20 genes.
-
-
-```python
-modules = list(filter(lambda m: len(m) >= 20, modules))
-```
-
-_Caveat: in the original SCENIC tutorial the genes that are not part of the whole genome ranking are removed from the signature.
-For pySCENIC this is not required._
 
 #### Phase II: Prune modules for targets with cis regulatory footprints (aka RcisTarget)
 
