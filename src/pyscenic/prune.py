@@ -208,10 +208,13 @@ def _distributed_calc(rnkdbs: Sequence[Type[RankingDatabase]], modules: Sequence
             # a file server and have a common home folder configured, these database (stored on this shared drive)
             # can be accessed from all nodes in the cluster and can all use the same path in the configuration file.
 
-            # TODO: A potential improvement to reduce I/O contention for this shared drive (accessing the ranking
-            # TODO: database) would be to load the database in memory (using the available decorator) for each task.
-            # TODO: The penalty of loading the database in memory should be shared across multiple gene signature so
-            # TODO: in this case chunking of gene signatures is mandatory to avoid severe performance penalties.
+            # A potential improvement to reduce I/O contention for this shared drive (accessing the ranking
+            # database) would be to load the database in memory (using the available decorator) for each task.
+            # The penalty of loading the database in memory should be shared across multiple gene signature so
+            # in this case chunking of gene signatures is mandatory to avoid severe performance penalties.
+            # However, because of the memory need of a node running pyscenic is already high (i.e. pre-allocation
+            # of recovery curves - 20K features (max. enriched) * rank_threshold * 8 bytes (float) * num_cores),
+            # this might not be a sound idea to do.
             return delayed(aggregate_func)(
                         (delayed(transform_func)
                             (db, gs_chunk, delayed_or_future_annotations)
@@ -263,6 +266,7 @@ def find_features(rnkdbs: Sequence[Type[RankingDatabase]], signatures: Sequence[
     :param motif_base_url:
     :return: A dataframe with the enriched features.
     """
+    # Always use module2features_auc1st_impl not only because of speed impact but also because of reduced memory footprint.
     module2features_func = partial(module2features_auc1st_impl,
                                    rank_threshold=rank_threshold,
                                    auc_threshold=auc_threshold,
@@ -309,6 +313,7 @@ def prune(rnkdbs: Sequence[Type[RankingDatabase]], modules: Sequence[Regulome],
         systems 'custom_multiprocessing' or 'dask_multiprocessing' can be supplied.
     :return: A sequence of regulomes.
     """
+    # Always use module2features_auc1st_impl not only because of speed impact but also because of reduced memory footprint.
     module2features_func = partial(module2features_auc1st_impl,
                                    rank_threshold=rank_threshold,
                                    auc_threshold=auc_threshold,
@@ -355,6 +360,7 @@ def prune2df(rnkdbs: Sequence[Type[RankingDatabase]], modules: Sequence[Regulome
         systems 'custom_multiprocessing' or 'dask_multiprocessing' can be supplied.
     :return: A dataframe.
     """
+    # Always use module2features_auc1st_impl not only because of speed impact but also because of reduced memory footprint.
     module2features_func = partial(module2features_auc1st_impl,
                                    rank_threshold=rank_threshold,
                                    auc_threshold=auc_threshold,

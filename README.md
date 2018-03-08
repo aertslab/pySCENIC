@@ -220,6 +220,13 @@ optional arguments:
                         Output file/stream.
 ```
 
+
+## Remarks on usage on clusters
+
+When running on clusters the memory footprint of pySCENIC on the individual nodes might be significant because for the
+calculation of the recovery curves large chuncks of memory are pre-allocated. To mitigate this problem the parameter
+`rank_threshold` should not be set too high.
+
 ## Website
 
 For more information, please visit http://scenic.aertslab.org .
