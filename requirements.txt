@@ -13,3 +13,4 @@ cloudpickle
 distributed
 arboretum
 setuptools
+pyyaml

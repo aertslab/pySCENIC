@@ -19,16 +19,13 @@ def create_argument_parser():
     parser.add_argument('-o', '--outputdir',
                         type=str, default=os.getcwd(),
                         help='Output directory (default: current directory).')
-    parser.add_argument('-n','--nomenclature',
-                               type=str, default='HGNC',
-                               help='The nomenclature used for the gene signatures (default HGNC).')
     return parser
 
 
-def convert(out_folder, nomenclature, in_fnames):
+def convert(out_folder, in_fnames):
     for fname in in_fnames:
         print("Converting {}".format(fname))
-        convert2feather(fname, out_folder, derive_db_name(fname), nomenclature)
+        convert2feather(fname, out_folder, derive_db_name(fname))
 
 
 def main():
@@ -37,7 +34,7 @@ def main():
     if len(args.db_fnames) == 0:
         parser.print_help()
     else:
-        convert(args.outputdir, args.nomenclature, args.db_fnames)
+        convert(args.outputdir, args.db_fnames)
 
 
 if __name__ == "__main__":
