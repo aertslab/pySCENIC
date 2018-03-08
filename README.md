@@ -17,9 +17,25 @@ All the functionality of the original R implementation is available and in addit
 
 ## Installation
 
-The package itself can be installed via `pip install pyscenic`.
+:construction: The package itself can be installed via `pip install pyscenic`. :construction:
 
-The successfully use this pipeline you also need auxilliary datasets:
+You can also create this package manually from source:
+
+```
+git clone https://github.com/aertslab/pySCENIC.git
+
+cd pySCENIC/
+
+python setup.py sdist
+```
+
+This will create a source distribution which you can subsequently install via:
+
+```
+pip install pyscenic-<version>.tar.gz
+```
+
+To successfully use this pipeline you also need auxilliary datasets:
 
 1. Databases ranking the whole genome of your species of interest based on regulatory features (i.e. transcription factor).
 Ranking databases are typically stored in the [feather format](https://github.com/wesm/feather).
