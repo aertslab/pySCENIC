@@ -195,6 +195,31 @@ auc_mtx = pd.concat([enrichment(rnk_mtx.T, regulome) for regulome in regulomes])
 sns.clustermap(auc_mtx, figsize=(8,8))
 ```
 
+## Command Line Interface
+
+A command line version of the tool is included. This tool is available after proper installation of the package via `pip`.
+
+
+```
+{ ~ }  » pyscenic                                            ~
+usage: SCENIC - Single-CEll regulatory Network Inference and Clustering
+       [-h] [-o OUTPUT] {grn,motifs,prune,aucell} ...
+
+positional arguments:
+  {grn,motifs,prune,aucell}
+                        sub-command help
+    grn                 Derive co-expression modules from expression matrix.
+    motifs              Find enriched motifs for gene signatures.
+    prune               Prune targets from a co-expression module based on
+                        cis-regulatory cues.
+    aucell              b help
+
+optional arguments:
+  -h, --help            show this help message and exit
+  -o OUTPUT, --output OUTPUT
+                        Output file/stream.
+```
+
 ## Website
 
 For more information, please visit http://scenic.aertslab.org .
