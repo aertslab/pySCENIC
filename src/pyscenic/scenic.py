@@ -118,7 +118,7 @@ def _load_modules(fname: str) -> Sequence[Type[GeneSignature]]:
 def _load_dbs(fnames: Sequence[str], nomenclature: str) -> Sequence[Type[RankingDatabase]]:
     def get_name(fname):
         return os.path.basename(fname).split(".")[0]
-    return [opendb(fname=fname, name=get_name(fname), nomenclature=nomenclature) for fname in fnames]
+    return [opendb(fname=fname.name, name=get_name(fname.name), nomenclature=nomenclature) for fname in fnames]
 
 
 def find_adjacencies(args):

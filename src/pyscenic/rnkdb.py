@@ -376,10 +376,10 @@ def open(fname: str, name: str, nomenclature: str) -> Type['RankingDatabase']:
     assert nomenclature, "Nomenclature for the genes in a database should be given."
 
     extension = os.path.splitext(fname)[1]
-    if extension == "feather":
+    if extension == ".feather":
         # noinspection PyTypeChecker
         return FeatherRankingDatabase(fname, name=name, nomenclature=nomenclature)
-    elif extension in ("db", "sqlite", "sqlite3"):
+    elif extension in (".db", ".sqlite", ".sqlite3"):
         # noinspection PyTypeChecker
         return SQLiteRankingDatabase(fname, name=name, nomenclature=nomenclature)
     else:
