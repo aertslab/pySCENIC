@@ -202,8 +202,8 @@ def module2df(db: Type[RankingDatabase], module: Regulome, motif_annotations: pd
                            data=rccs)
     df = pd.concat([df_annotated_features, df_rccs, df_rnks], axis=1)
 
-    # Calculate the leading edges for each row. Rank is discarded.
-    weights = np.array([module[gene] for gene in genes]) if weighted_recovery else np.ones(len(genes))
+    # Calculate the leading edges for each row. Always return importance from gene inference phase.
+    weights = np.array([module[gene] for gene in genes])
     df[[("Enrichment", COLUMN_NAME_TARGET_GENES), ("Enrichment", COLUMN_NAME_RANK_AT_MAX)]] = df.apply(partial(leading_edge4row,
                                                                                                                avg2stdrcc=avg2stdrcc, genes=genes, weights=weights), axis=1)
 
