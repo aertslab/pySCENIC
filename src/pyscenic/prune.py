@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-import datetime
+import logging
 import re
 from math import ceil
 from functools import partial
@@ -20,6 +20,7 @@ from dask.multiprocessing import get
 from dask import delayed
 from dask.distributed import LocalCluster, Client
 
+from .log import create_logging_handler
 from .genesig import Regulome, GeneSignature
 from .utils import load_motif_annotations
 from .rnkdb import RankingDatabase, MemoryDecorator
@@ -36,6 +37,8 @@ IP_PATTERN = re.compile(
     r"""(25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[1-9]?[0-9])\."""
     r"""(25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[1-9]?[0-9])\."""
     r"""(25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[1-9]?[0-9])""")
+
+LOGGER = logging.getLogger(__name__)
 
 
 def _prepare_client(client_or_address):
@@ -57,7 +60,7 @@ def _prepare_client(client_or_address):
 
         def close_client_and_local_cluster(verbose=False):
             if verbose:
-                print('shutting down client and local cluster')
+                LOGGER.info('shutting down client and local cluster')
 
             client.close()
             local_cluster.close()
@@ -69,7 +72,7 @@ def _prepare_client(client_or_address):
 
         def close_client(verbose=False):
             if verbose:
-                print('shutting down client')
+                LOGGER.info('shutting down client')
 
             client.close()
 
@@ -79,7 +82,7 @@ def _prepare_client(client_or_address):
 
         def close_dummy(verbose=False):
             if verbose:
-                print('not shutting down client, client was created externally')
+                LOGGER.info('not shutting down client, client was created externally')
 
             return None
 
@@ -106,17 +109,17 @@ class Worker(Process):
     def run(self):
         # Load ranking database in memory.
         rnkdb = MemoryDecorator(self.database)
-        print("{} - Worker {}: database loaded in memory.".format(datetime.datetime.now(), self.name))
+        LOGGER.info("Worker {}: database loaded in memory.".format(self.name))
 
         # Load motif annotations in memory.
         motif_annotations = load_motif_annotations(self.motif_annotations_fname,
                                                    motif_similarity_fdr=self.motif_similarity_fdr,
                                                    orthologous_identity_threshold=self.orthologuous_identity_threshold)
-        print("{} - Worker {}: motif annotations loaded in memory.".format(datetime.datetime.now(), self.name))
+        LOGGER.info("Worker {}: motif annotations loaded in memory.".format(self.name))
 
         # Apply transformation on all modules.
         output = self.transform_fnc(rnkdb, self.modules, motif_annotations=motif_annotations)
-        print("{} - Worker {}: All regulomes derived.".format(datetime.datetime.now(), self.name))
+        LOGGER.info("Worker {}: All regulomes derived.".format(self.name))
 
         # Sending information back to parent process.
         # Another approach might be to write a CSV file (for dataframes) or YAML file (for regulomes) to a temp.
@@ -124,7 +127,7 @@ class Worker(Process):
         # Serialization introduces a performance penalty!
         self.sender.send(output)
         self.sender.close()
-        print("{} - Worker {}: Done.".format(datetime.datetime.now(), self.name))
+        LOGGER.info("Worker {}: Done.".format(self.name))
 
 
 T = TypeVar('T')
@@ -168,13 +171,19 @@ def _distributed_calc(rnkdbs: Sequence[Type[RankingDatabase]], modules: Sequence
         return False
     assert is_valid(client_or_address), "\"{}\"is not valid for parameter client_or_address.".format(client_or_address)
 
+    # Make sure warnings and info are being logged.
+    if not len(LOGGER.handlers):
+        LOGGER.addHandler(create_logging_handler(False))
+        if LOGGER.getEffectiveLevel() > logging.INFO:
+            LOGGER.setLevel(logging.INFO)
+
     if client_or_address == 'custom_multiprocessing': # CUSTOM parallelized implementation.
         # This implementation overcomes the I/O-bounded performance. Each worker (subprocess) loads a dedicated ranking
         # database and motif annotation table into its own memory space before consuming module. The implementation of
         # each worker uses the AUC-first numba JIT based implementation of the algorithm.
         assert len(rnkdbs) <= num_workers if num_workers else cpu_count(), "The number of databases is larger than the number of cores."
         amplifier = int((num_workers if num_workers else cpu_count())/len(rnkdbs))
-        print("Using {} workers.".format(len(rnkdbs) * amplifier))
+        LOGGER.info("Using {} workers.".format(len(rnkdbs) * amplifier))
         receivers = []
         for db in rnkdbs:
             for idx, chunk in enumerate(chunked_iter(modules, ceil(len(modules)/float(amplifier)))):

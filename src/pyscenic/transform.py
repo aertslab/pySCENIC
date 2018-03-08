@@ -1,6 +1,8 @@
 # -*- coding: utf-8 -*-
 
 from .recovery import recovery, aucs as calc_aucs
+import logging
+import traceback
 import pandas as pd
 import numpy as np
 from .utils import COLUMN_NAME_MOTIF_SIMILARITY_QVALUE, COLUMN_NAME_ORTHOLOGOUS_IDENTITY, \
@@ -25,6 +27,9 @@ COLUMN_NAME_RANK_AT_MAX = "RankAtMax"
 
 
 __all__ = ["module2features", "module2df", "modules2df", "df2regulomes", "module2regulome", "modules2regulomes"]
+
+
+LOGGER = logging.getLogger(__name__)
 
 
 def module2features_rcc4all_impl(db: Type[RankingDatabase], module: Regulome, motif_annotations: pd.DataFrame,
@@ -167,13 +172,18 @@ def module2df(db: Type[RankingDatabase], module: Regulome, motif_annotations: pd
 
     """
     # Derive enriched and TF-annotated features for module.
-    df_annotated_features, rccs, rankings, genes, avg2stdrcc = module2features_func(db, module, motif_annotations,
+    try:
+        df_annotated_features, rccs, rankings, genes, avg2stdrcc = module2features_func(db, module, motif_annotations,
                                                                                     weighted_recovery=weighted_recovery)
+    except MemoryError:
+        LOGGER.error("Unable to process \"{}\" on database \"{}\" because ran out of memory. Stacktrace:".format(module.name, db.name))
+        LOGGER.error(traceback.format_exc())
+        return pd.DataFrame()
     # If less than 80% of the genes are mapped to the ranking database, the module is skipped.
     n_missing = len(module) - len(genes)
     frac_missing = float(n_missing)/len(module)
     if frac_missing >= 0.20:
-        print("Less than 80% of the genes in {} could be mapped to {}. Skipping this module.".format(module.name, db.name))
+        LOGGER.warning("Less than 80% of the genes in {} could be mapped to {}. Skipping this module.".format(module.name, db.name))
         return pd.DataFrame()
 
     # If no annotated enriched features could be found, skip module.
