@@ -5,6 +5,8 @@ Clustering) which enables biologists to infer Gene Regulatory Networks and cell 
 pySCENIC can be run on a single desktop machine but easily scales to multi-core clusters to analyze thousands of cells
 in no time.
 
+:construction: This project is Work In Progress :construction:
+
 ## Features
 
 All the functionality of the original R implementation is available and in addition:
