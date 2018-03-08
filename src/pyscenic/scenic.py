@@ -211,6 +211,8 @@ def prune_targets(args):
 def df2regulomes(args):
     ext = os.path.splitext(args.module_fname.name)[1]
     df = pd.read_csv(args.module_fname.name, sep=FILE_EXTENSION2SEPARATOR[ext])
+    df[('Enrichment', 'Context')] = df[('Enrichment', 'Context')].apply(eval, axis=1)
+    df[('Enrichment', 'Target Genes')] = df[('Enrichment', 'Target Genes')].apply(eval, axis=1)
     return df2regs(df, nomenclature=args.nomenclature)
 
 
