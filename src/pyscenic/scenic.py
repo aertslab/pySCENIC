@@ -33,27 +33,27 @@ class NoProgressBar:
 
 
 def add_recovery_parameters(parser):
-    group = parser.add_argument_group('motif enrichment')
+    group = parser.add_argument_group('motif enrichment arguments')
     group.add_argument('--rank_threshold',
                        type=int, default=5000,
-                       help='The rank threshold used for deriving the target genes of an enriched motif.')
+                       help='The rank threshold used for deriving the target genes of an enriched motif (default: 5000).')
     group.add_argument('--auc_threshold',
                        type=float, default=0.05,
-                       help='The threshold used for calculating the AUC of a feature as fraction of ranked genes.')
+                       help='The threshold used for calculating the AUC of a feature as fraction of ranked genes (default: 0.05).')
     group.add_argument('--nes_threshold',
                        type=float, default=3.0,
-                       help='The Normalized Enrichment Score (NES) threshold for finding enriched features.')
+                       help='The Normalized Enrichment Score (NES) threshold for finding enriched features (default: 3.0).')
     return parser
 
 
 def add_annotation_parameters(parser):
-    group = parser.add_argument_group('motif annotation')
+    group = parser.add_argument_group('motif annotation arguments')
     group.add_argument('--min_orthologous_identity',
                        type=float, default=0.0,
-                       help='Minimum orthologous identity to use when annotating enriched motifs.')
+                       help='Minimum orthologous identity to use when annotating enriched motifs (default: 0.0).')
     group.add_argument('--max_similarity_fdr',
                        type=float, default=0.001,
-                       help='Maximum FDR in motif similarity to use when annotating enriched motifs.')
+                       help='Maximum FDR in motif similarity to use when annotating enriched motifs (default: 0.001).')
     group.add_argument('--annotations_fname',
                        type=argparse.FileType('r'),
                        help='The name of the file that contains the motif annotations to use.')
@@ -61,46 +61,45 @@ def add_annotation_parameters(parser):
 
 
 def add_module_parameters(parser):
-    group = parser.add_argument_group('module generation')
+    group = parser.add_argument_group('module generation arguments')
     group.add_argument('--thresholds',
                        type=float, nargs='+', default=[0.001,0.005],
-                       help='The first method to create the TF-modules based on the best targets for each transcription factor.')
+                       help='The first method to create the TF-modules based on the best targets for each transcription factor (default: 0.001 0.005).')
     group.add_argument('--top_n_targets',
                        type=int, nargs='+', default=[50],
-                       help='The second method is to select the top targets for a given TF.')
+                       help='The second method is to select the top targets for a given TF. (default: 50)')
     group.add_argument('--top_n_regulators',
                        type=int, nargs='+', default=[5,10,50],
-                       help='The alternative way to create the TF-modules is to select the best regulators for each gene.')
+                       help='The alternative way to create the TF-modules is to select the best regulators for each gene. (default: 5 10 50)')
     group.add_argument('--min_genes',
                        type=int, default=20,
-                       help='The minimum number of genes in a module.')
-    group.add_argument('--min_genes',
-                       type=int, default=20,
-                       help='The minimum number of genes in a module.')
+                       help='The minimum number of genes in a module (default: 20).')
     group.add_argument('--nomenclature',
-                       type=str, default="UNKNOWN",
-                       help='The nomenclature.')
-    group.add_argument('expression_mtx_fname',
+                       type=str, default="HGNC",
+                       help='The nomenclature (default: HGNC).')
+    group.add_argument('--expression_mtx_fname',
                         type=argparse.FileType('r'),
-                        help='The name of the file that contains the expression matrix (CSV).')
+                        help='The name of the file that contains the expression matrix (CSV).'
+                             ' (Only required if modules need to be generated)')
     return parser
 
 
 def add_computation_parameters(parser):
-    group = parser.add_argument_group('computation')
+    group = parser.add_argument_group('computation arguments')
     group.add_argument('--num_workers',
                        type=int, default=cpu_count(),
-                       help='The number of workers to use.')
+                       help='The number of workers to use (default: {}).'.format(cpu_count()))
     group.add_argument('--chunk_size',
                        type=int, default=100,
-                       help='The size of the module chunks assigned to a node in the dask graph.')
+                       help='The size of the module chunks assigned to a node in the dask graph (default: 100).')
     group.add_argument('--mode',
                        choices=['custom_multiprocessing', 'dask_multiprocessing', 'dask_cluster'],
-                       default='custom_multiprocessing',
-                       help='The mode to be used for computing.')
+                       default='dask_multiprocessing',
+                       help='The mode to be used for computing (default: dask_multiprocessing).')
     group.add_argument('--client_or_address',
                        type=float, default='local',
-                       help='The client or the IP address of the dask scheduler to use.')
+                       help='The client or the IP address of the dask scheduler to use.'
+                            ' (Only required of dask_cluster is selected as mode)')
     return parser
 
 
@@ -238,7 +237,8 @@ def aucell(args):
 
 
 def create_argument_parser():
-    parser = argparse.ArgumentParser(prog='pySCENIC - Single-CEll regulatory Network Inference and Clustering',
+    parser = argparse.ArgumentParser(prog='pySCENIC',
+                                     description='Single-CEll regulatory Network Inference and Clustering',
                                      fromfile_prefix_chars='@', add_help=True)
 
     # General options ...
@@ -294,7 +294,7 @@ def create_argument_parser():
     parser_prune.set_defaults(func=prune_targets)
 
     # create the parser for the "aucell" command
-    parser_aucell = subparsers.add_parser('aucell', help='b help')
+    parser_aucell = subparsers.add_parser('aucell', help='Find enrichment of regulomes across single cells.')
     parser_aucell.add_argument('expression_mtx_fname',
                             type=argparse.FileType('r'),
                             help='The name of the file that contains the expression matrix (CSV).')
@@ -302,7 +302,7 @@ def create_argument_parser():
                           type=argparse.FileType('r'),
                                help='The name of the file that contains the co-expression modules (YAML or pickled DAT).'
                                     'A TSV with adjacencies can also be supplied.')
-    parser_motifs.add_argument('-n','--nomenclature',
+    parser_aucell.add_argument('-n','--nomenclature',
                                type=str, default='HGNC',
                                help='The nomenclature used for the gene signatures.')
     add_recovery_parameters(parser_aucell)
