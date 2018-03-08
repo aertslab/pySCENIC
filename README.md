@@ -223,7 +223,7 @@ optional arguments:
 ```
 
 
-## Remarks on usage on clusters
+## Remarks on cluster and parallel usage
 
 When running on clusters the memory footprint of pySCENIC on the individual nodes might be significant because for the
 calculation of the recovery curves large chuncks of memory are pre-allocated. To mitigate this problem the parameter
