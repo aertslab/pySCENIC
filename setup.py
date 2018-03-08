@@ -80,6 +80,7 @@ setuptools.setup(
     include_package_data=True,
     install_requires=read_requirements('requirements.txt'),
     entry_points = {
-        'console_scripts': ['pyscenic = pyscenic.scenic:scenic'],
+        'console_scripts': ['pyscenic = pyscenic.scenic:scenic',
+                            'db2feather = pyscenic.db2feather:main'],
     }
 )
