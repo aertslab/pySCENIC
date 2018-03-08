@@ -97,7 +97,7 @@ def add_computation_parameters(parser):
                        default='dask_multiprocessing',
                        help='The mode to be used for computing (default: dask_multiprocessing).')
     group.add_argument('--client_or_address',
-                       type=float, default='local',
+                       type=str, default='local',
                        help='The client or the IP address of the dask scheduler to use.'
                             ' (Only required of dask_cluster is selected as mode)')
     return parser
@@ -122,19 +122,19 @@ def _load_dbs(fnames: Sequence[str], nomenclature: str) -> Sequence[Type[Ranking
 
 
 def find_adjacencies(args):
-    LOGGER.info("{} - Loading datasets.")
+    LOGGER.info("Loading datasets.")
     ex_matrix = pd.read_csv(args.expression_mtx_fname, sep='\t', header=0, index_col=0).T
     tf_names = load_tf_names(args.tfs_fname.name)
 
-    LOGGER.info("{} - Calculating co-expression modules.")
+    LOGGER.info("Calculating co-expression modules.")
     network = grnboost2(expression_data=ex_matrix, tf_names=tf_names, verbose=True, client_or_address=args.client_or_address)
 
-    LOGGER.info("{} - Writing results to file.")
+    LOGGER.info("Writing results to file.")
     network.to_csv(args.output, index=False, sep='\t')
 
 
 def find_motifs(args):
-    LOGGER.info("{} - Loading modules.")
+    LOGGER.info("Loading modules.")
     # Loading from YAML is extremely slow. Therefore this is a potential performance improvement.
     # Potential improvements are switching to JSON or to use a CLoader:
     # https://stackoverflow.com/questions/27743711/can-i-speedup-yaml
@@ -144,11 +144,11 @@ def find_motifs(args):
     else:
         modules = _load_modules(args.module_fname.name)
 
-    LOGGER.info("{} - Loading databases.")
+    LOGGER.info("Loading databases.")
     nomenclature = modules[0].nomenclature
     dbs = _load_dbs(args.database_fname, nomenclature)
 
-    LOGGER.info("{} - Calculating regulomes.")
+    LOGGER.info("Calculating regulomes.")
     motif_annotations_fname = args.annotations_fname.name
     with ProgressBar() if args.mode == "dask_multiprocessing" else NoProgressBar():
         df = find_features(dbs, modules, motif_annotations_fname,
@@ -159,7 +159,7 @@ def find_motifs(args):
                            module_chunksize=args.chunk_size,
                            num_workers=args.num_workers)
 
-    LOGGER.info("{} - Writing results to file.")
+    LOGGER.info("Writing results to file.")
     df.to_csv(args.output)
 
 
@@ -182,17 +182,17 @@ def df2modules(args):
 
 def prune_targets(args):
     if any(args.module_fname.name.endswith(ext) for ext in FILE_EXTENSION2SEPARATOR.keys()):
-        LOGGER.info("{} - Creating modules.")
+        LOGGER.info("Creating modules.")
         modules = df2modules(args)
     else:
-        LOGGER.info("{} - Loading modules.")
+        LOGGER.info("Loading modules.")
         modules = _load_modules(args.module_fname.name)
 
-    LOGGER.info("{} - Loading databases.")
+    LOGGER.info("Loading databases.")
     nomenclature = modules[0].nomenclature
     dbs = _load_dbs(args.database_fname, nomenclature)
 
-    LOGGER.info("{} - Calculating regulomes.")
+    LOGGER.info("Calculating regulomes.")
     motif_annotations_fname = args.annotations_fname.name
     with ProgressBar() if args.mode == "dask_multiprocessing" else NoProgressBar():
         out = prune2df(dbs, modules, motif_annotations_fname,
@@ -203,36 +203,40 @@ def prune_targets(args):
                            module_chunksize=args.chunk_size,
                            num_workers=args.num_workers)
 
-    LOGGER.info("{} - Writing results to file.")
+    LOGGER.info("Writing results to file.")
     out.to_csv(args.output)
 
 
-def df2regulomes(args):
-    ext = os.path.splitext(args.module_fname.name)[1]
-    df = pd.read_csv(args.module_fname.name, sep=FILE_EXTENSION2SEPARATOR[ext], index_col=[0,1], header=[0,1], skipinitialspace=True)
+def df2regulomes(fname, nomenclature):
+    ext = os.path.splitext(fname,)[1]
+    df = pd.read_csv(fname, sep=FILE_EXTENSION2SEPARATOR[ext], index_col=[0,1], header=[0,1], skipinitialspace=True)
     df[('Enrichment', 'Context')] = df[('Enrichment', 'Context')].apply(lambda s: eval(s))
     df[('Enrichment', 'TargetGenes')] = df[('Enrichment', 'TargetGenes')].apply(lambda s: eval(s))
-    return df2regs(df, nomenclature=args.nomenclature)
+    return df2regs(df, nomenclature=nomenclature)
 
 
 def aucell(args):
-    LOGGER.info("{} - Loading datasets.")
+    LOGGER.info("Loading expression matrix.")
     ex_mtx = pd.read_csv(args.expression_mtx_fname, sep='\t', header=0, index_col=0)
 
-    if any(args.module_fname.name.endswith(ext) for ext in FILE_EXTENSION2SEPARATOR.keys()):
-        LOGGER.info("{} - Creating regulomes.")
-        regulomes = df2regulomes(args)
+    if any(args.regulomes_fname.name.endswith(ext) for ext in FILE_EXTENSION2SEPARATOR.keys()):
+        LOGGER.info("Creating regulomes.")
+        regulomes = df2regulomes(args.regulomes_fname.name, args.nomenclature)
+    elif args.regulomes_fname.name.endswith('.gmt'):
+        LOGGER.info("Loading regulomes.")
+        regulomes = GeneSignature.from_gmt(args.regulomes_fname.name, args.nomenclature, field_separator='\t', gene_separator='\t')
     else:
-        LOGGER.info("{} - Loading regulomes.")
+        LOGGER.info("Loading regulomes.")
         regulomes = load_from_yaml(args.regulomes_fname.name)
 
-    LOGGER.info("{} - Create rankings.")
+    LOGGER.info("Create rankings.")
     rnk_mtx = create_rankings(ex_mtx)
 
-    LOGGER.info("{} - Calculating enrichment.")
+    LOGGER.info("Calculating enrichment.")
     auc_heatmap = pd.concat([enrichment(rnk_mtx.T, regulome) for regulome in regulomes]).unstack('Regulome')
+    auc_heatmap.columns = auc_heatmap.columns.droplevel(0)
 
-    LOGGER.info("{} - Writing results to file.")
+    LOGGER.info("Writing results to file.")
     auc_heatmap.to_csv(args.output)
 
 
@@ -240,11 +244,6 @@ def create_argument_parser():
     parser = argparse.ArgumentParser(prog='pySCENIC',
                                      description='Single-CEll regulatory Network Inference and Clustering',
                                      fromfile_prefix_chars='@', add_help=True)
-
-    # General options ...
-    parser.add_argument('-o', '--output',
-                        type=argparse.FileType('w'), default=sys.stdout,
-                        help='Output file/stream.')
 
     subparsers = parser.add_subparsers(help='sub-command help')
 
@@ -257,6 +256,9 @@ def create_argument_parser():
     parser_grn.add_argument('tfs_fname',
                                type=argparse.FileType('r'),
                                help='The name of the file that contains the list of transcription factors (TXT).')
+    parser_grn.add_argument('-o', '--output',
+                            type=argparse.FileType('w'), default=sys.stdout,
+                            help='Output file/stream.')
     add_computation_parameters(parser_grn)
     parser_grn.set_defaults(func=find_adjacencies)
 
@@ -272,6 +274,9 @@ def create_argument_parser():
     parser_motifs.add_argument('-n','--nomenclature',
                                type=str, default='HGNC',
                                help='The nomenclature used for the gene signatures.')
+    parser_motifs.add_argument('-o', '--output',
+                            type=argparse.FileType('w'), default=sys.stdout,
+                            help='Output file/stream.')
     add_recovery_parameters(parser_motifs)
     add_annotation_parameters(parser_motifs)
     add_computation_parameters(parser_motifs)
@@ -287,6 +292,9 @@ def create_argument_parser():
     parser_prune.add_argument('database_fname',
                               type=argparse.FileType('r'), nargs='+',
                               help='The name(s) of the regulatory feature databases (FEATHER of LEGACY).')
+    parser_prune.add_argument('-o', '--output',
+                            type=argparse.FileType('w'), default=sys.stdout,
+                            help='Output file/stream.')
     add_recovery_parameters(parser_prune)
     add_annotation_parameters(parser_prune)
     add_computation_parameters(parser_prune)
@@ -301,13 +309,14 @@ def create_argument_parser():
     parser_aucell.add_argument('regulomes_fname',
                           type=argparse.FileType('r'),
                                help='The name of the file that contains the co-expression modules (YAML or pickled DAT).'
-                                    'A TSV with adjacencies can also be supplied.')
+                                    'A TSV with adjacencies can also be supplied or a GMT file containing gene signatures.')
     parser_aucell.add_argument('-n','--nomenclature',
                                type=str, default='HGNC',
                                help='The nomenclature used for the gene signatures.')
+    parser_aucell.add_argument('-o', '--output',
+                            type=argparse.FileType('w'), default=sys.stdout,
+                            help='Output file/stream.')
     add_recovery_parameters(parser_aucell)
-    add_annotation_parameters(parser_aucell)
-    add_computation_parameters(parser_aucell)
     parser_aucell.set_defaults(func=aucell)
 
     return parser
@@ -321,10 +330,11 @@ def scenic(argv=None):
 
     # Parse arguments.
     parser = create_argument_parser()
-    parser.parse_args(args=argv)
-    # Normally this could should not be reached because of the default handlers for each subparser. Except when no
-    # action is selected.
-    parser.print_help()
+    args = parser.parse_args(args=argv)
+    if not hasattr(args, 'func'):
+        parser.print_help()
+    else:
+        args.func(args)
 
 
 if __name__ == "__main__":

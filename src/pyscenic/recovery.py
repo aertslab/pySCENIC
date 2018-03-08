@@ -90,7 +90,7 @@ def recovery(rnk: pd.DataFrame, total_genes: int, weights: np.ndarray, rank_thre
     return rccs, aucs
 
 
-def enrichment4cells(rnk_mtx: pd.DataFrame, regulome: Regulome, rank_threshold: int = 5000, auc_threshold: float = 0.05) -> pd.DataFrame:
+def enrichment4cells(rnk_mtx: pd.DataFrame, regulome: Type[GeneSignature], rank_threshold: int = 5000, auc_threshold: float = 0.05) -> pd.DataFrame:
     """
     Calculate the enrichment of the regulome for the cells in the ranking dataframe.
 

@@ -8,7 +8,7 @@ def create_rankings(ex_mtx: pd.DataFrame) -> pd.DataFrame:
     """
     Create a whole genome rankings dataframe from a single cell expression profile dataframe.
 
-    :param ex_mtx: The expression profile matrix. The rows should correspond to different cells, the genes to different
+    :param ex_mtx: The expression profile matrix. The rows should correspond to different cells, the columns to different
         genes.
     :return: A genome rankings dataframe.
     """
