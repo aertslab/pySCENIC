@@ -5,12 +5,16 @@ import numpy as np
 from itertools import repeat
 from typing import Type, Optional, List, Tuple
 from numba import *
+import logging
 
 from .rnkdb import RankingDatabase
 from .genesig import GeneSignature, Regulome
 
 
 __all__ = ["recovery", "aucs", "enrichment4features", "enrichment4cells", "leading_edge4row"]
+
+
+LOGGER = logging.getLogger(__name__)
 
 
 def derive_rank_cutoff(auc_threshold, rank_threshold, total_genes):
@@ -102,12 +106,17 @@ def enrichment4cells(rnk_mtx: pd.DataFrame, regulome: Type[GeneSignature], rank_
     :return:
     """
     total_genes = len(rnk_mtx.columns)
-    rnk = rnk_mtx.iloc[:,rnk_mtx.columns.isin(regulome.genes)]
-    weights = np.asarray([regulome[gene] if gene in regulome.genes else 1.0 for gene in rnk.columns.values])
-    rccs, aucs = recovery(rnk, total_genes, weights, rank_threshold, auc_threshold)
-    index = pd.MultiIndex.from_tuples(list(zip(rnk.index.values, repeat(regulome.name))),
+    index = pd.MultiIndex.from_tuples(list(zip(rnk_mtx.index.values, repeat(regulome.name))),
                                       names=["Cell", "Regulome"])
-    return pd.DataFrame(index=index, data={"AUC": aucs})
+
+    rnk = rnk_mtx.iloc[:,rnk_mtx.columns.isin(regulome.genes)]
+    if len(rnk) == 0:
+        LOGGER.warning("Not a single genes in {} was found.".format(regulome.name))
+        return pd.DataFrame(index=index, data={"AUC": np.empty(shape=(rnk_mtx.shape[0]), dtype=np.float64)})
+    else:
+        weights = np.asarray([regulome[gene] if gene in regulome.genes else 1.0 for gene in rnk.columns.values])
+        rccs, aucs = recovery(rnk, total_genes, weights, rank_threshold, auc_threshold)
+        return pd.DataFrame(index=index, data={"AUC": aucs})
 
 
 def enrichment4features(rnkdb: Type[RankingDatabase], gs: Type[GeneSignature], rank_threshold: int = 5000, auc_threshold: float = 0.05) -> pd.DataFrame:
