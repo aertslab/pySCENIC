@@ -56,7 +56,7 @@ def add_annotation_parameters(parser):
                        help='Maximum FDR in motif similarity to use when annotating enriched motifs (default: 0.001).')
     group.add_argument('--annotations_fname',
                        type=argparse.FileType('r'),
-                       help='The name of the file that contains the motif annotations to use.')
+                       help='The name of the file that contains the motif annotations to use.', required=True)
     return parser
 
 
@@ -218,6 +218,8 @@ def df2regulomes(fname, nomenclature):
 def aucell(args):
     LOGGER.info("Loading expression matrix.")
     ex_mtx = pd.read_csv(args.expression_mtx_fname, sep='\t', header=0, index_col=0)
+    if args.transpose == 'yes':
+        ex_mtx = ex_mtx.T
 
     if any(args.regulomes_fname.name.endswith(ext) for ext in FILE_EXTENSION2SEPARATOR.keys()):
         LOGGER.info("Creating regulomes.")
@@ -233,7 +235,7 @@ def aucell(args):
     rnk_mtx = create_rankings(ex_mtx)
 
     LOGGER.info("Calculating enrichment.")
-    auc_heatmap = pd.concat([enrichment(rnk_mtx.T, regulome) for regulome in regulomes]).unstack('Regulome')
+    auc_heatmap = pd.concat([enrichment(rnk_mtx, regulome) for regulome in regulomes]).unstack('Regulome')
     auc_heatmap.columns = auc_heatmap.columns.droplevel(0)
 
     LOGGER.info("Writing results to file.")
@@ -243,7 +245,8 @@ def aucell(args):
 def create_argument_parser():
     parser = argparse.ArgumentParser(prog='pySCENIC',
                                      description='Single-CEll regulatory Network Inference and Clustering',
-                                     fromfile_prefix_chars='@', add_help=True)
+                                     fromfile_prefix_chars='@', add_help=True,
+                                     epilog="Arguments can be read from file using a @args.txt construct.")
 
     subparsers = parser.add_subparsers(help='sub-command help')
 
@@ -316,6 +319,8 @@ def create_argument_parser():
     parser_aucell.add_argument('-o', '--output',
                             type=argparse.FileType('w'), default=sys.stdout,
                             help='Output file/stream.')
+    parser_aucell.add_argument('-t', '--transpose', action='store_const', const = 'yes',
+                               help='Transpose the expression matrix.')
     add_recovery_parameters(parser_aucell)
     parser_aucell.set_defaults(func=aucell)
 
