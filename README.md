@@ -26,13 +26,7 @@ git clone https://github.com/aertslab/pySCENIC.git
 
 cd pySCENIC/
 
-python setup.py sdist
-```
-
-This will create a source distribution which you can subsequently install via:
-
-```
-pip install pyscenic-<version>.tar.gz
+pip install .
 ```
 
 To successfully use this pipeline you also need auxilliary datasets:
