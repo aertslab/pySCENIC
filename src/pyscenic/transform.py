@@ -24,6 +24,7 @@ COLUMN_NAME_AUC = "AUC"
 COLUMN_NAME_CONTEXT = "Context"
 COLUMN_NAME_TARGET_GENES = "TargetGenes"
 COLUMN_NAME_RANK_AT_MAX = "RankAtMax"
+COLUMN_NAME_TYPE = "Type"
 
 
 __all__ = ["module2features", "module2df", "modules2df", "df2regulomes", "module2regulome", "modules2regulomes"]
@@ -259,18 +260,19 @@ def df2regulomes(df, nomenclature) -> Sequence[Regulome]:
     :param nomenclature: The nomenclature of the genes.
     :return: A sequence of regulomes.
     """
+    # Normally the columns index has two levels. For convenience of the following code the first level is removed.
+    if df.columns.nlevels == 2:
+        df.columns = df.columns.droplevel(0)
 
     def get_type(row):
-        ctx = row[('Enrichment', 'Context')]
+        ctx = row[COLUMN_NAME_CONTEXT]
         return ACTIVATING_MODULE if ACTIVATING_MODULE in ctx else REPRESSING_MODULE
-    df[('Enrichment', 'Type')] = df.apply(get_type,axis=1)
+    df[COLUMN_NAME_TYPE] = df.apply(get_type,axis=1)
 
     not_none = lambda r: r is not None
-    return list(filter(not_none, (regulome4group(tf_name, frozenset([interaction_type]),
-                                                 df_grp['Enrichment'],
-                                                 nomenclature)
-                                  for (tf_name, interaction_type), df_grp in df.groupby(by=[COLUMN_NAME_TF,
-                                                                                            ('Enrichment', 'Type')]))))
+    return list(filter(not_none, (regulome4group(tf_name, frozenset([interaction_type]), df_grp, nomenclature)
+                                        for (tf_name, interaction_type), df_grp in df.groupby(by=[COLUMN_NAME_TF,
+                                                                                                  COLUMN_NAME_TYPE]))))
 
 
 def module2regulome(db: Type[RankingDatabase], module: Regulome, motif_annotations: pd.DataFrame,
