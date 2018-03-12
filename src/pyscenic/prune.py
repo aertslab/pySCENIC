@@ -6,6 +6,9 @@ from math import ceil
 from functools import partial
 from operator import concat
 from typing import Type, Sequence, TypeVar, Callable
+import tempfile
+import pickle
+import os
 
 import pandas as pd
 
@@ -121,11 +124,13 @@ class Worker(Process):
         output = self.transform_fnc(rnkdb, self.modules, motif_annotations=motif_annotations)
         LOGGER.info("Worker {}: All regulomes derived.".format(self.name))
 
-        # Sending information back to parent process.
-        # Another approach might be to write a CSV file (for dataframes) or YAML file (for regulomes) to a temp.
-        # file and share the name of the file with the parent process.
-        # Serialization introduces a performance penalty!
-        self.sender.send(output)
+        # Sending information back to parent process: to avoid overhead of pickling the data, the output is first written
+        # to disk in binary pickle format to a temporary file. The name of that file is shared with the parent process.
+        output_fname = tempfile.mktemp()
+        with open(output_fname, 'wb') as f:
+            pickle.dump(output, f)
+        del output
+        self.sender.send(output_fname)
         self.sender.close()
         LOGGER.info("Worker {}: Done.".format(self.name))
 
@@ -191,7 +196,18 @@ def _distributed_calc(rnkdbs: Sequence[Type[RankingDatabase]], modules: Sequence
                 receivers.append(receiver)
                 Worker("{}({})".format(db.name, idx+1), db, chunk, motif_annotations_fname, sender,
                        motif_similarity_fdr, orthologuous_identity_threshold, transform_func).start()
-        return aggregate_func([recv.recv() for recv in receivers])
+        # Retrieve the name of the temporary file to which the data is stored. This is a blocking operation.
+        fnames = [recv.recv() for recv in receivers]
+        # Load all data from disk and concatenate.
+        def load(fname):
+            with open(fname, 'rb') as f:
+                return pickle.load(f)
+        try:
+            return aggregate_func(list(map(load, fnames)))
+        finally:
+            # Remove temporary files.
+            for fname in fnames:
+                os.remove(fname)
     else: # DASK framework.
         # Load motif annotations.
         motif_annotations = load_motif_annotations(motif_annotations_fname,
@@ -224,6 +240,7 @@ def _distributed_calc(rnkdbs: Sequence[Type[RankingDatabase]], modules: Sequence
             # However, because of the memory need of a node running pyscenic is already high (i.e. pre-allocation
             # of recovery curves - 20K features (max. enriched) * rank_threshold * 8 bytes (float) * num_cores),
             # this might not be a sound idea to do.
+            # TODO: Use from_delayed to
             return delayed(aggregate_func)(
                         (delayed(transform_func)
                             (db, gs_chunk, delayed_or_future_annotations)
