@@ -22,3 +22,5 @@ boltons
 twine
 fabric3
 matplotlib-venn
+joblib
+umap-learn
