@@ -21,6 +21,8 @@ from boltons.iterutils import chunked_iter
 
 from dask.multiprocessing import get
 from dask import delayed
+from dask.dataframe import from_delayed
+
 from dask.distributed import LocalCluster, Client
 
 from .log import create_logging_handler
@@ -240,7 +242,6 @@ def _distributed_calc(rnkdbs: Sequence[Type[RankingDatabase]], modules: Sequence
             # However, because of the memory need of a node running pyscenic is already high (i.e. pre-allocation
             # of recovery curves - 20K features (max. enriched) * rank_threshold * 8 bytes (float) * num_cores),
             # this might not be a sound idea to do.
-            # TODO: Use from_delayed to
             return delayed(aggregate_func)(
                         (delayed(transform_func)
                             (db, gs_chunk, delayed_or_future_annotations)
@@ -300,7 +301,8 @@ def find_features(rnkdbs: Sequence[Type[RankingDatabase]], signatures: Sequence[
                                    avgrcc_sample_frac=avgrcc_sample_frac,
                                    filter_for_annotation=False)
     transformation_func = partial(modules2df, module2features_func=module2features_func, weighted_recovery=weighted_recovery)
-    aggregation_func = pd.concat
+    # Create a distributed dataframe from individual delayed objects to avoid out of memory problems.
+    aggregation_func = from_delayed if client_or_address != 'custom_multiprocessing' else pd.concat
     df = _distributed_calc(rnkdbs, signatures, motif_annotations_fname, transformation_func, aggregation_func,
                       motif_similarity_fdr, orthologuous_identity_threshold, client_or_address,
                       num_workers, module_chunksize)
@@ -394,7 +396,8 @@ def prune2df(rnkdbs: Sequence[Type[RankingDatabase]], modules: Sequence[Regulome
                                    avgrcc_sample_frac=avgrcc_sample_frac,
                                    filter_for_annotation=True)
     transformation_func = partial(modules2df, module2features_func=module2features_func, weighted_recovery=weighted_recovery)
-    aggregation_func = pd.concat
+    # Create a distributed dataframe from individual delayed objects to avoid out of memory problems.
+    aggregation_func = from_delayed if client_or_address != 'custom_multiprocessing' else pd.concat
     return _distributed_calc(rnkdbs, modules, motif_annotations_fname, transformation_func, aggregation_func,
                              motif_similarity_fdr, orthologuous_identity_threshold, client_or_address,
                              num_workers, module_chunksize)
