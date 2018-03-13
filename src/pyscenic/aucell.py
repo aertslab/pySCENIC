@@ -73,8 +73,10 @@ def aucell(exp_mtx: pd.DataFrame, modules: Sequence[Type[GeneSignature]],
             # in Parallel just before forking.
             rnk_mtx = load(temp_fname, mmap_mode='r')
 
+            if noweights:
+                modules = list(map(lambda m: m.noweights(), modules))
             aucs = pd.concat(Parallel(n_jobs=num_cores)(delayed(_enrichment)
-                                      (rnk_mtx, module if noweights else module.noweights(),
+                                      (rnk_mtx, module,
                                             genes, features, rank_threshold, auc_threshold) for module in tqdm(modules)))
         finally:
             try:
