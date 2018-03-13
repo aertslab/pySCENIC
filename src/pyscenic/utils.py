@@ -60,12 +60,12 @@ def add_correlation(adjacencies: pd.DataFrame, ex_mtx: pd.DataFrame) -> pd.DataF
     Add correlation in expression levels between target and factor.
 
     :param adjacencies: The dataframe with the TF-target links.
-    :param ex_mtx: The expression matrix (n_genes x n_cells).
+    :param ex_mtx: The expression matrix (n_cells x n_genes).
     :return: The adjacencies dataframe with an extra column.
     """
 
     # Calculate Pearson correlation to infer repression or activation.
-    corr_mtx = pd.DataFrame(index=ex_mtx.index, columns=ex_mtx.index, data=np.corrcoef(ex_mtx.values))
+    corr_mtx = pd.DataFrame(index=ex_mtx.columns, columns=ex_mtx.columns, data=np.corrcoef(ex_mtx.values.T))
 
     # Add "correlation" column to adjacencies dataframe.
     def add_regulation(row, corr_mtx):
@@ -150,7 +150,7 @@ def modules_from_adjacencies(adjacencies: pd.DataFrame,
     Create modules from a dataframe containing weighted adjacencies between a TF and a target genes.
     
     :param adjacencies: The dataframe with the TF-target links.
-    :param ex_mtx: The expression matrix (n_genes x n_cells).
+    :param ex_mtx: The expression matrix (n_cells x n_genes).
     :param nomenclature: The nomenclature of the genes.
     :param thresholds: the first method to create the TF-modules based on the best targets for each transcription factor.
     :param top_n_targets: the second method is to select the top targets for a given TF.
@@ -158,6 +158,7 @@ def modules_from_adjacencies(adjacencies: pd.DataFrame,
     :param min_genes: The required minimum number of genes in a module.
     :return: A list of Regulomes.
     """
+
     # Relationship between TF and its target, i.e. activator or repressor, is derived using the original expression
     # profiles. The Pearson product-moment correlation coefficient is used to derive this information.
 
