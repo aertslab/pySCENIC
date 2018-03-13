@@ -10,7 +10,7 @@ from arboretum.utils import load_tf_names
 from .utils import load_from_yaml
 from .rnkdb import open as opendb, RankingDatabase
 from .prune import prune2df, find_features
-from .aucell import create_rankings, enrichment
+from .aucell import aucell
 from .genesig import GeneSignature
 from .log import create_logging_handler
 import pandas as pd
@@ -121,7 +121,7 @@ def _load_dbs(fnames: Sequence[str], nomenclature: str) -> Sequence[Type[Ranking
     return [opendb(fname=fname.name, name=get_name(fname.name), nomenclature=nomenclature) for fname in fnames]
 
 
-def find_adjacencies(args):
+def find_adjacencies_command(args):
     LOGGER.info("Loading datasets.")
     ex_matrix = pd.read_csv(args.expression_mtx_fname, sep='\t', header=0, index_col=0).T
     tf_names = load_tf_names(args.tfs_fname.name)
@@ -133,7 +133,7 @@ def find_adjacencies(args):
     network.to_csv(args.output, index=False, sep='\t')
 
 
-def find_motifs(args):
+def find_motifs_command(args):
     LOGGER.info("Loading modules.")
     # Loading from YAML is extremely slow. Therefore this is a potential performance improvement.
     # Potential improvements are switching to JSON or to use a CLoader:
@@ -180,7 +180,7 @@ def df2modules(args):
                                               min_genes=args.min_genes)
 
 
-def prune_targets(args):
+def prune_targets_command(args):
     if any(args.module_fname.name.endswith(ext) for ext in FILE_EXTENSION2SEPARATOR.keys()):
         LOGGER.info("Creating modules.")
         modules = df2modules(args)
@@ -215,7 +215,7 @@ def df2regulomes(fname, nomenclature):
     return df2regs(df, nomenclature=nomenclature)
 
 
-def aucell(args):
+def aucell_command(args):
     LOGGER.info("Loading expression matrix.")
     ex_mtx = pd.read_csv(args.expression_mtx_fname, sep='\t', header=0, index_col=0)
     if args.transpose == 'yes':
@@ -231,12 +231,8 @@ def aucell(args):
         LOGGER.info("Loading regulomes.")
         regulomes = load_from_yaml(args.regulomes_fname.name)
 
-    LOGGER.info("Create rankings.")
-    rnk_mtx = create_rankings(ex_mtx)
-
     LOGGER.info("Calculating enrichment.")
-    auc_heatmap = pd.concat([enrichment(rnk_mtx, regulome) for regulome in regulomes]).unstack('Regulome')
-    auc_heatmap.columns = auc_heatmap.columns.droplevel(0)
+    auc_heatmap = aucell(ex_mtx, regulomes, args.rank_threshold, args.auc_threshold, args.weights != 'yes', args.num_workers)
 
     LOGGER.info("Writing results to file.")
     auc_heatmap.to_csv(args.output)
@@ -250,8 +246,8 @@ def create_argument_parser():
 
     subparsers = parser.add_subparsers(help='sub-command help')
 
-    # create the parser for the "grn" command
-    parser_grn = subparsers.add_parser('grn',
+    # create the parser for the "grnboost" command
+    parser_grn = subparsers.add_parser('grnboost',
                                          help='Derive co-expression modules from expression matrix.')
     parser_grn.add_argument('expression_mtx_fname',
                                type=argparse.FileType('r'),
@@ -263,9 +259,10 @@ def create_argument_parser():
                             type=argparse.FileType('w'), default=sys.stdout,
                             help='Output file/stream.')
     add_computation_parameters(parser_grn)
-    parser_grn.set_defaults(func=find_adjacencies)
+    parser_grn.set_defaults(func=find_adjacencies_command)
 
     # create the parser for the "motifs" command
+    #TODO: join with prune and have an option for pruning!
     parser_motifs = subparsers.add_parser('motifs',
                                          help='Find enriched motifs for gene signatures.')
     parser_motifs.add_argument('signatures_fname',
@@ -283,7 +280,7 @@ def create_argument_parser():
     add_recovery_parameters(parser_motifs)
     add_annotation_parameters(parser_motifs)
     add_computation_parameters(parser_motifs)
-    parser_motifs.set_defaults(func=find_motifs)
+    parser_motifs.set_defaults(func=find_motifs_command)
 
     # create the parser for the "prune" command
     parser_prune = subparsers.add_parser('prune',
@@ -302,7 +299,7 @@ def create_argument_parser():
     add_annotation_parameters(parser_prune)
     add_computation_parameters(parser_prune)
     add_module_parameters(parser_prune)
-    parser_prune.set_defaults(func=prune_targets)
+    parser_prune.set_defaults(func=prune_targets_command)
 
     # create the parser for the "aucell" command
     parser_aucell = subparsers.add_parser('aucell', help='Find enrichment of regulomes across single cells.')
@@ -321,8 +318,13 @@ def create_argument_parser():
                             help='Output file/stream.')
     parser_aucell.add_argument('-t', '--transpose', action='store_const', const = 'yes',
                                help='Transpose the expression matrix.')
+    parser_aucell.add_argument('-w', '--weights', action='store_const', const = 'yes',
+                               help='Use weights associated with genes in recovery analysis.')
+    parser_aucell.add_argument('--num_workers',
+                       type=int, default=cpu_count(),
+                       help='The number of workers to use (default: {}).'.format(cpu_count()))
     add_recovery_parameters(parser_aucell)
-    parser_aucell.set_defaults(func=aucell)
+    parser_aucell.set_defaults(func=aucell_command)
 
     return parser
 
