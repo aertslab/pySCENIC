@@ -14,4 +14,3 @@ distributed
 arboretum
 setuptools
 pyyaml
-joblib
