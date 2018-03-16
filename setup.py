@@ -71,7 +71,6 @@ setuptools.setup(
     ],
     keywords='single-cell transcriptomics gene-regulatory-network transcription-factors',
     author="Bram Van de Sande",
-    author_email="vandesande.bram@gmail.com",
     url='https://github.com/aertslab/pySCENIC',
     license='GPL-3.0+',
     packages=setuptools.find_packages(where='src'),
