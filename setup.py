@@ -54,7 +54,7 @@ setuptools.setup(
     name='pyscenic',
     version=versioneer.get_version(),
     cmdclass=versioneer.get_cmdclass(),
-    description="Python implementation of the SCENIC pipeline.",
+    description="Python implementation of the SCENIC pipeline for transcription factor inference from single-cell transcriptomics experiments.",
     long_description=read('README.md'),
     classifiers=[
         # Get strings from http://pypi.python.org/pypi?%3Aaction=list_classifiers
@@ -69,10 +69,10 @@ setuptools.setup(
         'Programming Language :: Python :: 3.6',
         'Programming Language :: Python :: Implementation :: CPython',
     ],
-    keywords='single-cell rna-seq',
+    keywords='single-cell transcriptomics gene-regulatory-network transcription-factors',
     author="Bram Van de Sande",
     author_email="vandesande.bram@gmail.com",
-    url='http://pyscenic.readthedocs.io/en/latest/',
+    url='https://github.com/aertslab/pySCENIC',
     license='GPL-3.0+',
     packages=setuptools.find_packages(where='src'),
     package_dir={'': 'src'},
