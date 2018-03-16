@@ -1,6 +1,7 @@
 # pySCENIC
 
-[![Build Status](https://travis-ci.org/aertslab/pySCENIC.svg?branch=master)](https://travis-ci.org/aertslab/pySCENIC)
+[![Build Status](https://travis-ci.org/aertslab/pySCENIC.svg?branch=master)](https://travis-ci.org/aertslab/pySCENIC) 
+[![PyPI version](https://badge.fury.io/py/pyscenic.svg)](https://badge.fury.io/py/pyscenic)
 
 pySCENIC is a lightning-fast python implementation of the SCENIC pipeline (Single-CEll regulatory Network Inference and
 Clustering) which enables biologists to infer transcription factors, Gene Regulatory Networks and cell types from 
