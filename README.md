@@ -6,8 +6,6 @@ single-cell RNA-seq data.
 pySCENIC can be run on a single desktop machine but easily scales to multi-core clusters to analyze thousands of cells
 in no time.
 
-:construction: This project is Work In Progress :construction:
-
 ## Features
 
 All the functionality of the original R implementation is available and in addition:
@@ -18,21 +16,21 @@ All the functionality of the original R implementation is available and in addit
 
 ## Installation
 
-:construction: The package itself can be installed via `pip install pyscenic`. :construction:
+The package itself can be installed via `pip install pyscenic`.
 
-> You can also create this package manually from source:
-> 
-> ```
-> git clone https://github.com/aertslab/pySCENIC.git
-> 
-> cd pySCENIC/
->
-> pip install .
-> ```
+You can also install this package directly from the source:
+ 
+ ```
+ git clone https://github.com/aertslab/pySCENIC.git
+ 
+ cd pySCENIC/
+
+ pip install .
+ ```
 
 To successfully use this pipeline you also need auxilliary datasets:
 
-1. Databases ranking the whole genome of your species of interest based on regulatory features (i.e. transcription factor).
+1. Databases ranking the whole genome of your species of interest based on regulatory features (i.e. transcription factors).
 Ranking databases are typically stored in the [feather format](https://github.com/wesm/feather).
 2. Motif annotation database providing the missing link between an enriched motif and the transcription factor that binds
 this motif. This pipeline needs a TSV text file where every line represents a particular annotation.
@@ -123,7 +121,7 @@ dbs
 In the initial phase of the pySCENIC pipeline the single cell expression profiles are used to infer 
 co-expression modules from.
 
-##### Run GENIE3 or GRNBoost from `arboretum` to infer co-expression modules
+##### Run GENIE3 or GRNBoost from [`arboretum`](https://github.com/tmoerman/arboretum) to infer co-expression modules
 
 The arboretum package is used for this phase of the pipeline. For this notebook only a sample of 1,000 cells is used
 for the co-expression module inference is used.
