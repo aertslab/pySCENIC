@@ -11,7 +11,7 @@ in no time.
 
 All the functionality of the original R implementation is available and in addition:
 
-1. You can leverage multi-core and multi-node clusters which enable you to expand pruning of targets based on more whole genome rankings databases.
+1. You can leverage multi-core and multi-node clusters.
 2. We implemented a version of the recovery of input genes that takes into account weights associated with these genes.
 3. Regulomes with targets that are repressed are now also derived and used for cell enrichment analysis.
 
@@ -19,15 +19,15 @@ All the functionality of the original R implementation is available and in addit
 
 :construction: The package itself can be installed via `pip install pyscenic`. :construction:
 
-You can also create this package manually from source:
-
-```
-git clone https://github.com/aertslab/pySCENIC.git
-
-cd pySCENIC/
-
-pip install .
-```
+> You can also create this package manually from source:
+> 
+> ```
+> git clone https://github.com/aertslab/pySCENIC.git
+> 
+> cd pySCENIC/
+>
+> pip install .
+> ```
 
 To successfully use this pipeline you also need auxilliary datasets:
 
@@ -54,7 +54,7 @@ from arboretum.algo import grnboost2
 from pyscenic.rnkdb import FeatherRankingDatabase as RankingDatabase
 from pyscenic.utils import modules_from_adjacencies, save_to_yaml
 from pyscenic.prune import prune, prune2df
-from pyscenic.aucell import create_rankings, enrichment
+from pyscenic.aucell import aucell
 
 import seaborn as sns
 
@@ -200,9 +200,8 @@ Characterize the different cells in a single-cell transcriptomics experiment by 
 regulomes. Enrichment of a regulome is measures as AUC of the recovery curve of the genes that define this regulome.
 
 ```python
-rnk_mtx = create_rankings(ex_matrix)
 
-auc_mtx = pd.concat([enrichment(rnk_mtx.T, regulome) for regulome in regulomes]).unstack("Regulome")
+auc_mtx = aucell(ex_matrix.T, regulomes, num_workers=4)
 
 sns.clustermap(auc_mtx, figsize=(8,8))
 ```
