@@ -14,3 +14,4 @@ distributed
 arboretum
 setuptools
 pyyaml
+tqdm
