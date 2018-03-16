@@ -38,10 +38,8 @@ You can also install this package directly from the source:
 
 To successfully use this pipeline you also need auxilliary datasets:
 
-1. Databases ranking the whole genome of your species of interest based on regulatory features (i.e. transcription factors).
-Ranking databases are typically stored in the `feather format <https://github.com/wesm/feather>`_.
-2. Motif annotation database providing the missing link between an enriched motif and the transcription factor that binds
-this motif. This pipeline needs a TSV text file where every line represents a particular annotation.
+1. Databases ranking the whole genome of your species of interest based on regulatory features (i.e. transcription factors). Ranking databases are typically stored in the `feather format <https://github.com/wesm/feather>`_.
+2. Motif annotation database providing the missing link between an enriched motif and the transcription factor that binds this motif. This pipeline needs a TSV text file where every line represents a particular annotation.
 
 To acquire these datasets please contact `LCB <https://aertslab.org>`_.
 
@@ -148,13 +146,16 @@ Derive potential regulomes from these co-expression modules
 Regulomes are derived from adjacencies based on three methods:
 
 The first method to create the TF-modules is to select the best targets for each transcription factor:
+
 1. Targets with weight > 0.001
 2. Targets with weight > 0.005
 
 The second method is to select the top targets for a given TF:
+
 1. Top 50 targets (targets with highest weight)
 
 The alternative way to create the TF-modules is to select the best regulators for each gene (this is actually how GENIE3 internally works). Then, these targets can be assigned back to each TF to form the TF-modules. In this way we will create three more gene-sets:
+
 1. Targets for which the TF is within its top 5 regulators
 2. Targets for which the TF is within its top 10 regulators
 3. Targets for which the TF is within its top 50 regulators
