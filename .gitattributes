@@ -1,1 +1,2 @@
 src/pyscenic/_version.py export-subst
+notebooks/* linguist-vendored
