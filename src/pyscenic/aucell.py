@@ -68,7 +68,7 @@ def aucell(exp_mtx: pd.DataFrame, modules: Sequence[Type[GeneSignature]],
 
     if num_cores == 1:
         # Show progress bar ...
-        aucs = pd.concat([enrichment(df_rnk, module if noweights else module.noweights(),
+        aucs = pd.concat([enrichment(df_rnk, module.noweights() if noweights else module,
                                  rank_threshold=rank_threshold,
                                  auc_threshold=auc_threshold) for module in tqdm(modules)]).unstack("Regulome")
         aucs.columns = aucs.columns.droplevel(0)
