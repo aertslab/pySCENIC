@@ -55,7 +55,7 @@ setuptools.setup(
     version=versioneer.get_version(),
     cmdclass=versioneer.get_cmdclass(),
     description="Python implementation of the SCENIC pipeline for transcription factor inference from single-cell transcriptomics experiments.",
-    long_description=read('README.md'),
+    long_description=read('README.rst'),
     classifiers=[
         # Get strings from http://pypi.python.org/pypi?%3Aaction=list_classifiers
         'Development Status :: 4 - Beta',
