@@ -13,7 +13,7 @@ The pioneering work was done in R and results were published in Nature Methods [
 pySCENIC can be run on a single desktop machine but easily scales to multi-core clusters to analyze thousands of cells
 in no time. The latter is achieved via the dask_ framework for distributed computing [2]_.
 
-The pipeline has tree steps:
+The pipeline has three steps:
 
 1. First transcription factors (TFs) and their target genes, i.e. targetomes, are derived using gene inference methods which solely rely on correlations between expression of genes across cells. The arboretum_ package is used for this step.
 2. These targetomes are refined by pruning targets that do not have an enrichment for a corresponding motif of the TF effectively separating direct from indirect targets based on the presence of cis-regulatory footprints.
