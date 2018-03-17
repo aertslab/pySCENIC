@@ -24,3 +24,4 @@ fabric3
 matplotlib-venn
 umap-learn
 tqdm
+sphinx

@@ -2,7 +2,7 @@
 pySCENIC
 ========
 
-|buildstatus|_ |pypipackage|_
+|buildstatus|_ |pypipackage|_ |docstatus|_
 
 pySCENIC is a lightning-fast python implementation of the SCENIC_ pipeline (Single-CEll regulatory Network Inference and
 Clustering) which enables biologists to infer transcription factors, gene regulatory networks and cell types from
@@ -44,7 +44,7 @@ The package itself can be installed via :code:`pip install pyscenic`.
 
 You can also install this package directly from the source:
  
-.. code-block::
+.. code-block:: bash
 
     git clone https://github.com/aertslab/pySCENIC.git
     cd pySCENIC/
@@ -109,7 +109,7 @@ Subsequently duplicate genes are removed:
     ex_matrix = ex_matrix[~ex_matrix.index.duplicated(keep='first')]
     ex_matrix.shape
 
-.. code-block:: bash
+::
 
     (19970, 3005)
 
@@ -131,7 +131,7 @@ Finally the ranking databases are loaded:
     dbs = [RankingDatabase(fname=fname, name=name(fname), nomenclature="MGI") for fname in db_fnames]
     dbs
 
-.. code-block::
+::
 
         [FeatherRankingDatabase(name="mm9-tss-centered-10kb-10species",nomenclature=MGI),
          FeatherRankingDatabase(name="mm9-500bp-upstream-7species",nomenclature=MGI),
@@ -232,9 +232,9 @@ regulomes. Enrichment of a regulome is measured as the Area Under the recovery C
 Command Line Interface
 ----------------------
 
-A command line version of the tool is included. This tool is available after proper installation of the package via ::code`pip`.
+A command line version of the tool is included. This tool is available after proper installation of the package via :code:`pip`.
 
-.. code-block::
+.. code-block:: bash
 
     { ~ }  » pyscenic                                            ~
     usage: SCENIC - Single-CEll regulatory Network Inference and Clustering
@@ -286,3 +286,7 @@ References
 
 .. |pypipackage| image:: https://badge.fury.io/py/pyscenic.svg
 .. _pypipackage: https://badge.fury.io/py/pyscenic
+
+.. |docstatus| image:: https://readthedocs.org/projects/pyscenic/badge/?version=latest
+.. _docstatus: http://pyscenic.readthedocs.io/en/latest/?badge=latest
+
