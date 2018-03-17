@@ -1,25 +1,41 @@
-========
+
 pySCENIC
 ========
 
-.. image:: https://travis-ci.org/aertslab/pySCENIC.svg?branch=master
-  :target: https://travis-ci.org/aertslab/pySCENIC
+|buildstatus|_ |pypipackage|_
 
-.. image:: https://badge.fury.io/py/pyscenic.svg
-  :target: https://badge.fury.io/py/pyscenic
-
-pySCENIC is a lightning-fast python implementation of the SCENIC pipeline (Single-CEll regulatory Network Inference and
-Clustering) which enables biologists to infer transcription factors, Gene Regulatory Networks and cell types from 
+pySCENIC is a lightning-fast python implementation of the SCENIC_ pipeline (Single-CEll regulatory Network Inference and
+Clustering) which enables biologists to infer transcription factors, gene regulatory networks and cell types from
 single-cell RNA-seq data.
+
+The pioneering work was done in R and results were published in Nature Methods [1]_.
+
 pySCENIC can be run on a single desktop machine but easily scales to multi-core clusters to analyze thousands of cells
-in no time.
+in no time. The latter is achieved via the dask_ framework for distributed computing [2]_.
+
+The pipeline has tree steps:
+
+1. First transcription factors (TFs) and their target genes, i.e. targetomes, are derived using gene inference methods which solely rely on correlations between
+expression of genes across cells. The arboretum_ package is used for this step.
+2. These targetomes are refined by pruning targets that do not have an enrichment for a corresponding motif of the TF
+effectively separating direct from indirect targets based on the presence of cis-regulatory footprints.
+3. Finally, the original cells are differentiated and clustered on the activity of these discovered targetomes.
+
+.. sidebar:: **Quick Start**
+
+    * `Installation`_
+    * `Tutorial`_
+    * `Command Line Interface`_
+    * See notebooks_
+    * Report an issue_
+    * Releases at PyPI_
 
 Features
 --------
 
 All the functionality of the original R implementation is available and in addition:
 
-1. You can leverage multi-core and multi-node clusters.
+1. You can leverage multi-core and multi-node clusters using dask_ and its distributed_ scheduler.
 2. We implemented a version of the recovery of input genes that takes into account weights associated with these genes.
 3. Regulomes with targets that are repressed are now also derived and used for cell enrichment analysis.
 
@@ -30,7 +46,7 @@ The package itself can be installed via :code:`pip install pyscenic`.
 
 You can also install this package directly from the source:
  
-.. code-block:: bash
+.. code-block::
 
     git clone https://github.com/aertslab/pySCENIC.git
     cd pySCENIC/
@@ -38,16 +54,18 @@ You can also install this package directly from the source:
 
 To successfully use this pipeline you also need auxilliary datasets:
 
-1. Databases ranking the whole genome of your species of interest based on regulatory features (i.e. transcription factors). Ranking databases are typically stored in the `feather format <https://github.com/wesm/feather>`_.
+1. Databases ranking the whole genome of your species of interest based on regulatory features (i.e. transcription factors). Ranking databases are typically stored in the feather_ format.
 2. Motif annotation database providing the missing link between an enriched motif and the transcription factor that binds this motif. This pipeline needs a TSV text file where every line represents a particular annotation.
 
-To acquire these datasets please contact `LCB <https://aertslab.org>`_.
+To acquire these datasets please contact LCB_.
 
 Tutorial
 --------
 
-For this tutorial 3005 single cell transcriptomes taken from the mouse brain (somatosensory cortex and 
-hippocampal regions) are used as an example (cf. references).
+For this tutorial 3,005 single cell transcriptomes taken from the mouse brain (somatosensory cortex and
+hippocampal regions) are used as an example [3]_. The analysis is done in a Jupyter_ notebook.
+
+First we import the necessary modules and declare some constants:
 
 .. code-block:: python
 
@@ -79,13 +97,14 @@ hippocampal regions) are used as an example (cf. references).
 Preliminary work
 ~~~~~~~~~~~~~~~~
 
-The scRNA-Seq data is downloaded from GEO: https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE60361 and loaded into memory
+The scRNA-Seq data is downloaded from GEO: https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE60361 and loaded into memory:
 
 .. code-block:: python
 
     ex_matrix = pd.read_csv(SC_EXP_FNAME, sep='\t', header=0, index_col=0)
 
-and duplicate genes are removed.
+
+Subsequently duplicate genes are removed:
 
 .. code-block:: python
 
@@ -96,14 +115,15 @@ and duplicate genes are removed.
 
     (19970, 3005)
 
-Load list of Transcription Factors (TF) for *Mus musculus*. The list of known TFs for Mm was prepared from TFCat (cf. notebooks section).
+and the list of Transcription Factors (TF) for *Mus musculus* are read from file.
+The list of known TFs for Mm was prepared from TFCat (cf. notebooks_ section).
 
 .. code-block:: python
 
     tf_names = load_tf_names(MM_TFS_FNAME)
 
 
-Load the ranking databases:
+Finally the ranking databases are loaded:
 
 .. code-block:: python
 
@@ -113,7 +133,7 @@ Load the ranking databases:
     dbs = [RankingDatabase(fname=fname, name=name(fname), nomenclature="MGI") for fname in db_fnames]
     dbs
 
-.. code-block:: bash
+.. code-block::
 
         [FeatherRankingDatabase(name="mm9-tss-centered-10kb-10species",nomenclature=MGI),
          FeatherRankingDatabase(name="mm9-500bp-upstream-7species",nomenclature=MGI),
@@ -128,8 +148,8 @@ Phase I: Inference of co-expression modules
 In the initial phase of the pySCENIC pipeline the single cell expression profiles are used to infer 
 co-expression modules from.
 
-Run GENIE3 or GRNBoost from `arboretum <https://github.com/tmoerman/arboretum>`_ to infer co-expression modules
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Run GENIE3 or GRNBoost from arboretum_ to infer co-expression modules
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 The arboretum package is used for this phase of the pipeline. For this notebook only a sample of 1,000 cells is used
 for the co-expression module inference is used.
@@ -143,7 +163,7 @@ for the co-expression module inference is used.
 Derive potential regulomes from these co-expression modules
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Regulomes are derived from adjacencies based on three methods:
+Regulomes are derived from adjacencies based on three methods.
 
 The first method to create the TF-modules is to select the best targets for each transcription factor:
 
@@ -203,8 +223,8 @@ Multi-core systems and clusters can leveraged in the following way:
 Phase III: Cellular regulome enrichment matrix (aka AUCell)
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-Characterize the different cells in a single-cell transcriptomics experiment by the enrichment of the previously discovered
-regulomes. Enrichment of a regulome is measures as AUC of the recovery curve of the genes that define this regulome.
+We characterize the different cells in a single-cell transcriptomics experiment via the enrichment of the previously discovered
+regulomes. Enrichment of a regulome is measured as the Area Under the recovery Curve (AUC) of the genes that define this regulome.
 
 .. code-block:: python
 
@@ -236,11 +256,10 @@ A command line version of the tool is included. This tool is available after pro
       -o OUTPUT, --output OUTPUT
                             Output file/stream.
 
-
 Website
 -------
 
-For more information, please visit http://scenic.aertslab.org .
+For more information, please visit LCB_ and SCENIC_.
 
 License
 -------
@@ -250,7 +269,22 @@ GNU General Public License v3
 References
 ----------
 
-- The original method was published in Nature Methods: ``S. Aibar, C. B. González-Blas, T. Moerman, V. A. Huynh-Thu, H. Imrichová, G. Hulselmans, F. Rambow, J.-C. Marine, P. Geurts, J. Aerts, J. van den Oord, Z. K. Atak, J. Wouters, and S. Aerts, “SCENIC: single-cell regulatory network inference and clustering.,” Nat Meth, vol. 14, no. 11, pp. 1083–1086, Nov. 2017.``
-- The tutorial is based on the paper: ``A. Zeisel, A. B. M͡oz-Manchado, S. Codeluppi, P. Lönnerberg, G. L. Manno, A. Juréus, S. Marques, H. Munguba, L. He, C. Betsholtz, C. Rolny, G. Castelo-Branco, J. Hjerling-Leffler, and S. Linnarsson, “Cell types in the mouse cortex and hippocampus revealed by single-cell RNA-seq,” Science, vol. 347, no. 6226, pp. 1138–1142, Mar. 2015.``
-- The R implementation is available on `github <https://github.com/aertslab/SCENIC>`_
-- The first phase of the pipeline, i.e. inference of co-expression modules, can be done via the python package `arboretum`_
+.. [1] Aibar, S. et al. SCENIC: single-cell regulatory network inference and clustering. Nat Meth 14, 1083–1086 (2017).
+.. [2] Rocklin, M. Dask: parallel computation with blocked algorithms and task scheduling. conference.scipy.org
+.. [3] Zeisel, A. et al. Cell types in the mouse cortex and hippocampus revealed by single-cell RNA-seq. Science 347, 1138–1142 (2015).
+.. _dask: https://dask.pydata.org/en/latest/
+.. _distributed: https://distributed.readthedocs.io/en/latest/
+.. _LCB: https://aertslab.org
+.. _feather: https://github.com/wesm/feather
+.. _arboretum: https://arboretum.readthedocs.io
+.. _notebooks: https://github.com/aertslab/pySCENIC/tree/master/notebooks
+.. _issue: https://github.com/aertslab/pySCENIC/issues/new
+.. _SCENIC: http://scenic.aertslab.org
+.. _PyPI: https://pypi.python.org/pypi/pyscenic
+.. _Jupyter: http://jupyter.org
+
+.. |buildstatus| image:: https://travis-ci.org/aertslab/pySCENIC.svg?branch=master
+.. _buildstatus: https://travis-ci.org/aertslab/pySCENIC
+
+.. |pypipackage| image:: https://badge.fury.io/py/pyscenic.svg
+.. _pypipackage: https://badge.fury.io/py/pyscenic
