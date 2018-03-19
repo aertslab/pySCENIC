@@ -72,7 +72,7 @@ def add_correlation(adjacencies: pd.DataFrame, ex_mtx: pd.DataFrame) -> pd.DataF
         tf = row[COLUMN_NAME_TF]
         target = row[COLUMN_NAME_TARGET]
         rho = corr_mtx[tf][target]
-        return int(rho > RHO_THRESHOLD) - int(rho < RHO_THRESHOLD)
+        return int(rho > RHO_THRESHOLD) - int(rho < -RHO_THRESHOLD)
 
     adjacencies[COLUMN_NAME_CORRELATION] = adjacencies.apply(partial(add_regulation, corr_mtx=corr_mtx), axis=1)
 
