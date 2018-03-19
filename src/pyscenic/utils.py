@@ -55,14 +55,17 @@ COLUMN_NAME_CORRELATION = "correlation"
 RHO_THRESHOLD = 0.3
 
 
-def add_correlation(adjacencies: pd.DataFrame, ex_mtx: pd.DataFrame) -> pd.DataFrame:
+def add_correlation(adjacencies: pd.DataFrame, ex_mtx: pd.DataFrame, rho_threshold=RHO_THRESHOLD) -> pd.DataFrame:
     """
     Add correlation in expression levels between target and factor.
 
     :param adjacencies: The dataframe with the TF-target links.
     :param ex_mtx: The expression matrix (n_cells x n_genes).
+    :param rho_threshold: The threshold on the correlation to decide if a target gene is activated
+        (rho > `rho_threshold`) or repressed (rho < -`rho_threshold`).
     :return: The adjacencies dataframe with an extra column.
     """
+    assert rho_threshold > 0, "rho_threshold should be greater than 0."
 
     # Calculate Pearson correlation to infer repression or activation.
     corr_mtx = pd.DataFrame(index=ex_mtx.columns, columns=ex_mtx.columns, data=np.corrcoef(ex_mtx.values.T))
@@ -72,7 +75,7 @@ def add_correlation(adjacencies: pd.DataFrame, ex_mtx: pd.DataFrame) -> pd.DataF
         tf = row[COLUMN_NAME_TF]
         target = row[COLUMN_NAME_TARGET]
         rho = corr_mtx[tf][target]
-        return int(rho > RHO_THRESHOLD) - int(rho < -RHO_THRESHOLD)
+        return int(rho > rho_threshold) - int(rho < -rho_threshold)
 
     adjacencies[COLUMN_NAME_CORRELATION] = adjacencies.apply(partial(add_regulation, corr_mtx=corr_mtx), axis=1)
 

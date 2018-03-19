@@ -123,8 +123,16 @@ def _load_dbs(fnames: Sequence[str], nomenclature: str) -> Sequence[Type[Ranking
 
 def find_adjacencies_command(args):
     LOGGER.info("Loading datasets.")
-    ex_matrix = pd.read_csv(args.expression_mtx_fname, sep='\t', header=0, index_col=0).T
+    ex_matrix = pd.read_csv(args.expression_mtx_fname, sep='\t', header=0, index_col=0)
+    if args.transpose == 'yes':
+        ex_matrix = ex_matrix.T
     tf_names = load_tf_names(args.tfs_fname.name)
+
+    # Check whether the supplied data
+    n_total_genes = len(ex_matrix.columns)
+    n_matching_genes = len(ex_matrix.columns.isin(tf_names))
+    if float(n_matching_genes)/n_total_genes < 0.80:
+        LOGGER.warning("Expression data is available for less than 80% of the supplied transcription factors.")
 
     LOGGER.info("Calculating co-expression modules.")
     network = grnboost2(expression_data=ex_matrix, tf_names=tf_names, verbose=True, client_or_address=args.client_or_address)
@@ -258,6 +266,8 @@ def create_argument_parser():
     parser_grn.add_argument('-o', '--output',
                             type=argparse.FileType('w'), default=sys.stdout,
                             help='Output file/stream.')
+    parser_grn.add_argument('-t', '--transpose', action='store_const', const = 'yes',
+                               help='Transpose the expression matrix.')
     add_computation_parameters(parser_grn)
     parser_grn.set_defaults(func=find_adjacencies_command)
 
