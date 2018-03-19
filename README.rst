@@ -40,7 +40,7 @@ All the functionality of the original R implementation is available and in addit
 Installation
 ------------
 
-The package itself can be installed via :code:`pip install pyscenic`.
+The **package** itself can be installed via :code:`pip install pyscenic`.
 
 You can also install this package directly from the source:
  
@@ -50,12 +50,56 @@ You can also install this package directly from the source:
     cd pySCENIC/
     pip install .
 
-To successfully use this pipeline you also need auxilliary datasets:
+To successfully use this pipeline you also need **auxilliary datasets**:
 
-1. Databases ranking the whole genome of your species of interest based on regulatory features (i.e. transcription factors). Ranking databases are typically stored in the feather_ format.
-2. Motif annotation database providing the missing link between an enriched motif and the transcription factor that binds this motif. This pipeline needs a TSV text file where every line represents a particular annotation.
+1. *Databases ranking the whole genome* of your species of interest based on regulatory features (i.e. transcription factors). Ranking databases are typically stored in the feather_ format.
 
-To acquire these datasets please contact LCB_.
+=================================  ==============  ================ ============================
+  Database                          Species         Search space     # of orthologous species
+=================================  ==============  ================ ============================
+hg19-500bp-upstream-10species_      Homo sapiens   [TSS+500bp,TSS[    10
+hg19-500bp-upstream-7species_       Homo sapiens   [TSS+500bp,TSS[    7
+hg19-tss-centered-10kb-10species_   Homo sapiens   TSS+/-10kbp        10
+hg19-tss-centered-10kb-7species_    Homo sapiens   TSS+/-10kbp        7
+hg19-tss-centered-5kb-10species_    Homo sapiens   TSS+/-5kbp         10
+hg19-tss-centered-5kb-7species_     Homo sapiens   TSS+/-5kbp         7
+
+mm9-500bp-upstream-10species_       Mus musculus   [TSS+500bp,TSS[    10
+mm9-500bp-upstream-7species_        Mus musculus   [TSS+500bp,TSS[    7
+mm9-tss-centered-10kb-10species_    Mus musculus   TSS+/-10kbp        10
+mm9-tss-centered-10kb-7species_     Mus musculus   TSS+/-10kbp        7
+mm9-tss-centered-5kb-10species_     Mus musculus   TSS+/-5kbp         10
+mm9-tss-centered-5kb-7species_      Mus musculus   TSS+/-5kbp         7
+=================================  ==============  ================ ============================
+
+.. _hg19-500bp-upstream-10species: http://pyscenic.aertslab.org/databases/hg19-500bp-upstream-10species.mc9nr.feather
+.. _hg19-500bp-upstream-7species: http://pyscenic.aertslab.org/databases/hg19-500bp-upstream-7species.mc9nr.feather
+.. _hg19-tss-centered-10kb-10species: http://pyscenic.aertslab.org/databases/hg19-tss-centered-10kb-10species.mc9nr.feather
+.. _hg19-tss-centered-10kb-7species: http://pyscenic.aertslab.org/databases/hg19-tss-centered-10kb-7species.mc9nr.feather
+.. _hg19-tss-centered-5kb-10species: http://pyscenic.aertslab.org/databases/hg19-tss-centered-5kb-10species.mc9nr.feather
+.. _hg19-tss-centered-5kb-7species: http://pyscenic.aertslab.org/databases/hg19-tss-centered-5kb-7species.mc9nr.feather
+
+.. _mm9-500bp-upstream-10species: http://pyscenic.aertslab.org/databases/mm9-500bp-upstream-10species.mc9nr.feather
+.. _mm9-500bp-upstream-7species: http://pyscenic.aertslab.org/databases/mm9-500bp-upstream-7species.mc9nr.feather
+.. _mm9-tss-centered-10kb-10species: http://pyscenic.aertslab.org/databases/mm9-tss-centered-10kb-10species.mc9nr.feather
+.. _mm9-tss-centered-10kb-7species: http://pyscenic.aertslab.org/databases/mm9-tss-centered-10kb-7species.mc9nr.feather
+.. _mm9-tss-centered-5kb-10species: http://pyscenic.aertslab.org/databases/mm9-tss-centered-5kb-10species.mc9nr.feather
+.. _mm9-tss-centered-5kb-7species: http://pyscenic.aertslab.org/databases/mm9-tss-centered-5kb-7species.mc9nr.feather
+
+2. *Motif annotation* database providing the missing link between an enriched motif and the transcription factor that binds this motif. This pipeline needs a TSV text file where every line represents a particular annotation.
+
+===================  ==============
+  Annotations            Species
+===================  ==============
+`HGNC annotations`_    Homo sapiens
+`MGI annotations`_     Mus musculus
+===================  ==============
+
+.. _`HGNC annotations`: http://pyscenic.aertslab.org/resources/motifs-v9-nr.hgnc-m0.001-o0.0.tbl
+.. _`MGI annotations`: http://pyscenic.aertslab.org/resources/motifs-v9-nr.mgi-m0.001-o0.0.tbl
+
+.. caution::
+    These ranking databases are 1.1 Gb each so downloading them might take a while. An annotations file is typically 100Mb in size.
 
 Tutorial
 --------
