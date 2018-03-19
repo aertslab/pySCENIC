@@ -69,6 +69,7 @@ setuptools.setup(
         'Programming Language :: Python :: 3.6',
         'Programming Language :: Python :: Implementation :: CPython',
     ],
+    python_requires=">3.3",
     keywords='single-cell transcriptomics gene-regulatory-network transcription-factors',
     author="Bram Van de Sande",
     url='https://github.com/aertslab/pySCENIC',
