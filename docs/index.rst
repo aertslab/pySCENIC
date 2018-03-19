@@ -43,7 +43,7 @@ Installation
 The **package** itself can be installed via :code:`pip install pyscenic`.
 
 .. caution::
-pySCENIC needs a python 3.x interpreter.
+  pySCENIC needs a python 3.x interpreter.
 
 You can also install this package directly from the source:
 
