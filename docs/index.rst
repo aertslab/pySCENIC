@@ -40,12 +40,12 @@ All the functionality of the original R implementation is available and in addit
 Installation
 ------------
 
-The **package** itself can be installed via :code:`pip install pyscenic`.
+The lastest stable release of the **package** itself can be installed via :code:`pip install pyscenic`.
 
 .. caution::
-  pySCENIC needs a python 3.x interpreter.
+pySCENIC needs a python 3.x interpreter.
 
-You can also install this package directly from the source:
+You can also install this bleeding edge (i.e. less stable) version of the package directly from the source:
 
 .. code-block:: bash
 
