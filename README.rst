@@ -45,7 +45,7 @@ The lastest stable release of the **package** itself can be installed via :code:
 .. caution::
     pySCENIC needs a python 3.x interpreter.
 
-You can also install this bleeding edge (i.e. less stable) version of the package directly from the source:
+You can also install the bleeding edge (i.e. less stable) version of the package directly from the source:
  
 .. code-block:: bash
 
