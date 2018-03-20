@@ -302,8 +302,7 @@ def find_features(rnkdbs: Sequence[Type[RankingDatabase]], signatures: Sequence[
                                    avgrcc_sample_frac=avgrcc_sample_frac,
                                    filter_for_annotation=False)
     transformation_func = partial(modules2df, module2features_func=module2features_func, weighted_recovery=weighted_recovery)
-    # Create a distributed dataframe from individual delayed objects to avoid out of memory problems.
-    aggregation_func = from_delayed if client_or_address != 'custom_multiprocessing' else pd.concat
+    aggregation_func = pd.concat
     df = _distributed_calc(rnkdbs, signatures, motif_annotations_fname, transformation_func, aggregation_func,
                       motif_similarity_fdr, orthologuous_identity_threshold, client_or_address,
                       num_workers, module_chunksize)
@@ -397,8 +396,7 @@ def prune2df(rnkdbs: Sequence[Type[RankingDatabase]], modules: Sequence[Regulome
                                    avgrcc_sample_frac=avgrcc_sample_frac,
                                    filter_for_annotation=True)
     transformation_func = partial(modules2df, module2features_func=module2features_func, weighted_recovery=weighted_recovery)
-    # Create a distributed dataframe from individual delayed objects to avoid out of memory problems.
-    aggregation_func = from_delayed if client_or_address != 'custom_multiprocessing' else pd.concat
+    aggregation_func = pd.concat
     return _distributed_calc(rnkdbs, modules, motif_annotations_fname, transformation_func, aggregation_func,
                              motif_similarity_fdr, orthologuous_identity_threshold, client_or_address,
                              num_workers, module_chunksize)
