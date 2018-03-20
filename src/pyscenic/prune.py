@@ -46,7 +46,8 @@ IP_PATTERN = re.compile(
 LOGGER = logging.getLogger(__name__)
 
 
-def _prepare_client(client_or_address):
+def _prepare_client(client_or_address, num_workers):
+    #TODO: Allow for number of workets
     """
     :param client_or_address: one of:
            * None
@@ -60,7 +61,7 @@ def _prepare_client(client_or_address):
     # https://github.com/tmoerman/arboretum/blob/b065c6eade325ace104b2bb772ad15c78d573b1b/arboretum/algo.py#L139-L185
 
     if client_or_address is None or str(client_or_address).lower() == 'local':
-        local_cluster = LocalCluster(diagnostics_port=None)
+        local_cluster = LocalCluster(diagnostics_port=None, n_workers=num_workers)
         client = Client(local_cluster)
 
         def close_client_and_local_cluster(verbose=False):
@@ -254,7 +255,7 @@ def _distributed_calc(rnkdbs: Sequence[Type[RankingDatabase]], modules: Sequence
             return create_graph().compute(get=get, num_workers=num_workers if num_workers else cpu_count())
         else:
             # ... via dask.distributed framework.
-            client, shutdown_callback = _prepare_client(client_or_address)
+            client, shutdown_callback = _prepare_client(client_or_address, num_workers=num_workers if num_workers else cpu_count())
             try:
                 return client.compute(create_graph(client))
             finally:

@@ -110,8 +110,8 @@ def enrichment4cells(rnk_mtx: pd.DataFrame, regulome: Type[GeneSignature], rank_
                                       names=["Cell", "Regulome"])
 
     rnk = rnk_mtx.iloc[:,rnk_mtx.columns.isin(regulome.genes)]
-    if len(rnk) == 0:
-        LOGGER.warning("Not a single genes in {} was found.".format(regulome.name))
+    if float(len(rnk))/len(regulome) < 0.80:
+        LOGGER.warning("Less than 80% of the genes in {} are present in the expression matrix.".format(regulome.name))
         return pd.DataFrame(index=index, data={"AUC": np.empty(shape=(rnk_mtx.shape[0]), dtype=np.float64)})
     else:
         weights = np.asarray([regulome[gene] if gene in regulome.genes else 1.0 for gene in rnk.columns.values])

@@ -7,9 +7,10 @@ from dask.diagnostics import ProgressBar
 from multiprocessing import cpu_count
 from arboretum.algo import grnboost2
 from arboretum.utils import load_tf_names
+
 from .utils import load_from_yaml
 from .rnkdb import open as opendb, RankingDatabase
-from .prune import prune2df, find_features
+from .prune import prune2df, find_features, _prepare_client
 from .aucell import aucell
 from .genesig import GeneSignature
 from .log import create_logging_handler
@@ -30,6 +31,155 @@ class NoProgressBar:
 
     def __exit__(*x):
         pass
+
+
+def _load_modules(fname: str) -> Sequence[Type[GeneSignature]]:
+    # Loading from YAML is extremely slow. Therefore this is a potential performance improvement.
+    # Potential improvements are switching to JSON or to use a CLoader:
+    # https://stackoverflow.com/questions/27743711/can-i-speedup-yaml
+    # The alternative for which was opted in the end is binary pickling.
+    if fname.endswith('.yaml') or fname.endswith('.yml'):
+        return load_from_yaml(fname)
+    elif fname.endswith('.dat'):
+        with open(fname, 'rb') as f:
+            return pickle.load(f)
+    else:
+        LOGGER.error("Unknown file format for \"{}\".".format(fname))
+        sys.exit(1)
+
+
+def _load_dbs(fnames: Sequence[str], nomenclature: str) -> Sequence[Type[RankingDatabase]]:
+    def get_name(fname):
+        return os.path.basename(fname).split(".")[0]
+    return [opendb(fname=fname.name, name=get_name(fname.name), nomenclature=nomenclature) for fname in fnames]
+
+
+FILE_EXTENSION2SEPARATOR = {
+    '.tsv': '\t',
+    '.csv': ','
+}
+
+
+def _df2modules(args):
+    ext = os.path.splitext(args.module_fname.name)[1]
+    adjacencies = pd.read_csv(args.module_fname.name, sep=FILE_EXTENSION2SEPARATOR[ext])
+    ex_mtx = pd.read_csv(args.expression_mtx_fname, sep='\t', header=0, index_col=0)
+    return modules_from_adjacencies(adjacencies, ex_mtx,
+                                    nomenclature = args.nomenclature,
+                                    thresholds=args.thresholds,
+                                    top_n_targets=args.top_n_targets,
+                                    top_n_regulators=args.top_n_regulators,
+                                    min_genes=args.min_genes)
+
+
+def _df2regulomes(fname, nomenclature):
+    ext = os.path.splitext(fname,)[1]
+    df = pd.read_csv(fname, sep=FILE_EXTENSION2SEPARATOR[ext], index_col=[0,1], header=[0,1], skipinitialspace=True)
+    df[('Enrichment', 'Context')] = df[('Enrichment', 'Context')].apply(lambda s: eval(s))
+    df[('Enrichment', 'TargetGenes')] = df[('Enrichment', 'TargetGenes')].apply(lambda s: eval(s))
+    return df2regs(df, nomenclature=nomenclature)
+
+
+def _load_expression_matrix(args):
+    LOGGER.info("Loading expression matrix.")
+    ext = os.path.splitext(args.expression_mtx_fname.name)[1]
+    if ext not in FILE_EXTENSION2SEPARATOR:
+        LOGGER.error("Unknown file format \"{}\"".format(args.expression_mtx_fname.name))
+        sys.exit(1)
+    ex_mtx = pd.read_csv(args.expression_mtx_fname, sep=FILE_EXTENSION2SEPARATOR[ext], header=0, index_col=0)
+    if args.transpose == 'yes':
+        ex_mtx = ex_mtx.T
+    return ex_mtx
+
+
+def find_adjacencies_command(args):
+    """
+    Infer co-expression modules.
+    """
+    LOGGER.info("Loading expression matrix.")
+    ex_mtx = _load_expression_matrix(args)
+    tf_names = load_tf_names(args.tfs_fname.name)
+
+    n_total_genes = len(ex_mtx.columns)
+    n_matching_genes = len(ex_mtx.columns.isin(tf_names))
+    if float(n_matching_genes)/n_total_genes < 0.80:
+        LOGGER.warning("Expression data is available for less than 80% of the supplied transcription factors.")
+
+    LOGGER.info("Inferring regulatory networks.")
+    client, shutdown_callback = _prepare_client(args.client_or_address, num_workers=args.num_workers)
+    try:
+        network = grnboost2(expression_data=ex_mtx, tf_names=tf_names, verbose=True, client_or_address=client)
+    finally:
+        shutdown_callback(False)
+
+    LOGGER.info("Writing results to file.")
+    network.to_csv(args.output, index=False, sep='\t')
+
+
+def prune_targets_command(args):
+    """
+    Prune targets/find enriched features.
+    """
+    LOGGER.info("Loading modules.")
+    # Loading from YAML is extremely slow. Therefore this is a potential performance improvement.
+    # Potential improvements are switching to JSON or to use a CLoader:
+    # https://stackoverflow.com/questions/27743711/can-i-speedup-yaml
+    # The alternative for which was opted in the end is binary pickling.
+    if any(args.module_fname.name.endswith(ext) for ext in FILE_EXTENSION2SEPARATOR.keys()):
+        LOGGER.info("Creating modules.")
+        modules = _df2modules(args)
+    else:
+        LOGGER.info("Loading modules.")
+        modules = _load_modules(args.module_fname.name)
+
+    if len(modules) == 0:
+        LOGGER.error("Not a single module loaded")
+        sys.exit(1)
+
+    LOGGER.info("Loading databases.")
+    nomenclature = modules[0].nomenclature
+    dbs = _load_dbs(args.database_fname, nomenclature)
+
+    LOGGER.info("Calculating regulomes.")
+    motif_annotations_fname = args.annotations_fname.name
+    calc_func = find_features if args.no_pruning == "yes" else prune2df
+    with ProgressBar() if args.mode == "dask_multiprocessing" else NoProgressBar():
+        out = calc_func(dbs, modules, motif_annotations_fname,
+                           rank_threshold=args.rank_threshold,
+                           auc_threshold=args.auc_threshold,
+                           nes_threshold=args.nes_threshold,
+                           client_or_address=args.mode,
+                           module_chunksize=args.chunk_size,
+                           num_workers=args.num_workers)
+
+    LOGGER.info("Writing results to file.")
+    out.to_csv(args.output)
+
+
+def aucell_command(args):
+    """
+    Calculate regulome enrichment (as AUC values) for cells.
+    """
+    LOGGER.info("Loading expression matrix.")
+    ex_mtx = _load_expression_matrix(args)
+
+    if any(args.regulomes_fname.name.endswith(ext) for ext in FILE_EXTENSION2SEPARATOR.keys()):
+        LOGGER.info("Creating regulomes.")
+        regulomes = _df2regulomes(args.regulomes_fname.name, args.nomenclature)
+    elif args.regulomes_fname.name.endswith('.gmt'):
+        LOGGER.info("Loading regulomes.")
+        regulomes = GeneSignature.from_gmt(args.regulomes_fname.name, args.nomenclature,
+                                           field_separator='\t', gene_separator='\t')
+    else:
+        LOGGER.info("Loading regulomes.")
+        regulomes = _load_modules(args.regulomes_fname.name)
+
+    LOGGER.info("Calculating enrichment.")
+    auc_heatmap = aucell(ex_mtx, regulomes, args.rank_threshold, args.auc_threshold,
+                         noweights=args.weights != 'yes', num_cores=args.num_workers)
+
+    LOGGER.info("Writing results to file.")
+    auc_heatmap.to_csv(args.output)
 
 
 def add_recovery_parameters(parser):
@@ -78,9 +228,9 @@ def add_module_parameters(parser):
                        type=str, default="HGNC",
                        help='The nomenclature (default: HGNC).')
     group.add_argument('--expression_mtx_fname',
-                        type=argparse.FileType('r'),
-                        help='The name of the file that contains the expression matrix (CSV).'
-                             ' (Only required if modules need to be generated)')
+                       type=argparse.FileType('r'),
+                       help='The name of the file that contains the expression matrix (CSV).'
+                            ' (Only required if modules need to be generated)')
     return parser
 
 
@@ -103,149 +253,6 @@ def add_computation_parameters(parser):
     return parser
 
 
-def _load_modules(fname: str) -> Sequence[Type[GeneSignature]]:
-    # Loading from YAML is extremely slow. Therefore this is a potential performance improvement.
-    # Potential improvements are switching to JSON or to use a CLoader:
-    # https://stackoverflow.com/questions/27743711/can-i-speedup-yaml
-    # The alternative for which was opted in the end is binary pickling.
-    if fname.endswith('.yaml'):
-        return load_from_yaml(fname)
-    else:
-        with open(fname, 'rb') as f:
-            return pickle.load(f)
-
-
-def _load_dbs(fnames: Sequence[str], nomenclature: str) -> Sequence[Type[RankingDatabase]]:
-    def get_name(fname):
-        return os.path.basename(fname).split(".")[0]
-    return [opendb(fname=fname.name, name=get_name(fname.name), nomenclature=nomenclature) for fname in fnames]
-
-
-def find_adjacencies_command(args):
-    LOGGER.info("Loading datasets.")
-    ex_matrix = pd.read_csv(args.expression_mtx_fname, sep='\t', header=0, index_col=0)
-    if args.transpose == 'yes':
-        ex_matrix = ex_matrix.T
-    tf_names = load_tf_names(args.tfs_fname.name)
-
-    # Check whether the supplied data
-    n_total_genes = len(ex_matrix.columns)
-    n_matching_genes = len(ex_matrix.columns.isin(tf_names))
-    if float(n_matching_genes)/n_total_genes < 0.80:
-        LOGGER.warning("Expression data is available for less than 80% of the supplied transcription factors.")
-
-    LOGGER.info("Calculating co-expression modules.")
-    network = grnboost2(expression_data=ex_matrix, tf_names=tf_names, verbose=True, client_or_address=args.client_or_address)
-
-    LOGGER.info("Writing results to file.")
-    network.to_csv(args.output, index=False, sep='\t')
-
-
-def find_motifs_command(args):
-    LOGGER.info("Loading modules.")
-    # Loading from YAML is extremely slow. Therefore this is a potential performance improvement.
-    # Potential improvements are switching to JSON or to use a CLoader:
-    # https://stackoverflow.com/questions/27743711/can-i-speedup-yaml
-    # The alternative for which was opted in the end is binary pickling.
-    if args.module_fname.name.lower().endswith('.gmt'):
-        modules = GeneSignature.from_gmt(args.module_fname.name, args.nomenclature)
-    else:
-        modules = _load_modules(args.module_fname.name)
-
-    LOGGER.info("Loading databases.")
-    nomenclature = modules[0].nomenclature
-    dbs = _load_dbs(args.database_fname, nomenclature)
-
-    LOGGER.info("Calculating regulomes.")
-    motif_annotations_fname = args.annotations_fname.name
-    with ProgressBar() if args.mode == "dask_multiprocessing" else NoProgressBar():
-        df = find_features(dbs, modules, motif_annotations_fname,
-                           rank_threshold=args.rank_threshold,
-                           auc_threshold=args.auc_threshold,
-                           nes_threshold=args.nes_threshold,
-                           client_or_address=args.mode,
-                           module_chunksize=args.chunk_size,
-                           num_workers=args.num_workers)
-
-    LOGGER.info("Writing results to file.")
-    df.to_csv(args.output)
-
-
-FILE_EXTENSION2SEPARATOR = {
-    '.tsv': '\t',
-    '.csv': ','
-}
-
-def df2modules(args):
-    ext = os.path.splitext(args.module_fname.name)[1]
-    adjacencies = pd.read_csv(args.module_fname.name, sep=FILE_EXTENSION2SEPARATOR[ext])
-    ex_mtx = pd.read_csv(args.expression_mtx_fname, sep='\t', header=0, index_col=0)
-    return modules_from_adjacencies(adjacencies, ex_mtx,
-                                    nomenclature = args.nomenclature,
-                                    thresholds=args.thresholds,
-                                    top_n_targets=args.top_n_targets,
-                             top_n_regulators=args.top_n_regulators,
-                                              min_genes=args.min_genes)
-
-
-def prune_targets_command(args):
-    if any(args.module_fname.name.endswith(ext) for ext in FILE_EXTENSION2SEPARATOR.keys()):
-        LOGGER.info("Creating modules.")
-        modules = df2modules(args)
-    else:
-        LOGGER.info("Loading modules.")
-        modules = _load_modules(args.module_fname.name)
-
-    LOGGER.info("Loading databases.")
-    nomenclature = modules[0].nomenclature
-    dbs = _load_dbs(args.database_fname, nomenclature)
-
-    LOGGER.info("Calculating regulomes.")
-    motif_annotations_fname = args.annotations_fname.name
-    with ProgressBar() if args.mode == "dask_multiprocessing" else NoProgressBar():
-        out = prune2df(dbs, modules, motif_annotations_fname,
-                           rank_threshold=args.rank_threshold,
-                           auc_threshold=args.auc_threshold,
-                           nes_threshold=args.nes_threshold,
-                           client_or_address=args.mode,
-                           module_chunksize=args.chunk_size,
-                           num_workers=args.num_workers)
-
-    LOGGER.info("Writing results to file.")
-    out.to_csv(args.output)
-
-
-def df2regulomes(fname, nomenclature):
-    ext = os.path.splitext(fname,)[1]
-    df = pd.read_csv(fname, sep=FILE_EXTENSION2SEPARATOR[ext], index_col=[0,1], header=[0,1], skipinitialspace=True)
-    df[('Enrichment', 'Context')] = df[('Enrichment', 'Context')].apply(lambda s: eval(s))
-    df[('Enrichment', 'TargetGenes')] = df[('Enrichment', 'TargetGenes')].apply(lambda s: eval(s))
-    return df2regs(df, nomenclature=nomenclature)
-
-
-def aucell_command(args):
-    LOGGER.info("Loading expression matrix.")
-    ex_mtx = pd.read_csv(args.expression_mtx_fname, sep='\t', header=0, index_col=0)
-    if args.transpose == 'yes':
-        ex_mtx = ex_mtx.T
-
-    if any(args.regulomes_fname.name.endswith(ext) for ext in FILE_EXTENSION2SEPARATOR.keys()):
-        LOGGER.info("Creating regulomes.")
-        regulomes = df2regulomes(args.regulomes_fname.name, args.nomenclature)
-    elif args.regulomes_fname.name.endswith('.gmt'):
-        LOGGER.info("Loading regulomes.")
-        regulomes = GeneSignature.from_gmt(args.regulomes_fname.name, args.nomenclature, field_separator='\t', gene_separator='\t')
-    else:
-        LOGGER.info("Loading regulomes.")
-        regulomes = load_from_yaml(args.regulomes_fname.name)
-
-    LOGGER.info("Calculating enrichment.")
-    auc_heatmap = aucell(ex_mtx, regulomes, args.rank_threshold, args.auc_threshold, args.weights != 'yes', args.num_workers)
-
-    LOGGER.info("Writing results to file.")
-    auc_heatmap.to_csv(args.output)
-
-
 def create_argument_parser():
     parser = argparse.ArgumentParser(prog='pySCENIC',
                                      description='Single-CEll regulatory Network Inference and Clustering',
@@ -259,38 +266,17 @@ def create_argument_parser():
                                          help='Derive co-expression modules from expression matrix.')
     parser_grn.add_argument('expression_mtx_fname',
                                type=argparse.FileType('r'),
-                               help='The name of the file that contains the expression matrix (CSV).')
+                               help='The name of the file that contains the expression matrix (CSV; rows=cells x columns=genes).')
     parser_grn.add_argument('tfs_fname',
                                type=argparse.FileType('r'),
-                               help='The name of the file that contains the list of transcription factors (TXT).')
+                               help='The name of the file that contains the list of transcription factors (TXT; one TF per line).')
     parser_grn.add_argument('-o', '--output',
                             type=argparse.FileType('w'), default=sys.stdout,
-                            help='Output file/stream.')
+                            help='Output file/stream, i.e. a table of TF-target genes (CSV).')
     parser_grn.add_argument('-t', '--transpose', action='store_const', const = 'yes',
-                               help='Transpose the expression matrix.')
+                               help='Transpose the expression matrix (rows=genes x columns=cells).')
     add_computation_parameters(parser_grn)
     parser_grn.set_defaults(func=find_adjacencies_command)
-
-    # create the parser for the "motifs" command
-    #TODO: join with prune and have an option for pruning!
-    parser_motifs = subparsers.add_parser('motifs',
-                                         help='Find enriched motifs for gene signatures.')
-    parser_motifs.add_argument('signatures_fname',
-                              type=argparse.FileType('r'),
-                              help='The name of the file that contains the gene signatures (GMT or YAML).')
-    parser_motifs.add_argument('database_fname',
-                              type=argparse.FileType('r'), nargs='+',
-                              help='The name(s) of the regulatory feature databases (FEATHER of LEGACY).')
-    parser_motifs.add_argument('-n','--nomenclature',
-                               type=str, default='HGNC',
-                               help='The nomenclature used for the gene signatures.')
-    parser_motifs.add_argument('-o', '--output',
-                            type=argparse.FileType('w'), default=sys.stdout,
-                            help='Output file/stream.')
-    add_recovery_parameters(parser_motifs)
-    add_annotation_parameters(parser_motifs)
-    add_computation_parameters(parser_motifs)
-    parser_motifs.set_defaults(func=find_motifs_command)
 
     # create the parser for the "prune" command
     parser_prune = subparsers.add_parser('prune',
@@ -298,13 +284,15 @@ def create_argument_parser():
     parser_prune.add_argument('module_fname',
                               type=argparse.FileType('r'),
                               help='The name of the file that contains the co-expression modules (YAML or pickled DAT).'
-                                   'A TSV with adjacencies can also be supplied.')
+                                   'A CSV with adjacencies can also be supplied.')
     parser_prune.add_argument('database_fname',
                               type=argparse.FileType('r'), nargs='+',
                               help='The name(s) of the regulatory feature databases (FEATHER of LEGACY).')
     parser_prune.add_argument('-o', '--output',
                             type=argparse.FileType('w'), default=sys.stdout,
-                            help='Output file/stream.')
+                            help='Output file/stream, i.e. a table of enriched motifs and target genes (CSV).')
+    parser_prune.add_argument('-n', '--no_pruning', action='store_const', const = 'yes',
+                              help='Do not perform pruning, i.e. find enriched motifs.')
     add_recovery_parameters(parser_prune)
     add_annotation_parameters(parser_prune)
     add_computation_parameters(parser_prune)
@@ -315,19 +303,19 @@ def create_argument_parser():
     parser_aucell = subparsers.add_parser('aucell', help='Find enrichment of regulomes across single cells.')
     parser_aucell.add_argument('expression_mtx_fname',
                             type=argparse.FileType('r'),
-                            help='The name of the file that contains the expression matrix (CSV).')
+                            help='The name of the file that contains the expression matrix (CSV; rows=cells x columns=genes).')
     parser_aucell.add_argument('regulomes_fname',
                           type=argparse.FileType('r'),
                                help='The name of the file that contains the co-expression modules (YAML or pickled DAT).'
-                                    'A TSV with adjacencies can also be supplied or a GMT file containing gene signatures.')
+                                    'A CSV with adjacencies can also be supplied or a GMT file containing gene signatures.')
     parser_aucell.add_argument('-n','--nomenclature',
                                type=str, default='HGNC',
                                help='The nomenclature used for the gene signatures.')
     parser_aucell.add_argument('-o', '--output',
                             type=argparse.FileType('w'), default=sys.stdout,
-                            help='Output file/stream.')
+                            help='Output file/stream, a matrix of AUC values (CSV; rows=cells x columns=regulomes).')
     parser_aucell.add_argument('-t', '--transpose', action='store_const', const = 'yes',
-                               help='Transpose the expression matrix.')
+                               help='Transpose the expression matrix (rows=genes x columns=cells).')
     parser_aucell.add_argument('-w', '--weights', action='store_const', const = 'yes',
                                help='Use weights associated with genes in recovery analysis.')
     parser_aucell.add_argument('--num_workers',
