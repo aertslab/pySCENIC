@@ -81,7 +81,6 @@ def _df2regulomes(fname, nomenclature):
 
 
 def _load_expression_matrix(args):
-    LOGGER.info("Loading expression matrix.")
     ext = os.path.splitext(args.expression_mtx_fname.name)[1]
     if ext not in FILE_EXTENSION2SEPARATOR:
         LOGGER.error("Unknown file format \"{}\"".format(args.expression_mtx_fname.name))
