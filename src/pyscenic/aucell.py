@@ -31,13 +31,26 @@ def create_rankings(ex_mtx: pd.DataFrame) -> pd.DataFrame:
         genes (n_cells x n_genes).
     :return: A genome rankings dataframe (n_cells x n_genes).
     """
-    return ex_mtx.rank(axis=1, ascending=False, method='first').astype(DTYPE)
+    # Do a shuffle would be nice for exactly similar behaviour as R implementation.
+    # 1. Ranks are assigned in the range of 1 to n, therefore we need to subtract 1.
+    # 2. In case of a tie the 'first' method is used, i.e. we keep the order in the original array. The remove any
+    #    bias we shuffle the dataframe before ranking it. This introduces a performance penalty!
+    # 3. Genes are ranked according to gene expression in descending order, i.e. from highly expressed (0) to low expression (n).
+    # 3. NAs should be given the highest rank numbers. Documentation is bad, so tested implementation via code snippet:
+    #
+    #    import pandas as pd
+    #    import numpy as np
+    #    df = pd.DataFrame(data=[4, 1, 3, np.nan, 2, 3], columns=['values'])
+    #    # Run below statement multiple times to see effect of shuffling in case of a tie.
+    #    df.sample(frac=1.0, replace=False).rank(ascending=False, method='first', na_option='bottom').sort_index() - 1
+    #
+    return ex_mtx.sample(frac=1.0, replace=False, axis=1).rank(axis=1, ascending=False, method='first', na_option='bottom').sort_index().astype(DTYPE) - 1
 
 
 enrichment = enrichment4cells
 
 
-def _enrichment(shared_ro_memory_array, modules, genes, cells, rank_threshold, auc_threshold, auc_mtx, offset):
+def _enrichment(shared_ro_memory_array, modules, genes, cells, auc_threshold, auc_mtx, offset):
     # The rankings dataframe is properly reconstructed (checked this).
     df_rnk = pd.DataFrame(data=np.frombuffer(shared_ro_memory_array, dtype=DTYPE).reshape(len(cells), len(genes)),
                           columns=genes, index=cells)
@@ -45,19 +58,16 @@ def _enrichment(shared_ro_memory_array, modules, genes, cells, rank_threshold, a
     result_mtx = np.frombuffer(auc_mtx.get_obj(), dtype='d')
     inc = len(cells)
     for idx, module in enumerate(modules):
-        result_mtx[offset+(idx*inc):offset+((idx+1)*inc)] = enrichment4cells(df_rnk, module, rank_threshold,
-                                                                             auc_threshold).values.flatten(order="C")
+        result_mtx[offset+(idx*inc):offset+((idx+1)*inc)] = enrichment4cells(df_rnk, module, auc_threshold).values.flatten(order="C")
 
 
 def aucell(exp_mtx: pd.DataFrame, modules: Sequence[Type[GeneSignature]],
-           rank_threshold: int = 5000, auc_threshold: float = 0.05,
-           noweights: bool = False, num_cores: int = cpu_count()) -> pd.DataFrame:
+           auc_threshold: float = 0.05, noweights: bool = False, num_cores: int = cpu_count()) -> pd.DataFrame:
     """
     Calculate enrichment of regulomes for single cells.
 
     :param exp_mtx: The expression matrix (n_cells x n_genes).
     :param modules: The regulomes.
-    :param rank_threshold: The total number of ranked genes to take into account when creating a recovery curve.
     :param auc_threshold: The fraction of the ranked genome to take into account for the calculation of the
         Area Under the recovery Curve.
     :param noweights: Should the weights of the genes part of regulome be used in calculation of enrichment?
@@ -68,9 +78,9 @@ def aucell(exp_mtx: pd.DataFrame, modules: Sequence[Type[GeneSignature]],
 
     if num_cores == 1:
         # Show progress bar ...
-        aucs = pd.concat([enrichment(df_rnk, module.noweights() if noweights else module,
-                                 rank_threshold=rank_threshold,
-                                 auc_threshold=auc_threshold) for module in tqdm(modules)]).unstack("Regulome")
+        aucs = pd.concat([enrichment4cells(df_rnk,
+                                     module.noweights() if noweights else module,
+                                     auc_threshold=auc_threshold) for module in tqdm(modules)]).unstack("Regulome")
         aucs.columns = aucs.columns.droplevel(0)
         return aucs
     else:
@@ -95,8 +105,7 @@ def aucell(exp_mtx: pd.DataFrame, modules: Sequence[Type[GeneSignature]],
         # Do the analysis in separate child processes.
         chunk_size = ceil(float(len(modules))/num_cores)
         processes = [Process(target=_enrichment, args=(shared_ro_memory_array, chunk,
-                                                       genes, cells,
-                                                       rank_threshold, auc_threshold,
+                                                       genes, cells, auc_threshold,
                                                        auc_mtx, (chunk_size*len(cells))*idx))
                      for idx, chunk in enumerate(chunked(modules, chunk_size))]
         for p in processes:

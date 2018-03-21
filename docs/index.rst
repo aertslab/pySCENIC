@@ -19,6 +19,10 @@ The pipeline has three steps:
 2. These targetomes are refined by pruning targets that do not have an enrichment for a corresponding motif of the TF effectively separating direct from indirect targets based on the presence of cis-regulatory footprints.
 3. Finally, the original cells are differentiated and clustered on the activity of these discovered targetomes.
 
+.. note::
+    The most impactfull speed improvement is introduced by the arboretum_ package in step 1. This package provides an alternative to GENIE3 [3]_ called GRNBoost2. This package can be controlled from within pySCENIC.
+
+
 .. sidebar:: **Quick Start**
 
     * `Installation`_

@@ -174,7 +174,7 @@ def aucell_command(args):
         regulomes = _load_modules(args.regulomes_fname.name)
 
     LOGGER.info("Calculating enrichment.")
-    auc_heatmap = aucell(ex_mtx, regulomes, args.rank_threshold, args.auc_threshold,
+    auc_heatmap = aucell(ex_mtx, regulomes, auc_threshold=args.auc_threshold,
                          noweights=args.weights != 'yes', num_cores=args.num_workers)
 
     LOGGER.info("Writing results to file.")

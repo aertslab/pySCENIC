@@ -123,7 +123,7 @@ def module2features_auc1st_impl(db: Type[RankingDatabase], module: Regulome, mot
 
     # Calculate recovery curves, AUC and NES values.
     # For fast unweighted implementation so weights to None.
-    aucs = calc_aucs(df, db.total_genes, weights if weighted_recovery else None, rank_threshold, auc_threshold)
+    aucs = calc_aucs(df, db.total_genes, weights, auc_threshold)
     ness = (aucs - aucs.mean()) / aucs.std()
 
     # Keep only features that are enriched, i.e. NES sufficiently high.

@@ -19,6 +19,9 @@ The pipeline has three steps:
 2. These targetomes are refined by pruning targets that do not have an enrichment for a corresponding motif of the TF effectively separating direct from indirect targets based on the presence of cis-regulatory footprints.
 3. Finally, the original cells are differentiated and clustered on the activity of these discovered targetomes.
 
+.. note::
+    The most impactfull speed improvement is introduced by the arboretum_ package in step 1. This package provides an alternative to GENIE3 [3]_ called GRNBoost2. This package can be controlled from within pySCENIC.
+
 .. sidebar:: **Quick Start**
 
     * `Installation`_
@@ -108,7 +111,7 @@ Tutorial
 --------
 
 For this tutorial 3,005 single cell transcriptomes taken from the mouse brain (somatosensory cortex and
-hippocampal regions) are used as an example [3]_. The analysis is done in a Jupyter_ notebook.
+hippocampal regions) are used as an example [4]_. The analysis is done in a Jupyter_ notebook.
 
 First we import the necessary modules and declare some constants:
 
@@ -316,7 +319,8 @@ References
 
 .. [1] Aibar, S. et al. SCENIC: single-cell regulatory network inference and clustering. Nat Meth 14, 1083–1086 (2017).
 .. [2] Rocklin, M. Dask: parallel computation with blocked algorithms and task scheduling. conference.scipy.org
-.. [3] Zeisel, A. et al. Cell types in the mouse cortex and hippocampus revealed by single-cell RNA-seq. Science 347, 1138–1142 (2015).
+.. [3] Huynh-Thu, V. A. et al. Inferring regulatory networks from expression data using tree-based methods. PLoS ONE 5, (2010).
+.. [4] Zeisel, A. et al. Cell types in the mouse cortex and hippocampus revealed by single-cell RNA-seq. Science 347, 1138–1142 (2015).
 .. _dask: https://dask.pydata.org/en/latest/
 .. _distributed: https://distributed.readthedocs.io/en/latest/
 .. _LCB: https://aertslab.org
