@@ -44,7 +44,27 @@ def create_rankings(ex_mtx: pd.DataFrame) -> pd.DataFrame:
     #    # Run below statement multiple times to see effect of shuffling in case of a tie.
     #    df.sample(frac=1.0, replace=False).rank(ascending=False, method='first', na_option='bottom').sort_index() - 1
     #
+    #TODO: Check the implementation!
     return ex_mtx.sample(frac=1.0, replace=False, axis=1).rank(axis=1, ascending=False, method='first', na_option='bottom').sort_index().astype(DTYPE) - 1
+
+
+def derive_auc_threshold(ex_mtx: pd.DataFrame) -> pd.DataFrame:
+    """
+    Derive AUC thresholds for an expression matrix.
+
+    It is important to check that most cells have a substantial fraction of expressed/detected genes in the calculation of
+    the AUC.
+
+    :param ex_mtx: The expression profile matrix. The rows should correspond to different cells, the columns to different
+        genes (n_cells x n_genes).
+    :return: A dataframe with AUC threshold for different quantiles over the number cells: a fraction of 0.01 designates
+        that when using this value as the AUC threshold for 99% of the cells all ranked genes used for AUC calculation will
+        have had a detected expression in the single-cell experiment.
+    """
+    binary_mtx = ex_mtx.copy()
+    binary_mtx[binary_mtx != 0] = 1.0
+    n_genes = len(binary_mtx.columns)
+    return binary_mtx.sum(axis=1).quantile([.01, .05, .10, .50, 1])/n_genes
 
 
 enrichment = enrichment4cells
@@ -61,12 +81,12 @@ def _enrichment(shared_ro_memory_array, modules, genes, cells, auc_threshold, au
         result_mtx[offset+(idx*inc):offset+((idx+1)*inc)] = enrichment4cells(df_rnk, module, auc_threshold).values.flatten(order="C")
 
 
-def aucell(exp_mtx: pd.DataFrame, modules: Sequence[Type[GeneSignature]],
+def aucell4r(df_rnk: pd.DataFrame, modules: Sequence[Type[GeneSignature]],
            auc_threshold: float = 0.05, noweights: bool = False, num_cores: int = cpu_count()) -> pd.DataFrame:
     """
     Calculate enrichment of regulomes for single cells.
 
-    :param exp_mtx: The expression matrix (n_cells x n_genes).
+    :param df_rnk: The rank matrix (n_cells x n_genes).
     :param modules: The regulomes.
     :param auc_threshold: The fraction of the ranked genome to take into account for the calculation of the
         Area Under the recovery Curve.
@@ -74,8 +94,6 @@ def aucell(exp_mtx: pd.DataFrame, modules: Sequence[Type[GeneSignature]],
     :param num_cores: The number of cores to use.
     :return: A dataframe with the AUCs (n_cells x n_modules).
     """
-    df_rnk = create_rankings(exp_mtx)
-
     if num_cores == 1:
         # Show progress bar ...
         aucs = pd.concat([enrichment4cells(df_rnk,
@@ -117,4 +135,20 @@ def aucell(exp_mtx: pd.DataFrame, modules: Sequence[Type[GeneSignature]],
         return pd.DataFrame(data=np.ctypeslib.as_array(auc_mtx.get_obj()).reshape(len(modules), len(cells)),
                            columns=pd.Index(data=cells, name='Cell'),
                             index=pd.Index(data=list(map(attrgetter("name"), modules)), name='Regulome')).T
+
+
+def aucell(exp_mtx: pd.DataFrame, modules: Sequence[Type[GeneSignature]],
+           auc_threshold: float = 0.05, noweights: bool = False, num_cores: int = cpu_count()) -> pd.DataFrame:
+    """
+    Calculate enrichment of regulomes for single cells.
+
+    :param exp_mtx: The expression matrix (n_cells x n_genes).
+    :param modules: The regulomes.
+    :param auc_threshold: The fraction of the ranked genome to take into account for the calculation of the
+        Area Under the recovery Curve.
+    :param noweights: Should the weights of the genes part of regulome be used in calculation of enrichment?
+    :param num_cores: The number of cores to use.
+    :return: A dataframe with the AUCs (n_cells x n_modules).
+    """
+    return aucell4r(create_rankings(exp_mtx), modules, auc_threshold, noweights, num_cores)
 
