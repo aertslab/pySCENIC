@@ -13,3 +13,4 @@ __pycache__/
 docs/_build/
 **/.ipynb_checkpoints/
 **/dask-worker-space/
+scripts/cli_test_data/
