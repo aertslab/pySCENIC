@@ -17,6 +17,8 @@ import math
 from itertools import chain
 from functools import partial
 from cytoolz import first
+import numpy as np
+from dask.dataframe.utils import make_meta
 
 
 COLUMN_NAME_NES = "NES"
@@ -25,6 +27,15 @@ COLUMN_NAME_CONTEXT = "Context"
 COLUMN_NAME_TARGET_GENES = "TargetGenes"
 COLUMN_NAME_RANK_AT_MAX = "RankAtMax"
 COLUMN_NAME_TYPE = "Type"
+#TODO: Should actually be a function depending on return_recovery_curves and rank_threshold
+DF_META_DATA = make_meta({('Enrichment', COLUMN_NAME_AUC): np.float64,
+                          ('Enrichment', COLUMN_NAME_NES): np.float64,
+                          ('Enrichment', COLUMN_NAME_MOTIF_SIMILARITY_QVALUE): np.float64,
+                          ('Enrichment', COLUMN_NAME_ORTHOLOGOUS_IDENTITY): np.float64,
+                          ('Enrichment', COLUMN_NAME_ANNOTATION): np.object,
+                          ('Enrichment', COLUMN_NAME_CONTEXT): np.object,
+                          ('Enrichment', COLUMN_NAME_TARGET_GENES): np.object,
+                          ('Enrichment', COLUMN_NAME_RANK_AT_MAX): np.int64})
 
 
 __all__ = ["module2features", "module2df", "modules2df", "df2regulomes", "module2regulome", "modules2regulomes"]
@@ -179,17 +190,17 @@ def module2df(db: Type[RankingDatabase], module: Regulome, motif_annotations: pd
     except MemoryError:
         LOGGER.error("Unable to process \"{}\" on database \"{}\" because ran out of memory. Stacktrace:".format(module.name, db.name))
         LOGGER.error(traceback.format_exc())
-        return pd.DataFrame()
+        return DF_META_DATA
     # If less than 80% of the genes are mapped to the ranking database, the module is skipped.
     n_missing = len(module) - len(genes)
     frac_missing = float(n_missing)/len(module)
     if frac_missing >= 0.20:
         LOGGER.warning("Less than 80% of the genes in {} could be mapped to {}. Skipping this module.".format(module.name, db.name))
-        return pd.DataFrame()
+        return DF_META_DATA
 
     # If no annotated enriched features could be found, skip module.
     if len(df_annotated_features) == 0:
-        return pd.DataFrame()
+        return DF_META_DATA
     rank_threshold = rccs.shape[1]
 
     # Combine elements into a dataframe.
@@ -216,11 +227,11 @@ def module2df(db: Type[RankingDatabase], module: Regulome, motif_annotations: pd
 
 
 def modules2df(db: Type[RankingDatabase], modules: Sequence[Regulome], motif_annotations: pd.DataFrame,
-               weighted_recovery=False, return_recovery_curves=False, module2features_func=module2features) -> pd.DataFrame:
-    """
-
-    """
-    return pd.concat([module2df(db, module, motif_annotations, weighted_recovery, return_recovery_curves, module2features_func)
+               weighted_recovery=False, module2features_func=module2features) -> pd.DataFrame:
+    # Make sure return recovery curves is always set to false because the metadata for the distributed dataframe needs
+    # to be fixed for the dask framework.
+    #TODO: Remove this restriction.
+    return pd.concat([module2df(db, module, motif_annotations, weighted_recovery, False, module2features_func)
                       for module in modules])
 
 

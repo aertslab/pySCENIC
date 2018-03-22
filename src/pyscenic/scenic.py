@@ -239,8 +239,8 @@ def add_computation_parameters(parser):
                        type=int, default=cpu_count(),
                        help='The number of workers to use (default: {}).'.format(cpu_count()))
     group.add_argument('--chunk_size',
-                       type=int, default=100,
-                       help='The size of the module chunks assigned to a node in the dask graph (default: 100).')
+                       type=int, default=1,
+                       help='The size of the module chunks assigned to a node in the dask graph (default: 1).')
     group.add_argument('--mode',
                        choices=['custom_multiprocessing', 'dask_multiprocessing', 'dask_cluster'],
                        default='dask_multiprocessing',
