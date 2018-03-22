@@ -30,7 +30,7 @@ from .genesig import Regulome, GeneSignature
 from .utils import load_motif_annotations
 from .rnkdb import RankingDatabase, MemoryDecorator
 from .utils import add_motif_url
-from .transform import module2features_auc1st_impl, modules2regulomes, modules2df, df2regulomes
+from .transform import module2features_auc1st_impl, modules2regulomes, modules2df, df2regulomes, DF_META_DATA
 
 
 __all__ = ['prune', 'prune2df', 'find_features', 'df2regulomes']
@@ -244,7 +244,7 @@ def _distributed_calc(rnkdbs: Sequence[Type[RankingDatabase]], modules: Sequence
             # this might not be a sound idea to do.
 
             return aggregate_func(
-                        (delayed((transform_func))
+                        (delayed(transform_func)
                             (db, gs_chunk, delayed_or_future_annotations)
                                 for db in rnkdbs
                                     for gs_chunk in chunked_iter(modules, module_chunksize)))
@@ -351,7 +351,7 @@ def prune2df(rnkdbs: Sequence[Type[RankingDatabase]], modules: Sequence[Regulome
     transformation_func = partial(modules2df,
                                   module2features_func=module2features_func, weighted_recovery=weighted_recovery)
     # Create a distributed dataframe from individual delayed objects to avoid out of memory problems.
-    aggregation_func = from_delayed if client_or_address != 'custom_multiprocessing' else pd.concat
+    aggregation_func = partial(from_delayed, meta=DF_META_DATA) if client_or_address != 'custom_multiprocessing' else pd.concat
     return _distributed_calc(rnkdbs, modules, motif_annotations_fname, transformation_func, aggregation_func,
                              motif_similarity_fdr, orthologuous_identity_threshold, client_or_address,
                              num_workers, module_chunksize)
