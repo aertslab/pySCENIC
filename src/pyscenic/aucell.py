@@ -44,7 +44,7 @@ def create_rankings(ex_mtx: pd.DataFrame) -> pd.DataFrame:
     #    # Run below statement multiple times to see effect of shuffling in case of a tie.
     #    df.sample(frac=1.0, replace=False).rank(ascending=False, method='first', na_option='bottom').sort_index() - 1
     #
-    return ex_mtx.sample(frac=1.0, replace=False, axis=1).rank(axis=1, ascending=False, method='first', na_option='bottom').sort_index().astype(DTYPE) - 1
+    return ex_mtx.sample(frac=1.0, replace=False, axis=1).rank(axis=1, ascending=False, method='first', na_option='bottom').astype(DTYPE) - 1
 
 
 def derive_auc_threshold(ex_mtx: pd.DataFrame) -> pd.DataFrame:

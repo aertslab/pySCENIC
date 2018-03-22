@@ -9,7 +9,7 @@ from pkg_resources import resource_filename
 
 
 TEST_SIGNATURE = "msigdb_cancer_c6"
-TEST_SIGNATURE_FNAME = resource_filename('resources', "c6.all.v6.1.symbols.gmt.txt")
+TEST_SIGNATURE_FNAME = resource_filename('resources', "c6.all.v6.1.symbols.gmt")
 NOMENCLATURE = "HGNC"
 
 

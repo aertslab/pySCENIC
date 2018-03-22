@@ -6,4 +6,6 @@ include src/pyscenic/_version.py
 include src/resources/*.feather
 include src/resources/*.txt
 include src/resources/*.db
+include src/resources/*.gmt
+include src/resources/*.csv
 include src/pyscenic/*.txt
