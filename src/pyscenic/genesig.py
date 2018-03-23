@@ -122,9 +122,9 @@ class GeneSignature(yaml.YAMLObject):
                              nomenclature=nomenclature,
                              gene2weights=list(columns()))
 
-    name: str = attr.ib()
-    nomenclature: str = attr.ib()
-    gene2weights: Mapping[str, float] = attr.ib(converter=convert)
+    name = attr.ib()  # str
+    nomenclature = attr.ib()  # str
+    gene2weights = attr.ib(converter=convert)  # Mapping[str, float]
 
     @name.validator
     def name_validator(self, attribute, value):
@@ -308,9 +308,9 @@ class Regulome(GeneSignature, yaml.YAMLObject):
                          context=frozenset(data['context']),
                          transcription_factor=data['transcription_factor'])
 
-    transcription_factor: str = attr.ib()
-    context: FrozenSet[str] = attr.ib(default=frozenset())
-    score: float = attr.ib(default=0.0)
+    transcription_factor = attr.ib()  # str
+    context = attr.ib(default=frozenset())  # FrozenSet[str]
+    score = attr.ib(default=0.0)  # float
 
     @transcription_factor.validator
     def non_empty(self, attribute, value):

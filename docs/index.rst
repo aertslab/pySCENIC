@@ -47,7 +47,7 @@ Installation
 The lastest stable release of the **package** itself can be installed via :code:`pip install pyscenic`.
 
 .. caution::
-    pySCENIC needs a python 3.x interpreter.
+    pySCENIC needs a python 3.5 or greater interpreter.
 
 You can also install the bleeding edge (i.e. less stable) version of the package directly from the source:
 
