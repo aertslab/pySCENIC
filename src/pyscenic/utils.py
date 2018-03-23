@@ -3,6 +3,7 @@
 import pandas as pd
 from urllib.parse import urljoin
 from .genesig import Regulome, GeneSignature
+from .math import masked_rho_2d
 from itertools import chain
 import numpy as np
 from functools import partial
@@ -55,7 +56,8 @@ COLUMN_NAME_CORRELATION = "correlation"
 RHO_THRESHOLD = 0.3
 
 
-def add_correlation(adjacencies: pd.DataFrame, ex_mtx: pd.DataFrame, rho_threshold=RHO_THRESHOLD) -> pd.DataFrame:
+def add_correlation(adjacencies: pd.DataFrame, ex_mtx: pd.DataFrame,
+                    rho_threshold=RHO_THRESHOLD, mask_dropouts=True) -> pd.DataFrame:
     """
     Add correlation in expression levels between target and factor.
 
@@ -63,18 +65,33 @@ def add_correlation(adjacencies: pd.DataFrame, ex_mtx: pd.DataFrame, rho_thresho
     :param ex_mtx: The expression matrix (n_cells x n_genes).
     :param rho_threshold: The threshold on the correlation to decide if a target gene is activated
         (rho > `rho_threshold`) or repressed (rho < -`rho_threshold`).
+    :param mask_dropouts: Do not use cells in which either the expression of the TF or the target gene is 0 when
+        calculating the correlation between a TF-target pair.
     :return: The adjacencies dataframe with an extra column.
     """
     assert rho_threshold > 0, "rho_threshold should be greater than 0."
 
     # Calculate Pearson correlation to infer repression or activation.
-    corr_mtx = pd.DataFrame(index=ex_mtx.columns, columns=ex_mtx.columns, data=np.corrcoef(ex_mtx.values.T))
+    # To improve speed of execution we only calculate rho for genes we later need.
+    #TODO: When masking dropouts the number of remaining adjacencies drops significantly! Check!
+    if mask_dropouts:
+        tf_names = list(set(adjacencies[COLUMN_NAME_TF]))
+        tf_exp = ex_mtx[ex_mtx.columns[ex_mtx.columns.isin(tf_names)]].T
+        target_names = list(set(adjacencies[COLUMN_NAME_TARGET]))
+        target_exp = ex_mtx[ex_mtx.columns[ex_mtx.columns.isin(target_names)]].T
+        corr_mtx = pd.DataFrame(index=tf_names, columns=target_names,
+                                data=masked_rho_2d(tf_exp.values, target_exp.values, mask=0.0))
+    else:
+        genes = list(set(adjacencies[COLUMN_NAME_TF]).union(set(adjacencies[COLUMN_NAME_TARGET])))
+        ex_mtx = ex_mtx[ex_mtx.columns[ex_mtx.columns.isin(genes)]]
+        corr_mtx = pd.DataFrame(index=ex_mtx.columns, columns=ex_mtx.columns,
+                        data=np.corrcoef(ex_mtx.values.T))
 
     # Add "correlation" column to adjacencies dataframe.
     def add_regulation(row, corr_mtx):
         tf = row[COLUMN_NAME_TF]
         target = row[COLUMN_NAME_TARGET]
-        rho = corr_mtx[tf][target]
+        rho = corr_mtx[target][tf]
         return int(rho > rho_threshold) - int(rho < -rho_threshold)
 
     adjacencies[COLUMN_NAME_CORRELATION] = adjacencies.apply(partial(add_regulation, corr_mtx=corr_mtx), axis=1)
@@ -166,13 +183,16 @@ def modules_from_adjacencies(adjacencies: pd.DataFrame,
     # profiles. The Pearson product-moment correlation coefficient is used to derive this information.
 
     # Add correlation column and create two disjoint set of adjacencies.
-    adjacencies = add_correlation(adjacencies.copy(), ex_mtx)
+    adjacencies = add_correlation(adjacencies.copy(), ex_mtx)  # Make a defensive copy.
     activating_modules = adjacencies[adjacencies['correlation'] > 0.0]
     repressing_modules = adjacencies[adjacencies['correlation'] < 0.0]
 
-    # Derive modules for these two sets of adjacencies
-    # Add the transcription factor to the module.
-    # Filter for minimum number of genes.
+    # Derive modules for these two sets of adjacencies.
+    # + Add the transcription factor to the module.
+    #   [We are unable to assess if a TF works in a direct self-regulating way, either inhibiting its own expression or
+    #    activating it. Therefore the most unbiased way forward is to add the TF to both activating as well as
+    #    repressing modules]
+    # + Filter for minimum number of genes.
     def iter_modules(adjc, context):
         yield from chain(chain.from_iterable(modules4thr(adjc, thr, nomenclature, context) for thr in thresholds),
                          chain.from_iterable(modules4top_targets(adjc, n, nomenclature, context) for n in top_n_targets),
