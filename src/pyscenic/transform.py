@@ -235,14 +235,23 @@ def modules2df(db: Type[RankingDatabase], modules: Sequence[Regulome], motif_ann
                       for module in modules])
 
 
-def regulome4group(tf_name, context, df_group, nomenclature) -> Optional[Regulome]:
-    """
-
-    """
-    # Create regulomes for each enriched and annotated feature.
+def _regulome4group(tf_name, context, df_group, nomenclature) -> Optional[Regulome]:
     def score(nes, motif_similarity_qval, orthologuous_identity):
-        MAX_VALUE = 100
-        score = nes * -math.log(motif_similarity_qval)/MAX_VALUE if not math.isnan(motif_similarity_qval) and motif_similarity_qval != 0.0 else nes
+        # The combined score starts from the NES score which is then corrected for less confidence in the TF annotation
+        # in two steps:
+        # 1. The orthologous identifity (a fraction between 0 and 1.0) is used directly to normalize the NES.
+        # 2. The motif similarity q-value is converted to a similar fraction: -log10(q-value)
+        # A motif that is directly annotated for the TF in the correct species is not penalized.
+
+        correction_fraction = 1.0
+        try:
+            max_value = 10  # A q-value smaller than 10**-10 is considered the same as a q-value of 0.0.
+            correction_fraction = min(-math.log(motif_similarity_qval, 10), max_value)/max_value if not math.isnan(motif_similarity_qval) else 1.0
+        except ValueError: # Math domain error
+            pass
+        score = nes * correction_fraction
+
+        # We assume that a non existing orthologous identity signifies a direct annotation.
         return score if math.isnan(orthologuous_identity) else score * orthologuous_identity
 
     def derive_interaction_type(ctx):
@@ -258,8 +267,10 @@ def regulome4group(tf_name, context, df_group, nomenclature) -> Optional[Regulom
                         context=context,
                         transcription_factor=tf_name,
                         gene2weights=row[COLUMN_NAME_TARGET_GENES])
-
-    # Aggregate these regulomes into a single one using the union operator.
+    # First we create a regulome for each enriched and annotated feature and then we aggregate these regulomes into a
+    # single one using the union operator. This operator combined all target genes into a single set of genes keeping
+    # the maximum weight associated with a gene. In addition, the maximum combined score is kept as the score of the
+    # entire regulome.
     return reduce(Regulome.union, (row2regulome(row) for _, row in df_group.iterrows()))
 
 
@@ -267,7 +278,7 @@ def df2regulomes(df, nomenclature) -> Sequence[Regulome]:
     """
     Create regulomes from a dataframe of enriched features.
 
-    :param df:
+    :param df: The dataframe.
     :param nomenclature: The nomenclature of the genes.
     :return: A sequence of regulomes.
     """
@@ -275,13 +286,15 @@ def df2regulomes(df, nomenclature) -> Sequence[Regulome]:
     if df.columns.nlevels == 2:
         df.columns = df.columns.droplevel(0)
 
+    # Unpack the type of the module from the context column (dtype = frozenset)
     def get_type(row):
         ctx = row[COLUMN_NAME_CONTEXT]
         return ACTIVATING_MODULE if ACTIVATING_MODULE in ctx else REPRESSING_MODULE
     df[COLUMN_NAME_TYPE] = df.apply(get_type,axis=1)
 
+    # Group all rows per TF and type (+)/(-). Each group results in a single regulome.
     not_none = lambda r: r is not None
-    return list(filter(not_none, (regulome4group(tf_name, frozenset([interaction_type]), df_grp, nomenclature)
+    return list(filter(not_none, (_regulome4group(tf_name, frozenset([interaction_type]), df_grp, nomenclature)
                                         for (tf_name, interaction_type), df_grp in df.groupby(by=[COLUMN_NAME_TF,
                                                                                                   COLUMN_NAME_TYPE]))))
 
