@@ -15,13 +15,12 @@ in no time. The latter is achieved via the dask_ framework for distributed compu
 
 The pipeline has three steps:
 
-1. First transcription factors (TFs) and their target genes, i.e. targetomes, are derived using gene inference methods which solely rely on correlations between expression of genes across cells. The arboretum_ package is used for this step.
-2. These targetomes are refined by pruning targets that do not have an enrichment for a corresponding motif of the TF effectively separating direct from indirect targets based on the presence of cis-regulatory footprints.
-3. Finally, the original cells are differentiated and clustered on the activity of these discovered targetomes.
+1. First transcription factors (TFs) and their target genes, together defining a regulon, are derived using gene inference methods which solely rely on correlations between expression of genes across cells. The arboretum_ package is used for this step.
+2. These regulons are refined by pruning targets that do not have an enrichment for a corresponding motif of the TF effectively separating direct from indirect targets based on the presence of cis-regulatory footprints.
+3. Finally, the original cells are differentiated and clustered on the activity of these discovered regulons.
 
 .. note::
-    The most impactfull speed improvement is introduced by the arboretum_ package in step 1. This package provides an alternative to GENIE3 [3]_ called GRNBoost2. This package can be controlled from within pySCENIC.
-
+The most impactfull speed improvement is introduced by the arboretum_ package in step 1. This package provides an alternative to GENIE3 [3]_ called GRNBoost2. This package can be controlled from within pySCENIC.
 
 .. sidebar:: **Quick Start**
 
@@ -39,7 +38,7 @@ All the functionality of the original R implementation is available and in addit
 
 1. You can leverage multi-core and multi-node clusters using dask_ and its distributed_ scheduler.
 2. We implemented a version of the recovery of input genes that takes into account weights associated with these genes.
-3. Regulomes with targets that are repressed are now also derived and used for cell enrichment analysis.
+3. Regulons, i.e. the regulatory network that connects a TF with its target genes, with targets that are repressed are now also derived and used for cell enrichment analysis.
 
 Installation
 ------------
@@ -47,7 +46,7 @@ Installation
 The lastest stable release of the **package** itself can be installed via :code:`pip install pyscenic`.
 
 .. caution::
-    pySCENIC needs a python 3.5 or greater interpreter.
+pySCENIC needs a python 3.5 or greater interpreter.
 
 You can also install the bleeding edge (i.e. less stable) version of the package directly from the source:
 
@@ -106,7 +105,7 @@ mm9-tss-centered-5kb-7species_      Mus musculus   TSS+/-5kbp         7
 .. _`MGI annotations`: http://pyscenic.aertslab.org/resources/motifs-v9-nr.mgi-m0.001-o0.0.tbl
 
 .. caution::
-    These ranking databases are 1.1 Gb each so downloading them might take a while. An annotations file is typically 100Mb in size.
+These ranking databases are 1.1 Gb each so downloading them might take a while. An annotations file is typically 100Mb in size.
 
 Tutorial
 --------
@@ -139,7 +138,7 @@ First we import the necessary modules and declare some constants:
     MOTIF_ANNOTATIONS_FNAME = os.path.join(RESOURCES_FOLDER, "motifs-v9-nr.mgi-m0.001-o0.0.tbl")
     MM_TFS_FNAME = os.path.join(RESOURCES_FOLDER, 'mm_tfs.txt')
     SC_EXP_FNAME = os.path.join(RESOURCES_FOLDER, "GSE60361_C1-3005-Expression.txt")
-    REGULOMES_FNAME = os.path.join(DATA_FOLDER, "regulomes.yaml")
+    REGULONS_FNAME = os.path.join(DATA_FOLDER, "regulons.yaml")
     NOMENCLATURE = "MGI"
 
 
@@ -209,10 +208,10 @@ for the co-expression module inference is used.
     adjancencies = grnboost2(expression_data=ex_matrix.T.sample(n=N_SAMPLES, replace=False),
                         tf_names=tf_names, verbose=True)
 
-Derive potential regulomes from these co-expression modules
+Derive potential regulons from these co-expression modules
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Regulomes are derived from adjacencies based on three methods.
+Regulons are derived from adjacencies based on three methods.
 
 The first method to create the TF-modules is to select the best targets for each transcription factor:
 
@@ -244,14 +243,14 @@ Phase II: Prune modules for targets with cis regulatory footprints (aka RcisTarg
 .. code-block:: python
 
     df = prune2df(dbs, modules, MOTIF_ANNOTATIONS_FNAME)
-    regulomes = df2regulomes(df, NOMENCLATURE)
+    regulons = df2regulons(df, NOMENCLATURE)
 
-Directly calculating regulomes without the intermediate dataframe of enriched features is also possible:
+Directly calculating regulons without the intermediate dataframe of enriched features is also possible:
 
 .. code-block:: python
 
-    regulomes = prune(dbs, modules, MOTIF_ANNOTATIONS_FNAME)
-    save_to_yaml(regulomes, REGULOMES_FNAME)
+    regulons = prune(dbs, modules, MOTIF_ANNOTATIONS_FNAME)
+    save_to_yaml(regulons, REGULONS_FNAME)
 
 Multi-core systems and clusters can leveraged in the following way:
 
@@ -261,23 +260,23 @@ Multi-core systems and clusters can leveraged in the following way:
     df = prune2df(dbs, modules, MOTIF_ANNOTATIONS_FNAME,
                         client_or_address="custom_multiprocessing", num_workers=8)
     # or alternatively:
-    regulomes = prune(dbs, modules, MOTIF_ANNOTATIONS_FNAME,
+    regulons = prune(dbs, modules, MOTIF_ANNOTATIONS_FNAME,
                         client_or_address="custom_multiprocessing", num_workers=8)
 
     # The clusters can be leveraged via the dask framework:
     df = prune2df(dbs, modules, MOTIF_ANNOTATIONS_FNAME, client_or_address="local")
     # or alternatively:
-    regulomes = prune(dbs, modules, MOTIF_ANNOTATIONS_FNAME, client_or_address="local")
+    regulons = prune(dbs, modules, MOTIF_ANNOTATIONS_FNAME, client_or_address="local")
 
-Phase III: Cellular regulome enrichment matrix (aka AUCell)
+Phase III: Cellular regulon enrichment matrix (aka AUCell)
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 We characterize the different cells in a single-cell transcriptomics experiment via the enrichment of the previously discovered
-regulomes. Enrichment of a regulome is measured as the Area Under the recovery Curve (AUC) of the genes that define this regulome.
+regulons. Enrichment of a regulon is measured as the Area Under the recovery Curve (AUC) of the genes that define this regulon.
 
 .. code-block:: python
 
-    auc_mtx = aucell(ex_matrix.T, regulomes, num_workers=4)
+    auc_mtx = aucell(ex_matrix.T, regulons, num_workers=4)
     sns.clustermap(auc_mtx, figsize=(8,8))
 
 Command Line Interface
@@ -288,22 +287,23 @@ A command line version of the tool is included. This tool is available after pro
 .. code-block:: bash
 
     { ~ }  » pyscenic                                            ~
-    usage: SCENIC - Single-CEll regulatory Network Inference and Clustering
-               [-h] [-o OUTPUT] {grn,motifs,prune,aucell} ...
+    usage: pySCENIC [-h] {grnboost,ctx,aucell} ...
+
+    Single-CEll regulatory Network Inference and Clustering
 
     positional arguments:
-      {grn,motifs,prune,aucell}
+      {grnboost,ctx,aucell}
                             sub-command help
-        grn                 Derive co-expression modules from expression matrix.
-        motifs              Find enriched motifs for gene signatures.
-        prune               Prune targets from a co-expression module based on
+        grnboost            Derive co-expression modules from expression matrix.
+        ctx                 Find enriched motifs for a gene signature and
+                            optionally prune targets from this signature based on
                             cis-regulatory cues.
-        aucell              b help
+        aucell              Find enrichment of regulons across single cells.
 
     optional arguments:
       -h, --help            show this help message and exit
-      -o OUTPUT, --output OUTPUT
-                            Output file/stream.
+
+    Arguments can be read from file using a @args.txt construct.
 
 Website
 -------
@@ -314,6 +314,12 @@ License
 -------
 
 GNU General Public License v3
+
+Acknowledgments
+---------------
+
+We are grateful to all providers of TF-annotated position weight matrices, in particular Martha Bulyk (UNIPROBE), Wyeth Wasserman and Albin Sandelin (JASPAR), BioBase (TRANSFAC), Scot Wolfe and Michael Brodsky (FlyFactorSurvey) and Timothy Hughes (cisBP).
+
 
 References
 ----------
@@ -338,3 +344,7 @@ References
 
 .. |pypipackage| image:: https://badge.fury.io/py/pyscenic.svg
 .. _pypipackage: https://badge.fury.io/py/pyscenic
+
+.. |docstatus| image:: https://readthedocs.org/projects/pyscenic/badge/?version=latest
+.. _docstatus: http://pyscenic.readthedocs.io/en/latest/?badge=latest
+

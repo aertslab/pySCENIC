@@ -2,7 +2,7 @@
 
 import pandas as pd
 from urllib.parse import urljoin
-from .genesig import Regulome, GeneSignature
+from .genesig import Regulon, GeneSignature
 from .math import masked_rho_2d
 from itertools import chain
 import numpy as np
@@ -109,12 +109,12 @@ def modules4thr(adjacencies, threshold, nomenclature="MGI", context=frozenset())
     """
     for tf_name, df_grp in adjacencies[adjacencies[COLUMN_NAME_WEIGHT] > threshold].groupby(by=COLUMN_NAME_TF):
         if len(df_grp) > 0:
-            yield Regulome(
-                name="Regulome for {}".format(tf_name),
+            yield Regulon(
+                name="Regulon for {}".format(tf_name),
                 nomenclature=nomenclature,
                 context=frozenset(["weight>{}".format(threshold)]).union(context),
                 transcription_factor=tf_name,
-                gene2weights=list(zip(df_grp[COLUMN_NAME_TARGET].values, df_grp[COLUMN_NAME_WEIGHT].values)))
+                gene2weight=list(zip(df_grp[COLUMN_NAME_TARGET].values, df_grp[COLUMN_NAME_WEIGHT].values)))
 
 
 def modules4top_targets(adjacencies, n, nomenclature="MGI", context=frozenset()):
@@ -128,12 +128,12 @@ def modules4top_targets(adjacencies, n, nomenclature="MGI", context=frozenset())
     for tf_name, df_grp in adjacencies.groupby(by=COLUMN_NAME_TF):
         module = df_grp.nlargest(n, COLUMN_NAME_WEIGHT)
         if len(module) > 0:
-            yield Regulome(
-                name="Regulome for {}".format(tf_name),
+            yield Regulon(
+                name="Regulon for {}".format(tf_name),
                 nomenclature=nomenclature,
                 context=frozenset(["top{}".format(n)]).union(context),
                 transcription_factor=tf_name,
-                gene2weights=list(zip(module[COLUMN_NAME_TARGET].values, module[COLUMN_NAME_WEIGHT].values)))
+                gene2weight=list(zip(module[COLUMN_NAME_TARGET].values, module[COLUMN_NAME_WEIGHT].values)))
 
 
 def modules4top_factors(adjacencies, n, nomenclature="MGI", context=frozenset()):
@@ -147,12 +147,12 @@ def modules4top_factors(adjacencies, n, nomenclature="MGI", context=frozenset())
     df = adjacencies.groupby(by=COLUMN_NAME_TARGET).apply(lambda grp: grp.nlargest(n, COLUMN_NAME_WEIGHT))
     for tf_name, df_grp in df.groupby(by=COLUMN_NAME_TF):
         if len(df_grp) > 0:
-            yield Regulome(
+            yield Regulon(
                 name=tf_name,
                 nomenclature=nomenclature,
                 context=frozenset(["top{}perTarget".format(n)]).union(context),
                 transcription_factor=tf_name,
-                gene2weights=list(zip(df_grp[COLUMN_NAME_TARGET].values, df_grp[COLUMN_NAME_WEIGHT].values)))
+                gene2weight=list(zip(df_grp[COLUMN_NAME_TARGET].values, df_grp[COLUMN_NAME_WEIGHT].values)))
 
 
 ACTIVATING_MODULE = "activating"
@@ -165,7 +165,7 @@ def modules_from_adjacencies(adjacencies: pd.DataFrame,
                         thresholds=(0.001,0.005),
                         top_n_targets=(50,),
                         top_n_regulators=(5,10,50),
-                        min_genes=20):
+                        min_genes=20) -> Sequence[Regulon]:
     """
     Create modules from a dataframe containing weighted adjacencies between a TF and a target genes.
     
@@ -176,7 +176,7 @@ def modules_from_adjacencies(adjacencies: pd.DataFrame,
     :param top_n_targets: the second method is to select the top targets for a given TF.
     :param top_n_regulators: the alternative way to create the TF-modules is to select the best regulators for each gene.
     :param min_genes: The required minimum number of genes in a module.
-    :return: A list of Regulomes.
+    :return: A sequence of regulons.
     """
 
     # Relationship between TF and its target, i.e. activator or repressor, is derived using the original expression

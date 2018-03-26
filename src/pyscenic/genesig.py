@@ -30,7 +30,7 @@ def convert(genes):
 @attr.s(frozen=True)
 class GeneSignature(yaml.YAMLObject):
     """
-    A class of gene signatures, i.e. a set of genes.
+    A class of gene signatures, i.e. a set of genes that are biologically related.
     """
 
     yaml_tag = u'!GeneSignature'
@@ -52,7 +52,7 @@ class GeneSignature(yaml.YAMLObject):
         data = loader.construct_mapping(node, cls)
         return GeneSignature(name=data['name'],
                              nomenclature=data['nomenclature'],
-                             gene2weights=zip(data['genes'], data['weights']))
+                             gene2weight=zip(data['genes'], data['weights']))
 
     @classmethod
     def from_gmt(cls, fname: str, nomenclature: str, field_separator: str =',', gene_separator=',') -> List['GeneSignature']:
@@ -75,7 +75,7 @@ class GeneSignature(yaml.YAMLObject):
                         continue
                     columns = re.split(field_separator, line.rstrip())
                     genes = columns[2:] if field_separator == gene_separator else columns[2].split(gene_separator)
-                    yield GeneSignature(name=columns[0], nomenclature=nomenclature, gene2weights=genes)
+                    yield GeneSignature(name=columns[0], nomenclature=nomenclature, gene2weight=genes)
         return list(signatures())
 
     @classmethod
@@ -93,7 +93,7 @@ class GeneSignature(yaml.YAMLObject):
         with open(fname, "r") as file:
             return GeneSignature(name=name,
                              nomenclature=nomenclature,
-                             gene2weights=[line.rstrip() for line in file if not line.startswith("#") and line.strip()])
+                             gene2weight=[line.rstrip() for line in file if not line.startswith("#") and line.strip()])
 
     @classmethod
     def from_rnk(cls, fname: str, name: str, nomenclature: str, field_separator=",") -> 'GeneSignature':
@@ -120,11 +120,11 @@ class GeneSignature(yaml.YAMLObject):
 
         return GeneSignature(name=name,
                              nomenclature=nomenclature,
-                             gene2weights=list(columns()))
+                             gene2weight=list(columns()))
 
     name = attr.ib()  # str
     nomenclature = attr.ib()  # str
-    gene2weights = attr.ib(converter=convert)  # Mapping[str, float]
+    gene2weight = attr.ib(converter=convert)  # Mapping[str, float]
 
     @name.validator
     def name_validator(self, attribute, value):
@@ -136,8 +136,8 @@ class GeneSignature(yaml.YAMLObject):
         if len(value) == 0:
             raise ValueError("A gene signature must have a nomenclature.")
 
-    @gene2weights.validator
-    def gene2weights_validator(self, attribute, value):
+    @gene2weight.validator
+    def gene2weight_validator(self, attribute, value):
         if len(value) == 0:
             raise ValueError("A gene signature must have at least one gene.")
 
@@ -147,7 +147,7 @@ class GeneSignature(yaml.YAMLObject):
         """
         Return genes in this signature. Genes are sorted in descending order according to weight.
         """
-        return tuple(map(first, sorted(self.gene2weights.items(), key=second, reverse=True)))
+        return tuple(map(first, sorted(self.gene2weight.items(), key=second, reverse=True)))
 
     @property
     @memoize
@@ -155,7 +155,7 @@ class GeneSignature(yaml.YAMLObject):
         """
         Return the weights of the genes in this signature. Genes are sorted in descending order according to weight.
         """
-        return tuple(map(second, sorted(self.gene2weights.items(), key=second, reverse=True)))
+        return tuple(map(second, sorted(self.gene2weight.items(), key=second, reverse=True)))
 
     def rename(self, name: str) -> Type['GeneSignature']:
         """
@@ -164,7 +164,7 @@ class GeneSignature(yaml.YAMLObject):
         :param name: The new name.
         :return: the new :class:`GeneSignature` instance.
         """
-        return GeneSignature(name=name, nomenclature=self.nomenclature, gene2weights=self.gene2weights)
+        return GeneSignature(name=name, nomenclature=self.nomenclature, gene2weight=self.gene2weight)
 
     def add(self, gene_symbol, weight=1.0)  -> Type['GeneSignature']:
         """
@@ -174,10 +174,10 @@ class GeneSignature(yaml.YAMLObject):
         :return: the new :class:`GeneSignature` instance.
         """
         return GeneSignature(name=self.name, nomenclature=self.nomenclature,
-                             gene2weights=list(chain(self.gene2weights.items(), [(gene_symbol, weight)])))
+                             gene2weight=list(chain(self.gene2weight.items(), [(gene_symbol, weight)])))
 
     def _union_impl(self, other):
-        return frozendict(merge_with(max, self.gene2weights, other.gene2weights))
+        return frozendict(merge_with(max, self.gene2weight, other.gene2weight))
 
     def union(self, other: Type['GeneSignature']) -> Type['GeneSignature']:
         """
@@ -192,10 +192,10 @@ class GeneSignature(yaml.YAMLObject):
         assert self.nomenclature == other.nomenclature, "Union of gene signatures is only possible when both signatures use same nomenclature for genes."
         return GeneSignature(name="({} | {})".format(self.name, other.name) if self.name != other.name else self.name,
                              nomenclature=self.nomenclature,
-                             gene2weights=self._union_impl(other))
+                             gene2weight=self._union_impl(other))
 
     def _difference_impl(self, other):
-        return frozendict(dissoc(dict(self.gene2weights), *other.genes))
+        return frozendict(dissoc(dict(self.gene2weight), *other.genes))
 
     def difference(self, other: Type['GeneSignature']) -> Type['GeneSignature']:
         """
@@ -210,12 +210,12 @@ class GeneSignature(yaml.YAMLObject):
         assert self.nomenclature == other.nomenclature, "Difference of gene signatures is only possible when both signatures use same nomenclature for genes."
         return GeneSignature(name="({} - {})".format(self.name, other.name) if self.name != other.name else self.name,
                          nomenclature=self.nomenclature,
-                         gene2weights=self._difference_impl(other))
+                         gene2weight=self._difference_impl(other))
 
     def _intersection_impl(self, other):
-        genes = set(self.gene2weights.keys()).intersection(set(other.gene2weights.keys()))
+        genes = set(self.gene2weight.keys()).intersection(set(other.gene2weight.keys()))
         return frozendict(keyfilter(lambda k: k in genes,
-                                    merge_with(max, self.gene2weights, other.gene2weights)))
+                                    merge_with(max, self.gene2weight, other.gene2weight)))
 
     def intersection(self, other: Type['GeneSignature']) -> Type['GeneSignature']:
         """
@@ -230,14 +230,14 @@ class GeneSignature(yaml.YAMLObject):
         assert self.nomenclature == other.nomenclature, "Intersection of gene signatures is only possible when both signatures use same nomenclature for genes."
         return GeneSignature(name="({} & {})".format(self.name, other.name) if self.name != other.name else self.name,
                              nomenclature=self.nomenclature,
-                             gene2weights=self._intersection_impl(other))
+                             gene2weight=self._intersection_impl(other))
 
     def noweights(self):
         """
         Create a new gene signature with uniform weights, i.e. all weights are equal and set to 1.0.
         """
         return GeneSignature(name=self.name, nomenclature=self.nomenclature,
-                             gene2weights=self.genes)
+                             gene2weight=self.genes)
 
     def __len__(self):
         """
@@ -249,13 +249,13 @@ class GeneSignature(yaml.YAMLObject):
         """
         Checks if a gene is part of this signature.
         """
-        return item in self.gene2weights.keys()
+        return item in self.gene2weight.keys()
 
     def __getitem__(self, item):
         """
         Return the weight associated with a gene.
         """
-        return self.gene2weights[item]
+        return self.gene2weight[item]
 
     def __str__(self):
         """
@@ -276,12 +276,13 @@ class GeneSignature(yaml.YAMLObject):
 
 
 @attr.s(frozen=True)
-class Regulome(GeneSignature, yaml.YAMLObject):
+class Regulon(GeneSignature, yaml.YAMLObject):
     """
-    A regulome is a gene signature that defines the target genes of a transcription factor.
+    A regulon is a gene signature that defines the target genes of a Transcription Factor (TF) and thereby defines
+    a subnetwork of a larger Gene Regulatory Network (GRN) connecting a TF with its target genes.
     """
 
-    yaml_tag = u'!Regulome'
+    yaml_tag = u'!Regulon'
 
     @classmethod
     def to_yaml(cls, dumper, data):
@@ -301,9 +302,9 @@ class Regulome(GeneSignature, yaml.YAMLObject):
     @classmethod
     def from_yaml(cls, loader, node):
         data = loader.construct_mapping(node, cls)
-        return Regulome(name=data['name'],
+        return Regulon(name=data['name'],
                          nomenclature=data['nomenclature'],
-                         gene2weights=list(zip(data['genes'], data['weights'])),
+                         gene2weight=list(zip(data['genes'], data['weights'])),
                          score=data['score'],
                          context=frozenset(data['context']),
                          transcription_factor=data['transcription_factor'])
@@ -315,58 +316,58 @@ class Regulome(GeneSignature, yaml.YAMLObject):
     @transcription_factor.validator
     def non_empty(self, attribute, value):
         if len(value) == 0:
-            raise ValueError("A regulome must have a transcription factor.")
+            raise ValueError("A regulon must have a transcription factor.")
 
-    def add(self, gene_symbol, weight=1.0) -> 'Regulome':
+    def add(self, gene_symbol, weight=1.0) -> 'Regulon':
         """
         Add an extra gene symbol to this signature.
         :param gene_symbol: The symbol of the gene.
         :param weight: The weight.
         :return: the new :class:`GeneSignature` instance.
         """
-        return Regulome(name=self.name, nomenclature=self.nomenclature,
+        return Regulon(name=self.name, nomenclature=self.nomenclature,
                         context=self.context, transcription_factor=self.transcription_factor,
                         score=self.score,
-                             gene2weights=list(chain(self.gene2weights.items(), [(gene_symbol, weight)])))
+                             gene2weight=list(chain(self.gene2weight.items(), [(gene_symbol, weight)])))
 
-    def union(self, other: Type['GeneSignature']) -> 'Regulome':
+    def union(self, other: Type['GeneSignature']) -> 'Regulon':
         assert self.nomenclature == other.nomenclature, "Union of gene signatures is only possible when both signatures use same nomenclature for genes."
-        assert self.transcription_factor == getattr(other, 'transcription_factor', self.transcription_factor), "Union of two regulomes is only possible when same factor."
-        return Regulome(name="({} | {})".format(self.name, other.name) if self.name != other.name else self.name,
+        assert self.transcription_factor == getattr(other, 'transcription_factor', self.transcription_factor), "Union of two regulons is only possible when same factor."
+        return Regulon(name="({} | {})".format(self.name, other.name) if self.name != other.name else self.name,
                              nomenclature=self.nomenclature,
                              transcription_factor=self.transcription_factor,
                              context=self.context.union(getattr(other, 'context', frozenset())),
                              score=max(self.score, getattr(other, 'score', 0.0)),
-                             gene2weights=self._union_impl(other))
+                             gene2weight=self._union_impl(other))
 
 
-    def difference(self, other: Type['GeneSignature']) -> 'Regulome':
+    def difference(self, other: Type['GeneSignature']) -> 'Regulon':
         assert self.nomenclature == other.nomenclature, "Difference of gene signatures is only possible when both signatures use same nomenclature for genes."
-        assert self.transcription_factor == getattr(other, 'transcription_factor', self.transcription_factor), "Difference of two regulomes is only possible when same factor."
-        return Regulome(name="({} - {})".format(self.name, other.name) if self.name != other.name else self.name,
+        assert self.transcription_factor == getattr(other, 'transcription_factor', self.transcription_factor), "Difference of two regulons is only possible when same factor."
+        return Regulon(name="({} - {})".format(self.name, other.name) if self.name != other.name else self.name,
                              nomenclature=self.nomenclature,
                              transcription_factor=self.transcription_factor,
                              context=self.context.union(getattr(other, 'context', frozenset())),
                              score=max(self.score, getattr(other, 'score', 0.0)),
-                             gene2weights=self._difference_impl(other))
+                             gene2weight=self._difference_impl(other))
 
-    def intersection(self, other: Type['GeneSignature']) -> 'Regulome':
+    def intersection(self, other: Type['GeneSignature']) -> 'Regulon':
         assert self.nomenclature == other.nomenclature, "Intersection of gene signatures is only possible when both signatures use same nomenclature for genes."
-        assert self.transcription_factor == getattr(other, 'transcription_factor', self.transcription_factor), "Intersection of two regulomes is only possible when same factor."
-        return Regulome(name="({} & {})".format(self.name, other.name) if self.name != other.name else self.name,
+        assert self.transcription_factor == getattr(other, 'transcription_factor', self.transcription_factor), "Intersection of two regulons is only possible when same factor."
+        return Regulon(name="({} & {})".format(self.name, other.name) if self.name != other.name else self.name,
                          nomenclature=self.nomenclature,
                          transcription_factor=self.transcription_factor,
                          context=self.context.union(getattr(other, 'context', frozenset())),
                          score=max(self.score, getattr(other, 'score', 0.0)),
-                         gene2weights=self._intersection_impl(other))
+                         gene2weight=self._intersection_impl(other))
 
     def noweights(self):
         """
-        Create a new regulome with uniform weights, i.e. all weights are equal and set to 1.0.
+        Create a new regulon with uniform weights, i.e. all weights are equal and set to 1.0.
         """
-        return Regulome(name=self.name,
+        return Regulon(name=self.name,
                         nomenclature=self.nomenclature,
                         transcription_factor=self.transcription_factor,
                         context=self.context,
                         score=self.score,
-                         gene2weights=self.genes)
+                         gene2weight=self.genes)

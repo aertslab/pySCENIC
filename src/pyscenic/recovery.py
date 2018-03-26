@@ -8,7 +8,7 @@ from numba import *
 import logging
 
 from .rnkdb import RankingDatabase
-from .genesig import GeneSignature, Regulome
+from .genesig import GeneSignature, Regulon
 
 
 __all__ = ["recovery", "aucs", "enrichment4features", "enrichment4cells", "leading_edge4row"]
@@ -93,26 +93,26 @@ def recovery(rnk: pd.DataFrame, total_genes: int, weights: np.ndarray, rank_thre
     return rccs, aucs
 
 
-def enrichment4cells(rnk_mtx: pd.DataFrame, regulome: Type[GeneSignature], auc_threshold: float = 0.05) -> pd.DataFrame:
+def enrichment4cells(rnk_mtx: pd.DataFrame, regulon: Type[GeneSignature], auc_threshold: float = 0.05) -> pd.DataFrame:
     """
-    Calculate the enrichment of the regulome for the cells in the ranking dataframe.
+    Calculate the enrichment of the regulon for the cells in the ranking dataframe.
 
     :param rnk_mtx: The ranked expression matrix (n_cells, n_genes).
-    :param regulome: The regulome the assess for enrichment
+    :param regulon: The regulon the assess for enrichment
     :param auc_threshold: The fraction of the ranked genome to take into account for the calculation of the
         Area Under the recovery Curve.
     :return:
     """
     total_genes = len(rnk_mtx.columns)
-    index = pd.MultiIndex.from_tuples(list(zip(rnk_mtx.index.values, repeat(regulome.name))),
-                                      names=["Cell", "Regulome"])
+    index = pd.MultiIndex.from_tuples(list(zip(rnk_mtx.index.values, repeat(regulon.name))),
+                                      names=["Cell", "Regulon"])
 
-    rnk = rnk_mtx.iloc[:,rnk_mtx.columns.isin(regulome.genes)]
-    if float(len(rnk))/len(regulome) < 0.80:
-        LOGGER.warning("Less than 80% of the genes in {} are present in the expression matrix.".format(regulome.name))
+    rnk = rnk_mtx.iloc[:,rnk_mtx.columns.isin(regulon.genes)]
+    if float(len(rnk))/len(regulon) < 0.80:
+        LOGGER.warning("Less than 80% of the genes in {} are present in the expression matrix.".format(regulon.name))
         return pd.DataFrame(index=index, data={"AUC": np.empty(shape=(rnk_mtx.shape[0]), dtype=np.float64)})
     else:
-        weights = np.asarray([regulome[gene] if gene in regulome.genes else 1.0 for gene in rnk.columns.values])
+        weights = np.asarray([regulon[gene] if gene in regulon.genes else 1.0 for gene in rnk.columns.values])
         return pd.DataFrame(index=index, data={"AUC": aucs(rnk, total_genes, weights, auc_threshold)})
 
 

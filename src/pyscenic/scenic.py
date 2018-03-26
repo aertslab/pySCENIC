@@ -19,7 +19,7 @@ import sys
 import pickle
 from typing import Type, Sequence
 from .utils import modules_from_adjacencies
-from .transform import df2regulomes as df2regs
+from .transform import df2regulons as df2regs
 
 
 LOGGER = logging.getLogger(__name__)
@@ -72,7 +72,7 @@ def _df2modules(args):
                                     min_genes=args.min_genes)
 
 
-def _df2regulomes(fname, nomenclature):
+def _df2regulons(fname, nomenclature):
     ext = os.path.splitext(fname,)[1]
     df = pd.read_csv(fname, sep=FILE_EXTENSION2SEPARATOR[ext], index_col=[0,1], header=[0,1], skipinitialspace=True)
     df[('Enrichment', 'Context')] = df[('Enrichment', 'Context')].apply(lambda s: eval(s))
@@ -139,7 +139,7 @@ def prune_targets_command(args):
     nomenclature = modules[0].nomenclature
     dbs = _load_dbs(args.database_fname, nomenclature)
 
-    LOGGER.info("Calculating regulomes.")
+    LOGGER.info("Calculating regulons.")
     motif_annotations_fname = args.annotations_fname.name
     calc_func = find_features if args.no_pruning == "yes" else prune2df
     with ProgressBar() if args.mode == "dask_multiprocessing" else NoProgressBar():
@@ -157,24 +157,24 @@ def prune_targets_command(args):
 
 def aucell_command(args):
     """
-    Calculate regulome enrichment (as AUC values) for cells.
+    Calculate regulon enrichment (as AUC values) for cells.
     """
     LOGGER.info("Loading expression matrix.")
     ex_mtx = _load_expression_matrix(args)
 
-    if any(args.regulomes_fname.name.endswith(ext) for ext in FILE_EXTENSION2SEPARATOR.keys()):
-        LOGGER.info("Creating regulomes.")
-        regulomes = _df2regulomes(args.regulomes_fname.name, args.nomenclature)
-    elif args.regulomes_fname.name.endswith('.gmt'):
-        LOGGER.info("Loading regulomes.")
-        regulomes = GeneSignature.from_gmt(args.regulomes_fname.name, args.nomenclature,
+    if any(args.regulons_fname.name.endswith(ext) for ext in FILE_EXTENSION2SEPARATOR.keys()):
+        LOGGER.info("Creating regulons.")
+        regulons = _df2regulons(args.regulons_fname.name, args.nomenclature)
+    elif args.regulons_fname.name.endswith('.gmt'):
+        LOGGER.info("Loading regulons.")
+        regulons = GeneSignature.from_gmt(args.regulons_fname.name, args.nomenclature,
                                            field_separator='\t', gene_separator='\t')
     else:
-        LOGGER.info("Loading regulomes.")
-        regulomes = _load_modules(args.regulomes_fname.name)
+        LOGGER.info("Loading regulons.")
+        regulons = _load_modules(args.regulons_fname.name)
 
     LOGGER.info("Calculating enrichment.")
-    auc_heatmap = aucell(ex_mtx, regulomes, auc_threshold=args.auc_threshold,
+    auc_heatmap = aucell(ex_mtx, regulons, auc_threshold=args.auc_threshold,
                          noweights=args.weights != 'yes', num_cores=args.num_workers)
 
     LOGGER.info("Writing results to file.")
@@ -277,33 +277,33 @@ def create_argument_parser():
     add_computation_parameters(parser_grn)
     parser_grn.set_defaults(func=find_adjacencies_command)
 
-    # create the parser for the "prune" command
-    parser_prune = subparsers.add_parser('prune',
-                                         help='Prune targets from a co-expression module based on cis-regulatory cues.')
-    parser_prune.add_argument('module_fname',
+    # create the parser for the "ctx" command
+    parser_ctx = subparsers.add_parser('ctx',
+                                         help='Find enriched motifs for a gene signature and optionally prune targets from this signature based on cis-regulatory cues.')
+    parser_ctx.add_argument('module_fname',
                               type=argparse.FileType('r'),
-                              help='The name of the file that contains the co-expression modules (YAML or pickled DAT).'
+                              help='The name of the file that contains the signature or the co-expression modules (YAML or pickled DAT).'
                                    'A CSV with adjacencies can also be supplied.')
-    parser_prune.add_argument('database_fname',
+    parser_ctx.add_argument('database_fname',
                               type=argparse.FileType('r'), nargs='+',
                               help='The name(s) of the regulatory feature databases (FEATHER of LEGACY).')
-    parser_prune.add_argument('-o', '--output',
+    parser_ctx.add_argument('-o', '--output',
                             type=argparse.FileType('w'), default=sys.stdout,
                             help='Output file/stream, i.e. a table of enriched motifs and target genes (CSV).')
-    parser_prune.add_argument('-n', '--no_pruning', action='store_const', const = 'yes',
+    parser_ctx.add_argument('-n', '--no_pruning', action='store_const', const = 'yes',
                               help='Do not perform pruning, i.e. find enriched motifs.')
-    add_recovery_parameters(parser_prune)
-    add_annotation_parameters(parser_prune)
-    add_computation_parameters(parser_prune)
-    add_module_parameters(parser_prune)
-    parser_prune.set_defaults(func=prune_targets_command)
+    add_recovery_parameters(parser_ctx)
+    add_annotation_parameters(parser_ctx)
+    add_computation_parameters(parser_ctx)
+    add_module_parameters(parser_ctx)
+    parser_ctx.set_defaults(func=prune_targets_command)
 
     # create the parser for the "aucell" command
-    parser_aucell = subparsers.add_parser('aucell', help='Find enrichment of regulomes across single cells.')
+    parser_aucell = subparsers.add_parser('aucell', help='Find enrichment of regulons across single cells.')
     parser_aucell.add_argument('expression_mtx_fname',
                             type=argparse.FileType('r'),
                             help='The name of the file that contains the expression matrix (CSV; rows=cells x columns=genes).')
-    parser_aucell.add_argument('regulomes_fname',
+    parser_aucell.add_argument('regulons_fname',
                           type=argparse.FileType('r'),
                                help='The name of the file that contains the co-expression modules (YAML or pickled DAT).'
                                     'A CSV with adjacencies can also be supplied or a GMT file containing gene signatures.')
@@ -312,7 +312,7 @@ def create_argument_parser():
                                help='The nomenclature used for the gene signatures.')
     parser_aucell.add_argument('-o', '--output',
                             type=argparse.FileType('w'), default=sys.stdout,
-                            help='Output file/stream, a matrix of AUC values (CSV; rows=cells x columns=regulomes).')
+                            help='Output file/stream, a matrix of AUC values (CSV; rows=cells x columns=regulons).')
     parser_aucell.add_argument('-t', '--transpose', action='store_const', const = 'yes',
                                help='Transpose the expression matrix (rows=genes x columns=cells).')
     parser_aucell.add_argument('-w', '--weights', action='store_const', const = 'yes',

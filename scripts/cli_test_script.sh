@@ -15,7 +15,7 @@ pyscenic grnboost --num_workers ${CORES} "${DATA_FOLDER}/GSE60361.em.mgi.sample.
 # TEST PRUNE #
 ##############
 
-pyscenic prune "${DATA_FOLDER}/GSE103322.modules.sample.dat" \
+pyscenic ctx "${DATA_FOLDER}/GSE103322.modules.sample.dat" \
        "${DB_FOLDER}/hg19-500bp-upstream-10species.mc9nr.feather" \
        "${DB_FOLDER}/hg19-500bp-upstream-7species.mc9nr.feather" \
        --annotations_fname "${RESOURCES_FOLDER}/motifs-v9-nr.hgnc-m0.001-o0.0.tbl" \
@@ -24,7 +24,7 @@ pyscenic prune "${DATA_FOLDER}/GSE103322.modules.sample.dat" \
        --output "${DATA_FOLDER}/motifs.csv" \
        --num_workers ${CORES}
 
-pyscenic prune "${DATA_FOLDER}/GSE103322.modules.sample.dat" \
+pyscenic ctx "${DATA_FOLDER}/GSE103322.modules.sample.dat" \
        "${DB_FOLDER}/hg19-500bp-upstream-10species.mc9nr.feather" \
        "${DB_FOLDER}/hg19-500bp-upstream-7species.mc9nr.feather" \
        --annotations_fname "${RESOURCES_FOLDER}/motifs-v9-nr.hgnc-m0.001-o0.0.tbl" \
