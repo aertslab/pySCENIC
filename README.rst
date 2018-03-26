@@ -315,6 +315,12 @@ License
 
 GNU General Public License v3
 
+
+Acknowledgments
+---------------
+
+We are grateful to all providers of TF-annotated position weight matrices, in particular Martha Bulyk (UNIPROBE), Wyeth Wasserman and Albin Sandelin (JASPAR), BioBase (TRANSFAC), Scot Wolfe and Michael Brodsky (FlyFactorSurvey) and Timothy Hughes (cisBP).
+
 References
 ----------
 
