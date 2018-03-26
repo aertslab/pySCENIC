@@ -119,7 +119,6 @@ def prune_targets_command(args):
     """
     Prune targets/find enriched features.
     """
-    LOGGER.info("Loading modules.")
     # Loading from YAML is extremely slow. Therefore this is a potential performance improvement.
     # Potential improvements are switching to JSON or to use a CLoader:
     # https://stackoverflow.com/questions/27743711/can-i-speedup-yaml
