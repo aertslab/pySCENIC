@@ -52,7 +52,7 @@ def load_motif_annotations(fname: str,
 COLUMN_NAME_TARGET = "target"
 COLUMN_NAME_WEIGHT = "importance"
 COLUMN_NAME_CORRELATION = "correlation"
-RHO_THRESHOLD = 0.3
+RHO_THRESHOLD = 0.03
 
 
 def add_correlation(adjacencies: pd.DataFrame, ex_mtx: pd.DataFrame, rho_threshold=RHO_THRESHOLD) -> pd.DataFrame:
