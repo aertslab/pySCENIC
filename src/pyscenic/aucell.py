@@ -89,7 +89,7 @@ def aucell4r(df_rnk: pd.DataFrame, signatures: Sequence[Type[GeneSignature]],
     :param signatures: The gene signatures or regulons.
     :param auc_threshold: The fraction of the ranked genome to take into account for the calculation of the
         Area Under the recovery Curve.
-    :param noweights: Should the weights of the genes part of regulome be used in calculation of enrichment?
+    :param noweights: Should the weights of the genes part of a signature be used in calculation of enrichment?
     :param num_cores: The number of cores to use.
     :return: A dataframe with the AUCs (n_cells x n_modules).
     """
@@ -133,7 +133,7 @@ def aucell4r(df_rnk: pd.DataFrame, signatures: Sequence[Type[GeneSignature]],
         # Reconstitute the results array. Using C or row-major ordering.
         return pd.DataFrame(data=np.ctypeslib.as_array(auc_mtx.get_obj()).reshape(len(signatures), len(cells)),
                             columns=pd.Index(data=cells, name='Cell'),
-                            index=pd.Index(data=list(map(attrgetter("name"), signatures)), name='Regulome')).T
+                            index=pd.Index(data=list(map(attrgetter("name"), signatures)), name='Regulon')).T
 
 
 def aucell(exp_mtx: pd.DataFrame, signatures: Sequence[Type[GeneSignature]],
@@ -145,7 +145,7 @@ def aucell(exp_mtx: pd.DataFrame, signatures: Sequence[Type[GeneSignature]],
     :param signatures: The gene signatures or regulons.
     :param auc_threshold: The fraction of the ranked genome to take into account for the calculation of the
         Area Under the recovery Curve.
-    :param noweights: Should the weights of the genes part of regulome be used in calculation of enrichment?
+    :param noweights: Should the weights of the genes part of a signature be used in calculation of enrichment?
     :param num_cores: The number of cores to use.
     :return: A dataframe with the AUCs (n_cells x n_modules).
     """

@@ -164,7 +164,7 @@ def test_intersection3():
 
 
 def test_regulon():
-    reg = Regulon(name='TP53 regulome', gene2weight={'TP53': 0.8, 'SOX4': 0.75}, nomenclature="HGNC", transcription_factor="TP53")
+    reg = Regulon(name='TP53 regulon', gene2weight={'TP53': 0.8, 'SOX4': 0.75}, nomenclature="HGNC", transcription_factor="TP53")
     assert reg.transcription_factor == "TP53"
 
 

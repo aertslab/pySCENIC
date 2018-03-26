@@ -97,7 +97,7 @@ def modules4thr(adjacencies, threshold, nomenclature="MGI", context=frozenset())
                 nomenclature=nomenclature,
                 context=frozenset(["weight>{}".format(threshold)]).union(context),
                 transcription_factor=tf_name,
-                gene2weights=list(zip(df_grp[COLUMN_NAME_TARGET].values, df_grp[COLUMN_NAME_WEIGHT].values)))
+                gene2weight=list(zip(df_grp[COLUMN_NAME_TARGET].values, df_grp[COLUMN_NAME_WEIGHT].values)))
 
 
 def modules4top_targets(adjacencies, n, nomenclature="MGI", context=frozenset()):
@@ -116,7 +116,7 @@ def modules4top_targets(adjacencies, n, nomenclature="MGI", context=frozenset())
                 nomenclature=nomenclature,
                 context=frozenset(["top{}".format(n)]).union(context),
                 transcription_factor=tf_name,
-                gene2weights=list(zip(module[COLUMN_NAME_TARGET].values, module[COLUMN_NAME_WEIGHT].values)))
+                gene2weight=list(zip(module[COLUMN_NAME_TARGET].values, module[COLUMN_NAME_WEIGHT].values)))
 
 
 def modules4top_factors(adjacencies, n, nomenclature="MGI", context=frozenset()):
@@ -135,7 +135,7 @@ def modules4top_factors(adjacencies, n, nomenclature="MGI", context=frozenset())
                 nomenclature=nomenclature,
                 context=frozenset(["top{}perTarget".format(n)]).union(context),
                 transcription_factor=tf_name,
-                gene2weights=list(zip(df_grp[COLUMN_NAME_TARGET].values, df_grp[COLUMN_NAME_WEIGHT].values)))
+                gene2weight=list(zip(df_grp[COLUMN_NAME_TARGET].values, df_grp[COLUMN_NAME_WEIGHT].values)))
 
 
 ACTIVATING_MODULE = "activating"

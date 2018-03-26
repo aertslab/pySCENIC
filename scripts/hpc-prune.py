@@ -91,7 +91,7 @@ def run(args):
     db_fnames = list(mapcat(glob.glob, cfg['data']['databases'].split(";")))
     dbs = [RankingDatabase(fname=fname, name=name(fname), nomenclature=nomenclature) for fname in db_fnames]
 
-    LOGGER.info("Calculating regulomes.")
+    LOGGER.info("Calculating regulons.")
     motif_annotations_fname = cfg['data']['motif_annotations']
     mode= cfg['parameters']['mode']
     with ProgressBar() if mode == "dask_multiprocessing" else NoProgressBar():
