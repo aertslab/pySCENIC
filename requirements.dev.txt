@@ -6,6 +6,7 @@ attrs
 frozendict
 numpy
 pandas
+pyarrow==0.8.0
 feather-format
 dask
 graphviz

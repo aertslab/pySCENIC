@@ -6,6 +6,7 @@ frozendict
 numpy
 pandas
 dask
+pyarrow==0.8.0
 feather-format
 arboretum
 boltons
