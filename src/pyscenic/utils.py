@@ -148,7 +148,7 @@ def modules_from_adjacencies(adjacencies: pd.DataFrame,
                         thresholds=(0.001,0.005),
                         top_n_targets=(50,),
                         top_n_regulators=(5,10,50),
-                        min_genes=20) -> Sequence[Regulon]:
+                        min_genes=20, rho_threshold=RHO_THRESHOLD) -> Sequence[Regulon]:
     """
     Create modules from a dataframe containing weighted adjacencies between a TF and a target genes.
     
@@ -159,6 +159,8 @@ def modules_from_adjacencies(adjacencies: pd.DataFrame,
     :param top_n_targets: the second method is to select the top targets for a given TF.
     :param top_n_regulators: the alternative way to create the TF-modules is to select the best regulators for each gene.
     :param min_genes: The required minimum number of genes in a module.
+    :param rho_threshold: The threshold on the correlation to decide if a target gene is activated
+        (rho > `rho_threshold`) or repressed (rho < -`rho_threshold`).
     :return: A sequence of regulons.
     """
 
@@ -166,7 +168,7 @@ def modules_from_adjacencies(adjacencies: pd.DataFrame,
     # profiles. The Pearson product-moment correlation coefficient is used to derive this information.
 
     # Add correlation column and create two disjoint set of adjacencies.
-    adjacencies = add_correlation(adjacencies.copy(), ex_mtx)
+    adjacencies = add_correlation(adjacencies.copy(), ex_mtx, rho_threshold=rho_threshold)
     activating_modules = adjacencies[adjacencies['correlation'] > 0.0]
     repressing_modules = adjacencies[adjacencies['correlation'] < 0.0]
 
