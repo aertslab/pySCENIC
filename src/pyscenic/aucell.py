@@ -80,13 +80,13 @@ def _enrichment(shared_ro_memory_array, modules, genes, cells, auc_threshold, au
         result_mtx[offset+(idx*inc):offset+((idx+1)*inc)] = enrichment4cells(df_rnk, module, auc_threshold).values.flatten(order="C")
 
 
-def aucell4r(df_rnk: pd.DataFrame, modules: Sequence[Type[GeneSignature]],
-           auc_threshold: float = 0.05, noweights: bool = False, num_cores: int = cpu_count()) -> pd.DataFrame:
+def aucell4r(df_rnk: pd.DataFrame, signatures: Sequence[Type[GeneSignature]],
+             auc_threshold: float = 0.05, noweights: bool = False, num_cores: int = cpu_count()) -> pd.DataFrame:
     """
-    Calculate enrichment of regulomes for single cells.
+    Calculate enrichment of gene signatures for single cells.
 
     :param df_rnk: The rank matrix (n_cells x n_genes).
-    :param modules: The regulomes.
+    :param signatures: The gene signatures or regulons.
     :param auc_threshold: The fraction of the ranked genome to take into account for the calculation of the
         Area Under the recovery Curve.
     :param noweights: Should the weights of the genes part of regulome be used in calculation of enrichment?
@@ -97,7 +97,7 @@ def aucell4r(df_rnk: pd.DataFrame, modules: Sequence[Type[GeneSignature]],
         # Show progress bar ...
         aucs = pd.concat([enrichment4cells(df_rnk,
                                      module.noweights() if noweights else module,
-                                     auc_threshold=auc_threshold) for module in tqdm(modules)]).unstack("Regulome")
+                                     auc_threshold=auc_threshold) for module in tqdm(signatures)]).unstack("Regulon")
         aucs.columns = aucs.columns.droplevel(0)
         return aucs
     else:
@@ -113,41 +113,41 @@ def aucell4r(df_rnk: pd.DataFrame, modules: Sequence[Type[GeneSignature]],
         array[:] = df_rnk.as_matrix().flatten(order='C')
 
         # The resulting AUCs are returned via a synchronize array.
-        auc_mtx = Array('d', len(cells) * len(modules))  # Double precision floats.
+        auc_mtx = Array('d', len(cells) * len(signatures))  # Double precision floats.
 
         # Convert the modules to modules with uniform weights if necessary.
         if noweights:
-            modules = list(map(lambda m: m.noweights(), modules))
+            signatures = list(map(lambda m: m.noweights(), signatures))
 
         # Do the analysis in separate child processes.
-        chunk_size = ceil(float(len(modules))/num_cores)
+        chunk_size = ceil(float(len(signatures)) / num_cores)
         processes = [Process(target=_enrichment, args=(shared_ro_memory_array, chunk,
                                                        genes, cells, auc_threshold,
                                                        auc_mtx, (chunk_size*len(cells))*idx))
-                     for idx, chunk in enumerate(chunked(modules, chunk_size))]
+                     for idx, chunk in enumerate(chunked(signatures, chunk_size))]
         for p in processes:
             p.start()
         for p in processes:
             p.join()
 
         # Reconstitute the results array. Using C or row-major ordering.
-        return pd.DataFrame(data=np.ctypeslib.as_array(auc_mtx.get_obj()).reshape(len(modules), len(cells)),
-                           columns=pd.Index(data=cells, name='Cell'),
-                            index=pd.Index(data=list(map(attrgetter("name"), modules)), name='Regulome')).T
+        return pd.DataFrame(data=np.ctypeslib.as_array(auc_mtx.get_obj()).reshape(len(signatures), len(cells)),
+                            columns=pd.Index(data=cells, name='Cell'),
+                            index=pd.Index(data=list(map(attrgetter("name"), signatures)), name='Regulome')).T
 
 
-def aucell(exp_mtx: pd.DataFrame, modules: Sequence[Type[GeneSignature]],
+def aucell(exp_mtx: pd.DataFrame, signatures: Sequence[Type[GeneSignature]],
            auc_threshold: float = 0.05, noweights: bool = False, num_cores: int = cpu_count()) -> pd.DataFrame:
     """
-    Calculate enrichment of regulomes for single cells.
+    Calculate enrichment of gene signatures for single cells.
 
     :param exp_mtx: The expression matrix (n_cells x n_genes).
-    :param modules: The regulomes.
+    :param signatures: The gene signatures or regulons.
     :param auc_threshold: The fraction of the ranked genome to take into account for the calculation of the
         Area Under the recovery Curve.
     :param noweights: Should the weights of the genes part of regulome be used in calculation of enrichment?
     :param num_cores: The number of cores to use.
     :return: A dataframe with the AUCs (n_cells x n_modules).
     """
-    return aucell4r(create_rankings(exp_mtx), modules, auc_threshold, noweights, num_cores)
+    return aucell4r(create_rankings(exp_mtx), signatures, auc_threshold, noweights, num_cores)
 

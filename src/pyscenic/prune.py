@@ -26,14 +26,14 @@ from dask.dataframe import from_delayed
 from dask.distributed import LocalCluster, Client
 
 from .log import create_logging_handler
-from .genesig import Regulome, GeneSignature
+from .genesig import Regulon, GeneSignature
 from .utils import load_motif_annotations
 from .rnkdb import RankingDatabase, MemoryDecorator
 from .utils import add_motif_url
-from .transform import module2features_auc1st_impl, modules2regulomes, modules2df, df2regulomes, DF_META_DATA
+from .transform import module2features_auc1st_impl, modules2regulons, modules2df, df2regulons, DF_META_DATA
 
 
-__all__ = ['prune', 'prune2df', 'find_features', 'df2regulomes']
+__all__ = ['prune', 'prune2df', 'find_features', 'df2regulons']
 
 
 # Taken from: https://www.regular-expressions.info/ip.html
@@ -98,7 +98,7 @@ def _prepare_client(client_or_address, num_workers):
 
 
 class Worker(Process):
-    def __init__(self, name: str, db: Type[RankingDatabase], modules: Sequence[Regulome],
+    def __init__(self, name: str, db: Type[RankingDatabase], modules: Sequence[Regulon],
                  motif_annotations_fname: str, sender,
                  motif_similarity_fdr: float, orthologuous_identity_threshold: float,
                  transformation_func):
@@ -124,7 +124,7 @@ class Worker(Process):
 
         # Apply transformation on all modules.
         output = self.transform_fnc(rnkdb, self.modules, motif_annotations=motif_annotations)
-        LOGGER.info("Worker {}: All regulomes derived.".format(self.name))
+        LOGGER.info("Worker {}: All regulons derived.".format(self.name))
 
         # Sending information back to parent process: to avoid overhead of pickling the data, the output is first written
         # to disk in binary pickle format to a temporary file. The name of that file is shared with the parent process.
@@ -154,10 +154,10 @@ def _distributed_calc(rnkdbs: Sequence[Type[RankingDatabase]], modules: Sequence
     :param modules: A sequence of gene signatures.
     :param motif_annotations_fname: The filename of the motif annotations to use.
     :param transform_func: A function having a signature (Type[RankingDatabase], Sequence[Type[GeneSignature]], str) and
-        that returns Union[Sequence[Regulome]],pandas.DataFrame].
+        that returns Union[Sequence[Regulon]],pandas.DataFrame].
     :param aggregate_func: A function having a signature:
         - (Sequence[pandas.DataFrame]) => pandas.DataFrame
-        - (Sequence[Sequence[Regulome]]) => Sequence[Regulome]
+        - (Sequence[Sequence[Regulon]]) => Sequence[Regulon]
     :param motif_similarity_fdr: The maximum False Discovery Rate to find factor annotations for enriched motifs.
     :param orthologuous_identity_threshold: The minimum orthologuous identity to find factor annotations
         for enriched motifs.
@@ -166,7 +166,7 @@ def _distributed_calc(rnkdbs: Sequence[Type[RankingDatabase]], modules: Sequence
     :param num_workers: If not using a cluster, the number of workers to use for the calculation.
         None of all available CPUs need to be used.
     :param module_chunksize: The size of the chunk in signatures to use when using the dask framework.
-    :return: A pandas dataframe or a sequence of regulomes (depends on aggregate function supplied).
+    :return: A pandas dataframe or a sequence of regulons (depends on aggregate function supplied).
     """
     def is_valid(client_or_address):
         if isinstance(client_or_address, str) and ((client_or_address in
@@ -262,16 +262,16 @@ def _distributed_calc(rnkdbs: Sequence[Type[RankingDatabase]], modules: Sequence
                 shutdown_callback(False)
 
 
-def prune(rnkdbs: Sequence[Type[RankingDatabase]], modules: Sequence[Regulome],
+def prune(rnkdbs: Sequence[Type[RankingDatabase]], modules: Sequence[Regulon],
                          motif_annotations_fname: str,
                          rank_threshold: int = 1500, auc_threshold: float = 0.05, nes_threshold=3.0,
                          motif_similarity_fdr: float = 0.001, orthologuous_identity_threshold: float = 0.0,
                          avgrcc_sample_frac: float = None,
                          weighted_recovery=False, client_or_address='custom_multiprocessing',
-                         num_workers=None, module_chunksize=100) -> Sequence[Regulome]:
+                         num_workers=None, module_chunksize=100) -> Sequence[Regulon]:
     """
-    Calculate all regulomes for a given sequence of ranking databases and a sequence of co-expression modules.
-    The number of regulomes derived from the supplied modules is usually much lower. In addition, the targets of the
+    Calculate all regulons for a given sequence of ranking databases and a sequence of co-expression modules.
+    The number of regulons derived from the supplied modules is usually much lower. In addition, the targets of the
     retained modules is reduced to only these ones for which a cis-regulatory footprint is present.
 
     :param rnkdbs: The sequence of databases.
@@ -292,7 +292,7 @@ def prune(rnkdbs: Sequence[Type[RankingDatabase]], modules: Sequence[Regulome],
     :param module_chunksize: The size of the chunk to use when using the dask framework.
     :param client_or_address: The client of IP address of the scheduler when working with dask. For local multi-core
         systems 'custom_multiprocessing' or 'dask_multiprocessing' can be supplied.
-    :return: A sequence of regulomes.
+    :return: A sequence of regulons.
     """
     # Always use module2features_auc1st_impl not only because of speed impact but also because of reduced memory footprint.
     module2features_func = partial(module2features_auc1st_impl,
@@ -301,7 +301,7 @@ def prune(rnkdbs: Sequence[Type[RankingDatabase]], modules: Sequence[Regulome],
                                    nes_threshold=nes_threshold,
                                    avgrcc_sample_frac=avgrcc_sample_frac,
                                    filter_for_annotation=True)
-    transformation_func = partial(modules2regulomes, module2features_func=module2features_func, weighted_recovery=weighted_recovery)
+    transformation_func = partial(modules2regulons, module2features_func=module2features_func, weighted_recovery=weighted_recovery)
     from toolz.curried import reduce
     aggregation_func = delayed(reduce(concat)) if client_or_address != 'custom_multiprocessing' else reduce(concat)
     return _distributed_calc(rnkdbs, modules, motif_annotations_fname, transformation_func, aggregation_func,
@@ -309,7 +309,7 @@ def prune(rnkdbs: Sequence[Type[RankingDatabase]], modules: Sequence[Regulome],
                       num_workers, module_chunksize)
 
 
-def prune2df(rnkdbs: Sequence[Type[RankingDatabase]], modules: Sequence[Regulome],
+def prune2df(rnkdbs: Sequence[Type[RankingDatabase]], modules: Sequence[Regulon],
              motif_annotations_fname: str,
              rank_threshold: int = 1500, auc_threshold: float = 0.05, nes_threshold=3.0,
              motif_similarity_fdr: float = 0.001, orthologuous_identity_threshold: float = 0.0,
@@ -317,8 +317,8 @@ def prune2df(rnkdbs: Sequence[Type[RankingDatabase]], modules: Sequence[Regulome
              weighted_recovery=False, client_or_address='custom_multiprocessing',
              num_workers=None, module_chunksize=100, filter_for_annotation=True) -> pd.DataFrame:
     """
-    Calculate all regulomes for a given sequence of ranking databases and a sequence of co-expression modules.
-    The number of regulomes derived from the supplied modules is usually much lower. In addition, the targets of the
+    Calculate all regulons for a given sequence of ranking databases and a sequence of co-expression modules.
+    The number of regulons derived from the supplied modules is usually much lower. In addition, the targets of the
     retained modules is reduced to only these ones for which a cis-regulatory footprint is present.
 
     :param rnkdbs: The sequence of databases.

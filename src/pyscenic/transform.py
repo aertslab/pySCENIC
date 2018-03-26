@@ -11,7 +11,7 @@ from itertools import repeat
 from .rnkdb import RankingDatabase
 from functools import reduce
 from typing import Type, Sequence, Optional
-from .genesig import Regulome
+from .genesig import Regulon
 from .recovery import leading_edge4row
 import math
 from itertools import chain
@@ -38,13 +38,13 @@ DF_META_DATA = make_meta({('Enrichment', COLUMN_NAME_AUC): np.float64,
                           ('Enrichment', COLUMN_NAME_RANK_AT_MAX): np.int64})
 
 
-__all__ = ["module2features", "module2df", "modules2df", "df2regulomes", "module2regulome", "modules2regulomes"]
+__all__ = ["module2features", "module2df", "modules2df", "df2regulons", "module2regulon", "modules2regulons"]
 
 
 LOGGER = logging.getLogger(__name__)
 
 
-def module2features_rcc4all_impl(db: Type[RankingDatabase], module: Regulome, motif_annotations: pd.DataFrame,
+def module2features_rcc4all_impl(db: Type[RankingDatabase], module: Regulon, motif_annotations: pd.DataFrame,
                                  rank_threshold: int = 1500, auc_threshold: float = 0.05, nes_threshold=3.0,
                                  avgrcc_sample_frac: float = None, weighted_recovery=False,
                                  filter_for_annotation=True):
@@ -108,7 +108,7 @@ def module2features_rcc4all_impl(db: Type[RankingDatabase], module: Regulome, mo
     return annotated_features, rccs, rankings, genes, avg2stdrcc
 
 
-def module2features_auc1st_impl(db: Type[RankingDatabase], module: Regulome, motif_annotations: pd.DataFrame,
+def module2features_auc1st_impl(db: Type[RankingDatabase], module: Regulon, motif_annotations: pd.DataFrame,
                                 rank_threshold: int = 1500, auc_threshold: float = 0.05, nes_threshold=3.0,
                                 avgrcc_sample_frac: float = None, weighted_recovery=False,
                                 filter_for_annotation=True):
@@ -178,7 +178,7 @@ module2features = partial(module2features_auc1st_impl,
                           avgrcc_sample_frac = None, filter_for_annotation=True)
 
 
-def module2df(db: Type[RankingDatabase], module: Regulome, motif_annotations: pd.DataFrame,
+def module2df(db: Type[RankingDatabase], module: Regulon, motif_annotations: pd.DataFrame,
               weighted_recovery=False, return_recovery_curves=False, module2features_func=module2features) -> pd.DataFrame:
     """
 
@@ -226,7 +226,7 @@ def module2df(db: Type[RankingDatabase], module: Regulome, motif_annotations: pd
     return df
 
 
-def modules2df(db: Type[RankingDatabase], modules: Sequence[Regulome], motif_annotations: pd.DataFrame,
+def modules2df(db: Type[RankingDatabase], modules: Sequence[Regulon], motif_annotations: pd.DataFrame,
                weighted_recovery=False, module2features_func=module2features) -> pd.DataFrame:
     # Make sure return recovery curves is always set to false because the metadata for the distributed dataframe needs
     # to be fixed for the dask framework.
@@ -235,7 +235,7 @@ def modules2df(db: Type[RankingDatabase], modules: Sequence[Regulome], motif_ann
                       for module in modules])
 
 
-def _regulome4group(tf_name, context, df_group, nomenclature) -> Optional[Regulome]:
+def _regulon4group(tf_name, context, df_group, nomenclature) -> Optional[Regulon]:
     def score(nes, motif_similarity_qval, orthologuous_identity):
         # The combined score starts from the NES score which is then corrected for less confidence in the TF annotation
         # in two steps:
@@ -257,30 +257,30 @@ def _regulome4group(tf_name, context, df_group, nomenclature) -> Optional[Regulo
     def derive_interaction_type(ctx):
         return "(-)" if REPRESSING_MODULE in ctx else "(+)"
 
-    def row2regulome(row):
+    def row2regulon(row):
         # The target genes as well as their weights/importances are directly taken from the dataframe.
-        return Regulome(name="{}{}".format(tf_name,derive_interaction_type(context)),
+        return Regulon(name="{}{}".format(tf_name,derive_interaction_type(context)),
                         score=score(row[COLUMN_NAME_NES],
                                     row[COLUMN_NAME_MOTIF_SIMILARITY_QVALUE],
                                     row[COLUMN_NAME_ORTHOLOGOUS_IDENTITY]),
                         nomenclature=nomenclature,
                         context=context,
                         transcription_factor=tf_name,
-                        gene2weights=row[COLUMN_NAME_TARGET_GENES])
-    # First we create a regulome for each enriched and annotated feature and then we aggregate these regulomes into a
+                        gene2weight=row[COLUMN_NAME_TARGET_GENES])
+    # First we create a regulon for each enriched and annotated feature and then we aggregate these regulons into a
     # single one using the union operator. This operator combined all target genes into a single set of genes keeping
     # the maximum weight associated with a gene. In addition, the maximum combined score is kept as the score of the
-    # entire regulome.
-    return reduce(Regulome.union, (row2regulome(row) for _, row in df_group.iterrows()))
+    # entire regulon.
+    return reduce(Regulon.union, (row2regulon(row) for _, row in df_group.iterrows()))
 
 
-def df2regulomes(df, nomenclature) -> Sequence[Regulome]:
+def df2regulons(df, nomenclature) -> Sequence[Regulon]:
     """
-    Create regulomes from a dataframe of enriched features.
+    Create regulons from a dataframe of enriched features.
 
     :param df: The dataframe.
     :param nomenclature: The nomenclature of the genes.
-    :return: A sequence of regulomes.
+    :return: A sequence of regulons.
     """
     # Normally the columns index has two levels. For convenience of the following code the first level is removed.
     if df.columns.nlevels == 2:
@@ -292,33 +292,33 @@ def df2regulomes(df, nomenclature) -> Sequence[Regulome]:
         return ACTIVATING_MODULE if ACTIVATING_MODULE in ctx else REPRESSING_MODULE
     df[COLUMN_NAME_TYPE] = df.apply(get_type,axis=1)
 
-    # Group all rows per TF and type (+)/(-). Each group results in a single regulome.
+    # Group all rows per TF and type (+)/(-). Each group results in a single regulon.
     not_none = lambda r: r is not None
-    return list(filter(not_none, (_regulome4group(tf_name, frozenset([interaction_type]), df_grp, nomenclature)
-                                        for (tf_name, interaction_type), df_grp in df.groupby(by=[COLUMN_NAME_TF,
+    return list(filter(not_none, (_regulon4group(tf_name, frozenset([interaction_type]), df_grp, nomenclature)
+                                  for (tf_name, interaction_type), df_grp in df.groupby(by=[COLUMN_NAME_TF,
                                                                                                   COLUMN_NAME_TYPE]))))
 
 
-def module2regulome(db: Type[RankingDatabase], module: Regulome, motif_annotations: pd.DataFrame,
-                    weighted_recovery=False, return_recovery_curves=False,
-                    module2features_func=module2features) -> Optional[Regulome]:
-    # First calculating a dataframe and then derive the regulomes from them introduces a performance penalty.
+def module2regulon(db: Type[RankingDatabase], module: Regulon, motif_annotations: pd.DataFrame,
+                   weighted_recovery=False, return_recovery_curves=False,
+                   module2features_func=module2features) -> Optional[Regulon]:
+    # First calculating a dataframe and then derive the regulons from them introduces a performance penalty.
     df = module2df(db, module, motif_annotations, weighted_recovery=weighted_recovery,
                    return_recovery_curves=return_recovery_curves,
                    module2features_func=module2features_func)
     if len(df) == 0:
         return None
-    regulomes = df2regulomes(df, module.nomenclature)
-    return first(regulomes) if len(regulomes) > 0 else None
+    regulons = df2regulons(df, module.nomenclature)
+    return first(regulons) if len(regulons) > 0 else None
 
 
-def modules2regulomes(db: Type[RankingDatabase], modules: Sequence[Regulome], motif_annotations: pd.DataFrame,
-                      weighted_recovery=False, return_recovery_curves=False,
-                      module2features_func=module2features) -> Sequence[Regulome]:
+def modules2regulons(db: Type[RankingDatabase], modules: Sequence[Regulon], motif_annotations: pd.DataFrame,
+                     weighted_recovery=False, return_recovery_curves=False,
+                     module2features_func=module2features) -> Sequence[Regulon]:
     assert len(modules) > 0
 
     nomenclature = modules[0].nomenclature
     df = modules2df(db, modules, motif_annotations, weighted_recovery=weighted_recovery,
                     return_recovery_curves=return_recovery_curves,
                     module2features_func=module2features_func)
-    return [] if len(df) == 0 else df2regulomes(df, nomenclature)
+    return [] if len(df) == 0 else df2regulons(df, nomenclature)
