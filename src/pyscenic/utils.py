@@ -73,7 +73,6 @@ def add_correlation(adjacencies: pd.DataFrame, ex_mtx: pd.DataFrame,
 
     # Calculate Pearson correlation to infer repression or activation.
     # To improve speed of execution we only calculate rho for genes we later need.
-    #TODO: When masking dropouts the number of remaining adjacencies drops significantly! Check!
     if mask_dropouts:
         tf_names = list(set(adjacencies[COLUMN_NAME_TF]))
         tf_exp = ex_mtx[ex_mtx.columns[ex_mtx.columns.isin(tf_names)]].T
