@@ -78,6 +78,10 @@ def add_correlation(adjacencies: pd.DataFrame, ex_mtx: pd.DataFrame,
     # Calculate Pearson correlation to infer repression or activation.
     # To improve speed of execution we only calculate rho for genes we later need.
     if mask_dropouts:
+        # Even by calculating a rectangular correlation matrix (TF x target) we do far too much calculations.
+        # However this approach enables us to factor out this part of the code and perform JIT optimisation.
+        # Another approach would be to use the JIT-boosted masked_rho function and run it for each pair during
+        # add_regulation (of course with memoization).
         tf_names = list(set(adjacencies[COLUMN_NAME_TF]))
         tf_exp = ex_mtx[ex_mtx.columns[ex_mtx.columns.isin(tf_names)]].T
         target_names = list(set(adjacencies[COLUMN_NAME_TARGET]))
@@ -184,6 +188,8 @@ def modules_from_adjacencies(adjacencies: pd.DataFrame,
     :param min_genes: The required minimum number of genes in a module.
     :param rho_threshold: The threshold on the correlation to decide if a target gene is activated
         (rho > `rho_threshold`) or repressed (rho < -`rho_threshold`).
+    :param mask_dropouts: Do not use cells in which either the expression of the TF or the target gene is 0 when
+        calculating the correlation between a TF-target pair.
     :return: A sequence of regulons.
     """
 
