@@ -48,3 +48,23 @@ def masked_rho_2d(x: np.ndarray, y: np.ndarray, mask: float = 0.0) -> np.ndarray
         for p_idx in range(p):
             rhos[n_idx, p_idx] = masked_rho(x[n_idx, :], y[p_idx, :], mask)
     return rhos
+
+
+@njit(signature_or_function=float64[:](float64[:, :], int64[:, :], float64), parallel=True)
+def masked_rho4pairs(mtx: np.ndarray, idx_pairs: np.ndarray, mask: float = 0.0) -> np.ndarray:
+    """
+    Calculates the masked correlation coefficients of two arrays.
+
+    :param x: array of n variables and m observations (nxm).
+    :param y: array of p variables and m observations (pxm).
+    :param mask: the value to be masked.
+    :return: array with correlation coefficients (nxp).
+    """
+    #Numba can parallelize loops automatically but this is still an experimental feature.
+    n = idx_pairs.shape[0]
+    rhos = np.empty(shape=n, dtype=np.float64)
+    for n_idx in prange(n):
+        x = mtx[idx_pairs[n_idx, 0], :]
+        y = mtx[idx_pairs[n_idx, 1], :]
+        rhos[n_idx] = masked_rho(x, y, mask)
+    return rhos

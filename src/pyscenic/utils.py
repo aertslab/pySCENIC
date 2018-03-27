@@ -75,13 +75,30 @@ def add_correlation(adjacencies: pd.DataFrame, ex_mtx: pd.DataFrame,
     """
     assert rho_threshold > 0, "rho_threshold should be greater than 0."
 
+    # Assessment of best optimization strategy for calculating dropout masked correlations between TF-target expression:
+    #
+    # Measurement of time performance of masked_rho (with numba JIT): 136 µs ± 932 ns for a single pair of vectors.
+    # For a typical dataset this translates into (for a single core):
+    # 1. Calculating the rectangular (TFxtarget) correlation matrix:
+    #    (1,564 TFs * 19,812 targets * 136 microseconds * 10e-6)/3600.0 ~ 12 hours.
+    #    This approach calculates far too much be has the potential for easy parallelization via numba (cf. current
+    #    implementation of masked_rho_2d).
+    # 2. Calculating only needed TF-target pairs:
+    #    (6,732,441 TF-target links * 136 microseconds * 10e-6)/3600.0 ~ 2h 30 mins.
+    #    - Many of these gene-gene links will be duplicate so there might be a potential for memoization. However because
+    #    the calculation is already quite fast and the memoization would need to take into account the commutativity of
+    #    the operation and involves hashing large numerical vectors, the benefit if this memoization might be minimal.
+    #    - Calculation of unique pairs already takes substantial amount of time and does not introduce a substantial
+    #    reduction in the number of gene-gene pairs to calculate the correlation for: 6,732,441 => 6,630,720 (2 min 9 s).
+    #    This is exactly the additional needed for calculating the rho values for these pairs. No gain here.
+    #
+    # The best combined approach is to calculate rhos for pairs defined by indexes but the difficulty here is to
+    # efficiently create the list of pairs of indices.
+
     # Calculate Pearson correlation to infer repression or activation.
-    # To improve speed of execution we only calculate rho for genes we later need.
     if mask_dropouts:
         # Even by calculating a rectangular correlation matrix (TF x target) we do far too much calculations.
         # However this approach enables us to factor out this part of the code and perform JIT optimisation.
-        # Another approach would be to use the JIT-boosted masked_rho function and run it for each pair during
-        # add_regulation (of course with memoization).
         tf_names = list(set(adjacencies[COLUMN_NAME_TF]))
         tf_exp = ex_mtx[ex_mtx.columns[ex_mtx.columns.isin(tf_names)]].T
         target_names = list(set(adjacencies[COLUMN_NAME_TARGET]))
