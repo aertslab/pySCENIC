@@ -35,7 +35,8 @@ DF_META_DATA = make_meta({('Enrichment', COLUMN_NAME_AUC): np.float64,
                           ('Enrichment', COLUMN_NAME_ANNOTATION): np.object,
                           ('Enrichment', COLUMN_NAME_CONTEXT): np.object,
                           ('Enrichment', COLUMN_NAME_TARGET_GENES): np.object,
-                          ('Enrichment', COLUMN_NAME_RANK_AT_MAX): np.int64})
+                          ('Enrichment', COLUMN_NAME_RANK_AT_MAX): np.int64},
+                         index=pd.MultiIndex.from_arrays([[],[]], names=(COLUMN_NAME_TF, COLUMN_NAME_MOTIF_ID)))
 
 
 __all__ = ["module2features", "module2df", "modules2df", "df2regulons", "module2regulon", "modules2regulons"]
