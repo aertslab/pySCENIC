@@ -13,6 +13,10 @@ try:
     from yaml import CLoader as Loader, CDumper as Dumper
 except ImportError:
     from yaml import Loader, Dumper
+import logging
+
+
+LOGGER = logging.getLogger(__name__)
 
 
 COLUMN_NAME_TF = "TF"
@@ -57,7 +61,7 @@ RHO_THRESHOLD = 0.03
 
 
 def add_correlation(adjacencies: pd.DataFrame, ex_mtx: pd.DataFrame,
-                    rho_threshold=RHO_THRESHOLD, mask_dropouts=True) -> pd.DataFrame:
+                    rho_threshold=RHO_THRESHOLD, mask_dropouts=False) -> pd.DataFrame:
     """
     Add correlation in expression levels between target and factor.
 
@@ -78,6 +82,7 @@ def add_correlation(adjacencies: pd.DataFrame, ex_mtx: pd.DataFrame,
         tf_exp = ex_mtx[ex_mtx.columns[ex_mtx.columns.isin(tf_names)]].T
         target_names = list(set(adjacencies[COLUMN_NAME_TARGET]))
         target_exp = ex_mtx[ex_mtx.columns[ex_mtx.columns.isin(target_names)]].T
+        LOGGER.info("{} TFs x {} targets.".format(len(tf_names), len(target_names)))
         corr_mtx = pd.DataFrame(index=tf_names, columns=target_names,
                                 data=masked_rho_2d(tf_exp.values, target_exp.values, mask=0.0))
     else:
@@ -164,7 +169,9 @@ def modules_from_adjacencies(adjacencies: pd.DataFrame,
                         thresholds=(0.001,0.005),
                         top_n_targets=(50,),
                         top_n_regulators=(5,10,50),
-                        min_genes=20, rho_threshold=RHO_THRESHOLD) -> Sequence[Regulon]:
+                        min_genes=20,
+                        rho_threshold=RHO_THRESHOLD,
+                        mask_dropouts=False) -> Sequence[Regulon]:
     """
     Create modules from a dataframe containing weighted adjacencies between a TF and a target genes.
     
@@ -184,7 +191,9 @@ def modules_from_adjacencies(adjacencies: pd.DataFrame,
     # profiles. The Pearson product-moment correlation coefficient is used to derive this information.
 
     # Add correlation column and create two disjoint set of adjacencies.
-    adjacencies = add_correlation(adjacencies.copy(), ex_mtx, rho_threshold=rho_threshold) # Make a defensive copy.
+    LOGGER.info("Calculating Pearson correlations.")
+    adjacencies = add_correlation(adjacencies.copy(), ex_mtx,
+                                  rho_threshold=rho_threshold, mask_dropouts=mask_dropouts) # Make a defensive copy.
     activating_modules = adjacencies[adjacencies['correlation'] > 0.0]
     repressing_modules = adjacencies[adjacencies['correlation'] < 0.0]
 
@@ -194,6 +203,7 @@ def modules_from_adjacencies(adjacencies: pd.DataFrame,
     #    activating it. Therefore the most unbiased way forward is to add the TF to both activating as well as
     #    repressing modules]
     # + Filter for minimum number of genes.
+    LOGGER.info("Creating modules.")
     def iter_modules(adjc, context):
         yield from chain(chain.from_iterable(modules4thr(adjc, thr, nomenclature, context) for thr in thresholds),
                          chain.from_iterable(modules4top_targets(adjc, n, nomenclature, context) for n in top_n_targets),

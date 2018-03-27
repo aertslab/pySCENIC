@@ -18,15 +18,19 @@ def masked_rho(x: np.ndarray, y: np.ndarray, mask: float = 0.0) -> float:
     idx = (x != mask) & (y != mask)
     x_masked = x[idx]
     y_masked = y[idx]
+    if (len(x_masked) == 0) or (len(y_masked) == 0):
+        return np.nan
     x_demeaned = x_masked - x_masked.mean()
     y_demeaned = y_masked - y_masked.mean()
     cov_xy = np.dot(x_demeaned, y_demeaned)
     std_x = np.sqrt(np.dot(x_demeaned, x_demeaned))
     std_y = np.sqrt(np.dot(y_demeaned, y_demeaned))
+    if (std_x * std_y) == 0:
+        return np.nan
     return cov_xy / (std_x * std_y)
 
 
-@njit(signature_or_function=float64[:, :](float64[:, :], float64[:, :], float64))
+@njit(signature_or_function=float64[:, :](float64[:, :], float64[:, :], float64), parallel=True)
 def masked_rho_2d(x: np.ndarray, y: np.ndarray, mask: float = 0.0) -> np.ndarray:
     """
     Calculates the masked correlation coefficients of two arrays.
@@ -40,7 +44,7 @@ def masked_rho_2d(x: np.ndarray, y: np.ndarray, mask: float = 0.0) -> np.ndarray
     n = x.shape[0]
     p = y.shape[0]
     rhos = np.empty(shape=(n, p), dtype=np.float64)
-    for n_idx in range(n):
+    for n_idx in prange(n):
         for p_idx in range(p):
             rhos[n_idx, p_idx] = masked_rho(x[n_idx, :], y[p_idx, :], mask)
     return rhos
