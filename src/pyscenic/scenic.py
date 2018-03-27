@@ -101,6 +101,9 @@ def find_adjacencies_command(args):
 
     n_total_genes = len(ex_mtx.columns)
     n_matching_genes = len(ex_mtx.columns.isin(tf_names))
+    if n_total_genes == 0:
+        LOGGER.error("The expression matrix supplied does not contain any genes. Make sure the extension of the file matches the format (tab separation for TSV and comma sepatration for CSV).")
+        sys.exit(1)
     if float(n_matching_genes)/n_total_genes < 0.80:
         LOGGER.warning("Expression data is available for less than 80% of the supplied transcription factors.")
 
@@ -236,14 +239,7 @@ def add_computation_parameters(parser):
     group = parser.add_argument_group('computation arguments')
     group.add_argument('--num_workers',
                        type=int, default=cpu_count(),
-                       help='The number of workers to use (default: {}).'.format(cpu_count()))
-    group.add_argument('--chunk_size',
-                       type=int, default=1,
-                       help='The size of the module chunks assigned to a node in the dask graph (default: 1).')
-    group.add_argument('--mode',
-                       choices=['custom_multiprocessing', 'dask_multiprocessing', 'dask_cluster'],
-                       default='dask_multiprocessing',
-                       help='The mode to be used for computing (default: dask_multiprocessing).')
+                       help='The number of workers to use. Only valid of using dask_multiprocessing, custom_multiprocessing or local as mode. (default: {}).'.format(cpu_count()))
     group.add_argument('--client_or_address',
                        type=str, default='local',
                        help='The client or the IP address of the dask scheduler to use.'
@@ -291,6 +287,13 @@ def create_argument_parser():
                             help='Output file/stream, i.e. a table of enriched motifs and target genes (CSV).')
     parser_ctx.add_argument('-n', '--no_pruning', action='store_const', const = 'yes',
                               help='Do not perform pruning, i.e. find enriched motifs.')
+    parser_ctx.add_argument('--chunk_size',
+                       type=int, default=1,
+                       help='The size of the module chunks assigned to a node in the dask graph (default: 1).')
+    parser_ctx.add_argument('--mode',
+                       choices=['custom_multiprocessing', 'dask_multiprocessing', 'dask_cluster'],
+                       default='dask_multiprocessing',
+                       help='The mode to be used for computing (default: dask_multiprocessing).')
     add_recovery_parameters(parser_ctx)
     add_annotation_parameters(parser_ctx)
     add_computation_parameters(parser_ctx)
