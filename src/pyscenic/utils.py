@@ -3,7 +3,7 @@
 import pandas as pd
 from urllib.parse import urljoin
 from .genesig import Regulon, GeneSignature
-from .math import masked_rho_2d
+from .math import masked_rho_2d, masked_rho4pairs
 from itertools import chain
 import numpy as np
 from functools import partial
@@ -56,8 +56,54 @@ def load_motif_annotations(fname: str,
 
 COLUMN_NAME_TARGET = "target"
 COLUMN_NAME_WEIGHT = "importance"
-COLUMN_NAME_CORRELATION = "correlation"
+COLUMN_NAME_REGULATION = "regulation"
+COLUMN_NAME_CORRELATION = "rho"
 RHO_THRESHOLD = 0.03
+
+
+def _create_idx_pairs(adjacencies: pd.DataFrame, exp_mtx: pd.DataFrame) -> np.ndarray:
+    """
+    :precondition: The column index of the exp_mtx should be sorted in ascending order.
+            `exp_mtx = exp_mtx.sort_index(axis=1)`
+    """
+
+    # Create sorted list of genes that take part in a TF-target link.
+    sorted_genes = sorted(set(adjacencies.TF).union(set(adjacencies.target)))
+
+    # Find column idx in the expression matrix of each gene that takes part in a link. Having the column index of genes
+    # sorted as well as the list of link genes makes sure that we can map indexes back to genes!
+    symbol2idx = dict(zip(sorted_genes, np.nonzero(exp_mtx.columns.isin(sorted_genes))[0]))
+
+    # Create numpy array of idx pairs.
+    return np.array([[symbol2idx[s1], symbol2idx[s2]] for s1, s2 in zip(adjacencies.TF, adjacencies.target)])
+
+
+def _create_apply_function(adjacencies: pd.DataFrame, ex_mtx: pd.DataFrame,
+                           rho_threshold=RHO_THRESHOLD, mask_dropouts=False):
+    if mask_dropouts:
+        ex_mtx = ex_mtx.sort_index(axis=1)
+        col_idx_pairs = _create_idx_pairs(adjacencies, ex_mtx)
+        rhos = masked_rho4pairs(ex_mtx.values, col_idx_pairs, 0.0)
+        link2rho = {(tf, target): rho for tf, target, rho in zip(adjacencies.TF, adjacencies.target, rhos)}
+        def add_regulation(row):
+            tf = row[COLUMN_NAME_TF]
+            target = row[COLUMN_NAME_TARGET]
+            rho = link2rho[(tf, target)]
+            return pd.Series(index=[COLUMN_NAME_REGULATION, COLUMN_NAME_CORRELATION],
+                             data=[int(rho > rho_threshold) - int(rho < -rho_threshold), rho])
+        return add_regulation
+    else:
+        genes = list(set(adjacencies[COLUMN_NAME_TF]).union(set(adjacencies[COLUMN_NAME_TARGET])))
+        ex_mtx = ex_mtx[ex_mtx.columns[ex_mtx.columns.isin(genes)]]
+        corr_mtx = pd.DataFrame(index=ex_mtx.columns, columns=ex_mtx.columns,
+                                data=np.corrcoef(ex_mtx.values.T))
+        def add_regulation(row):
+            tf = row[COLUMN_NAME_TF]
+            target = row[COLUMN_NAME_TARGET]
+            rho = corr_mtx[target][tf]
+            return pd.Series(index=[COLUMN_NAME_REGULATION, COLUMN_NAME_CORRELATION],
+                         data=[int(rho > rho_threshold) - int(rho < -rho_threshold), rho])
+        return add_regulation
 
 
 def add_correlation(adjacencies: pd.DataFrame, ex_mtx: pd.DataFrame,
@@ -74,6 +120,9 @@ def add_correlation(adjacencies: pd.DataFrame, ex_mtx: pd.DataFrame,
     :return: The adjacencies dataframe with an extra column.
     """
     assert rho_threshold > 0, "rho_threshold should be greater than 0."
+
+    # Take defensive copy of adjacencies.
+    adjacencies = adjacencies.copy()
 
     # Assessment of best optimization strategy for calculating dropout masked correlations between TF-target expression:
     #
@@ -92,34 +141,16 @@ def add_correlation(adjacencies: pd.DataFrame, ex_mtx: pd.DataFrame,
     #    reduction in the number of gene-gene pairs to calculate the correlation for: 6,732,441 => 6,630,720 (2 min 9 s).
     #    This is exactly the additional needed for calculating the rho values for these pairs. No gain here.
     #
-    # The best combined approach is to calculate rhos for pairs defined by indexes but the difficulty here is to
-    # efficiently create the list of pairs of indices.
+    # The other options would have been to used the masked array abstraction provided by numpy but this again
+    # this not allow for easy parallelization. In addition the corrcoef operation is far slower than the numba
+    # JIT implementation: 2.36 ms ± 62 µs per loop.
+    #
+    # The best combined approach is to calculate rhos for pairs defined by indexes which is the approach implemented
+    # below.
 
     # Calculate Pearson correlation to infer repression or activation.
-    if mask_dropouts:
-        # Even by calculating a rectangular correlation matrix (TF x target) we do far too much calculations.
-        # However this approach enables us to factor out this part of the code and perform JIT optimisation.
-        tf_names = list(set(adjacencies[COLUMN_NAME_TF]))
-        tf_exp = ex_mtx[ex_mtx.columns[ex_mtx.columns.isin(tf_names)]].T
-        target_names = list(set(adjacencies[COLUMN_NAME_TARGET]))
-        target_exp = ex_mtx[ex_mtx.columns[ex_mtx.columns.isin(target_names)]].T
-        LOGGER.info("{} TFs x {} targets.".format(len(tf_names), len(target_names)))
-        corr_mtx = pd.DataFrame(index=tf_names, columns=target_names,
-                                data=masked_rho_2d(tf_exp.values, target_exp.values, mask=0.0))
-    else:
-        genes = list(set(adjacencies[COLUMN_NAME_TF]).union(set(adjacencies[COLUMN_NAME_TARGET])))
-        ex_mtx = ex_mtx[ex_mtx.columns[ex_mtx.columns.isin(genes)]]
-        corr_mtx = pd.DataFrame(index=ex_mtx.columns, columns=ex_mtx.columns,
-                        data=np.corrcoef(ex_mtx.values.T))
-
-    # Add "correlation" column to adjacencies dataframe.
-    def add_regulation(row, corr_mtx):
-        tf = row[COLUMN_NAME_TF]
-        target = row[COLUMN_NAME_TARGET]
-        rho = corr_mtx[target][tf]
-        return int(rho > rho_threshold) - int(rho < -rho_threshold)
-
-    adjacencies[COLUMN_NAME_CORRELATION] = adjacencies.apply(partial(add_regulation, corr_mtx=corr_mtx), axis=1)
+    func = _create_apply_function(adjacencies, ex_mtx, rho_threshold, mask_dropouts)
+    adjacencies[[COLUMN_NAME_REGULATION, COLUMN_NAME_CORRELATION]] = adjacencies.apply(func, axis=1)
 
     return adjacencies
 
@@ -215,10 +246,10 @@ def modules_from_adjacencies(adjacencies: pd.DataFrame,
 
     # Add correlation column and create two disjoint set of adjacencies.
     LOGGER.info("Calculating Pearson correlations.")
-    adjacencies = add_correlation(adjacencies.copy(), ex_mtx,
-                                  rho_threshold=rho_threshold, mask_dropouts=mask_dropouts) # Make a defensive copy.
-    activating_modules = adjacencies[adjacencies['correlation'] > 0.0]
-    repressing_modules = adjacencies[adjacencies['correlation'] < 0.0]
+    adjacencies = add_correlation(adjacencies, ex_mtx,
+                                  rho_threshold=rho_threshold, mask_dropouts=mask_dropouts)
+    activating_modules = adjacencies[adjacencies[COLUMN_NAME_REGULATION] > 0.0]
+    repressing_modules = adjacencies[adjacencies[COLUMN_NAME_REGULATION] < 0.0]
 
     # Derive modules for these two sets of adjacencies.
     # + Add the transcription factor to the module.
