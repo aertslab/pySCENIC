@@ -2,6 +2,7 @@
 
 import os
 import pandas as pd
+import numpy as np
 from typing import Tuple, Set, Type
 from abc import ABCMeta, abstractmethod
 import sqlite3
@@ -329,6 +330,30 @@ class DataFrameRankingDatabase(RankingDatabase):
         df.index.name = INDEX_NAME
         df.reset_index(inplace=True) # Index is not stored in feather format. https://github.com/wesm/feather/issues/200
         write_dataframe(df, fname)
+
+
+def invert(db: Type[RankingDatabase], top_n_regions: int = 50.000) -> pd.DataFrame:
+    """
+    Create an inverted whole genome rankings database keeping only the top n genes/regions for a feature.
+
+    Inverted design: not storing the rankings for all regions in the dataframe but instead store the identifier of the
+    top n genes/regions in the dataframe introduces an enormous reduction in disk and memory size.
+
+    :param db: The rankings database.
+    :param top_n_regions: The number of genes to keep in the inverted database.
+    :return: A dataframe representing the inverted database.
+    """
+    df_original = db.load_full()
+    region_id_n_chars = max(map(len, df_original.columns))
+    n_features = len(df_original)
+
+    inverted_data = np.empty(shape=(n_features, top_n_regions), dtype='U{}'.format(region_id_n_chars))
+    for idx, (_, row) in enumerate(df_original.iterrows()):
+        inverted_data[idx, :] = row.sort_values(ascending=True).head(top_n_regions).index
+
+    return pd.DataFrame(data=inverted_data,
+                        index=df_original.index,
+                        columns=list(range(top_n_regions)))
 
 
 def convert2feather(fname: str, out_folder: str, name: str, extension: str="feather") -> str:
