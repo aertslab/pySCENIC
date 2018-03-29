@@ -68,10 +68,13 @@ def _create_idx_pairs(adjacencies: pd.DataFrame, exp_mtx: pd.DataFrame) -> np.nd
     """
 
     # Create sorted list of genes that take part in a TF-target link.
-    sorted_genes = sorted(set(adjacencies.TF).union(set(adjacencies.target)))
+    genes = set(adjacencies.TF).union(set(adjacencies.target))
+    sorted_genes = sorted(genes)
 
     # Find column idx in the expression matrix of each gene that takes part in a link. Having the column index of genes
-    # sorted as well as the list of link genes makes sure that we can map indexes back to genes!
+    # sorted as well as the list of link genes makes sure that we can map indexes back to genes! This only works if
+    # all genes we are looking for are part of the expression matrix.
+    assert len(set(exp_mtx.columns).intersection(genes)) == len(genes)
     symbol2idx = dict(zip(sorted_genes, np.nonzero(exp_mtx.columns.isin(sorted_genes))[0]))
 
     # Create numpy array of idx pairs.
