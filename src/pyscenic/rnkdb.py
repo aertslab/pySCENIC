@@ -334,7 +334,7 @@ class DataFrameRankingDatabase(RankingDatabase):
 
 
 IDENTIFIERS_FNAME_EXTENSION = "identifiers.txt"
-INVERTED_DB_DTYPE = np.unit32
+INVERTED_DB_DTYPE = np.uint32
 
 
 class InvertedRankingDatabase(RankingDatabase):
