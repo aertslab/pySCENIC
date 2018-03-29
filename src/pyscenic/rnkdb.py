@@ -3,6 +3,7 @@
 import os
 import pandas as pd
 import numpy as np
+from numba import njit, prange, uint32, jit
 from typing import Tuple, Set, Type
 from abc import ABCMeta, abstractmethod
 import sqlite3
@@ -332,28 +333,121 @@ class DataFrameRankingDatabase(RankingDatabase):
         write_dataframe(df, fname)
 
 
-def invert(db: Type[RankingDatabase], top_n_regions: int = 50.000) -> pd.DataFrame:
-    """
-    Create an inverted whole genome rankings database keeping only the top n genes/regions for a feature.
+IDENTIFIERS_FNAME_EXTENSION = "identifiers.txt"
+INVERTED_DB_DTYPE = np.unit32
 
-    Inverted design: not storing the rankings for all regions in the dataframe but instead store the identifier of the
-    top n genes/regions in the dataframe introduces an enormous reduction in disk and memory size.
 
-    :param db: The rankings database.
-    :param top_n_regions: The number of genes to keep in the inverted database.
-    :return: A dataframe representing the inverted database.
-    """
-    df_original = db.load_full()
-    region_id_n_chars = max(map(len, df_original.columns))
-    n_features = len(df_original)
+class InvertedRankingDatabase(RankingDatabase):
+    @classmethod
+    def _derive_identifiers_fname(cls, fname):
+        return '{}.{}'.format(os.path.splitext(fname)[0], IDENTIFIERS_FNAME_EXTENSION)
 
-    inverted_data = np.empty(shape=(n_features, top_n_regions), dtype='U{}'.format(region_id_n_chars))
-    for idx, (_, row) in enumerate(df_original.iterrows()):
-        inverted_data[idx, :] = row.sort_values(ascending=True).head(top_n_regions).index
 
-    return pd.DataFrame(data=inverted_data,
-                        index=df_original.index,
-                        columns=list(range(top_n_regions)))
+    @classmethod
+    def invert(cls, db: Type[RankingDatabase], fname: str, top_n_identifiers: int = 50.000) -> None:
+        """
+        Create an inverted whole genome rankings database keeping only the top n genes/regions for a feature.
+
+        Inverted design: not storing the rankings for all regions in the dataframe but instead store the identifier of the
+        top n genes/regions in the dataframe introduces an enormous reduction in disk and memory size.
+
+        :param db: The rankings database.
+        :param fname: the filename of the inverted database to be created.
+        :param top_n_identifiers: The number of genes to keep in the inverted database.
+        """
+
+        df_original = db.load_full()
+        n_features = len(df_original)
+
+        index_fname = InvertedRankingDatabase._derive_identifiers_fname(fname)
+        assert not os.path.exists(index_fname), "Database index {0:s} already exists.".format(index_fname)
+        identifiers = df_original.columns.values
+        with open(index_fname, 'w') as f:
+            f.write('\n'.join(identifiers))
+        identifier2idx = {identifier: idx for idx, identifier in identifiers}
+
+        inverted_data = np.empty(shape=(n_features, top_n_identifiers), dtype=INVERTED_DB_DTYPE)
+        for idx, (_, row) in enumerate(df_original.iterrows()):
+            row = np.array([identifier2idx[identifier] for identifier in row.sort_values(ascending=True).head(top_n_identifiers).index],
+                           dtype=INVERTED_DB_DTYPE)
+            inverted_data[idx, :] = row
+
+        df = pd.DataFrame(data=inverted_data,
+                            index=df_original.index,
+                            columns=list(range(top_n_identifiers)))
+        df.index.name = INDEX_NAME
+        df.reset_index(inplace=True) # Index is not stored in feather format. https://github.com/wesm/feather/issues/200
+        write_dataframe(df, fname)
+
+
+    def __init__(self, fname: str, name: str = None, nomenclature: str = None):
+        """
+        Create a new inverted database.
+
+        :param fname: The filename of the database.
+        :param name: The name of the database.
+        :param nomenclature: The nomenclature used for the genes that are being ranked.
+        """
+        super().__init__(name=name, nomenclature=nomenclature)
+
+        assert os.path.isfile(fname), "Database {0:s} doesn't exist.".format(fname)
+
+        # Load mapping from gene/region identifiers to index values used in stored in inverted database.
+        index_fname = InvertedRankingDatabase._derive_identifiers_fname(fname)
+        assert os.path.isfile(fname), "Database index {0:s} doesn't exist.".format(index_fname)
+        self.identifier2idx = self._load_identifier2idx(index_fname)
+
+        # Load dataframe into memory: df = (n_features, max_rank).
+        self.df = FeatherReader(self._fname).read().set_index(INDEX_NAME)
+        self.max_rank = len(self.df.columns)
+
+    def _load_identifier2idx(self, fname):
+        with open(fname, 'r') as f:
+            return {line.strip(): idx for idx, line in enumerate(f)}
+
+    @property
+    def total_genes(self) -> int:
+        return len(self.identifier2idx)
+
+    @property
+    @memoize
+    def genes(self) -> Tuple[str]:
+        # noinspection PyTypeChecker
+        return tuple(self.identifier2idx.keys())
+
+    @property
+    def region_identifiers(self) -> Tuple[str]:
+        return self.genes
+
+    def is_valid_rank_threshold(self, rank_threshold:int) -> bool:
+        return rank_threshold <= self.max_rank
+
+    def load_full(self) -> pd.DataFrame:
+        # Loading the whole database into memory is not possible with an inverted database.
+        # Decoration with a MemoryDecorator is not possible and will be prevented by raising
+        # an exception.
+        raise NotImplemented
+
+    def load(self, gs: Type[GeneSignature]) -> pd.DataFrame:
+        reference_identifiers = np.array([self.identifier2idx[identifier] for identifier in gs.genes])
+        ranked_identifiers = self.df.values
+        return pd.DataFrame(data=build_rankings(ranked_identifiers, reference_identifiers),
+                            index=self.df.index,
+                            columns=gs.genes)
+
+#TODO: Check if njitable :-)
+#@njit(signature_or_function=uint32[:, :](uint32[:, :], uint32[:]), parallel=True)
+@jit
+def build_rankings(ranked_identifiers, reference_identifiers):
+    rank_unknown = np.iinfo(INVERTED_DB_DTYPE).max
+    n_features = ranked_identifiers.shape[0]; n_identifiers = len(reference_identifiers)
+    result = np.full(shape=(n_features, n_identifiers), fill_value=rank_unknown, dtype=INVERTED_DB_DTYPE)
+    for row_idx in prange(n_features):
+        ranked_identifiers4feature = ranked_identifiers[row_idx, :]  # The values of a row are the identifiers
+        ranks = np.array([np.where(ranked_identifiers4feature == elem)[0] for elem in reference_identifiers], dtype=INVERTED_DB_DTYPE)
+        col_idxs = np.nonzero(reference_identifiers.isin(ranked_identifiers4feature))
+        result[row_idx, col_idxs] = ranks
+    return result
 
 
 def convert2feather(fname: str, out_folder: str, name: str, extension: str="feather") -> str:
