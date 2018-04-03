@@ -225,10 +225,11 @@ def modules_from_adjacencies(adjacencies: pd.DataFrame,
                         top_n_targets=(50,),
                         top_n_regulators=(5,10,50),
                         min_genes=20,
+                        rho_dichotomize=True,
                         rho_threshold=RHO_THRESHOLD,
-                        mask_dropouts=False) -> Sequence[Regulon]:
+                        rho_mask_dropouts=False) -> Sequence[Regulon]:
     """
-    Create modules from a dataframe containing weighted adjacencies between a TF and a target genes.
+    Create modules from a dataframe containing weighted adjacencies between a TF and its target genes.
     
     :param adjacencies: The dataframe with the TF-target links.
     :param ex_mtx: The expression matrix (n_cells x n_genes).
@@ -236,41 +237,47 @@ def modules_from_adjacencies(adjacencies: pd.DataFrame,
     :param thresholds: the first method to create the TF-modules based on the best targets for each transcription factor.
     :param top_n_targets: the second method is to select the top targets for a given TF.
     :param top_n_regulators: the alternative way to create the TF-modules is to select the best regulators for each gene.
-    :param min_genes: The required minimum number of genes in a module.
+    :param min_genes: The required minimum number of genes in a resulting module.
+    :param rho_dichotomize: Differentiate between activating and repressing modules based on the correlation patterns of
+        the expression of the TF and its target genes.
     :param rho_threshold: The threshold on the correlation to decide if a target gene is activated
         (rho > `rho_threshold`) or repressed (rho < -`rho_threshold`).
-    :param mask_dropouts: Do not use cells in which either the expression of the TF or the target gene is 0 when
+    :param rho_mask_dropouts: Do not use cells in which either the expression of the TF or the target gene is 0 when
         calculating the correlation between a TF-target pair.
     :return: A sequence of regulons.
     """
 
-    # Relationship between TF and its target, i.e. activator or repressor, is derived using the original expression
-    # profiles. The Pearson product-moment correlation coefficient is used to derive this information.
+    def iter_modules(adjc, context):
+        yield from chain(chain.from_iterable(modules4thr(adjc, thr, nomenclature, context) for thr in thresholds),
+                         chain.from_iterable(modules4top_targets(adjc, n, nomenclature, context) for n in top_n_targets),
+                         chain.from_iterable(modules4top_factors(adjc, n, nomenclature, context) for n in top_n_regulators))
 
-    # Add correlation column and create two disjoint set of adjacencies.
-    LOGGER.info("Calculating Pearson correlations.")
-    adjacencies = add_correlation(adjacencies, ex_mtx,
-                                  rho_threshold=rho_threshold, mask_dropouts=mask_dropouts)
-    activating_modules = adjacencies[adjacencies[COLUMN_NAME_REGULATION] > 0.0]
-    repressing_modules = adjacencies[adjacencies[COLUMN_NAME_REGULATION] < 0.0]
+    if not rho_dichotomize:
+        # Do not differentiate between activating and repressing modules.
+        modules_iter = iter_modules(adjacencies, frozenset())
+    else:
+        # Relationship between TF and its target, i.e. activator or repressor, is derived using the original expression
+        # profiles. The Pearson product-moment correlation coefficient is used to derive this information.
 
-    # Derive modules for these two sets of adjacencies.
+        # Add correlation column and create two disjoint set of adjacencies.
+        LOGGER.info("Calculating Pearson correlations.")
+        adjacencies = add_correlation(adjacencies, ex_mtx,
+                                  rho_threshold=rho_threshold, mask_dropouts=rho_mask_dropouts)
+        activating_modules = adjacencies[adjacencies[COLUMN_NAME_REGULATION] > 0.0]
+        repressing_modules = adjacencies[adjacencies[COLUMN_NAME_REGULATION] < 0.0]
+        modules_iter = chain(iter_modules(activating_modules, frozenset([ACTIVATING_MODULE])),
+                             iter_modules(repressing_modules, frozenset([REPRESSING_MODULE])))
+
+    # Derive modules for these adjacencies.
     # + Add the transcription factor to the module.
     #   [We are unable to assess if a TF works in a direct self-regulating way, either inhibiting its own expression or
     #    activating it. Therefore the most unbiased way forward is to add the TF to both activating as well as
     #    repressing modules]
     # + Filter for minimum number of genes.
     LOGGER.info("Creating modules.")
-    def iter_modules(adjc, context):
-        yield from chain(chain.from_iterable(modules4thr(adjc, thr, nomenclature, context) for thr in thresholds),
-                         chain.from_iterable(modules4top_targets(adjc, n, nomenclature, context) for n in top_n_targets),
-                         chain.from_iterable(modules4top_factors(adjc, n, nomenclature, context) for n in top_n_regulators))
     def add_tf(module):
         return module.add(module.transcription_factor)
-    return list(filter(lambda m: len(m) >= min_genes,
-                    map(add_tf,
-                       chain(iter_modules(activating_modules, frozenset([ACTIVATING_MODULE])),
-                             iter_modules(repressing_modules, frozenset([REPRESSING_MODULE]))))))
+    return list(filter(lambda m: len(m) >= min_genes, map(add_tf, modules_iter)))
 
 
 def save_to_yaml(signatures: Sequence[Type[GeneSignature]], fname: str):
