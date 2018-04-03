@@ -61,7 +61,8 @@ def run():
         for rho_threshold in RHO_THRESHOLDS:
             calc_modules(adjacencies, exp_mtx, name, rho_dichotomize=True, rho_threshold=rho_threshold, mask_dropouts=False)
             calc_modules(adjacencies, exp_mtx, name, rho_dichotomize=True, rho_threshold=rho_threshold, mask_dropouts=True)
-            calc_modules(adjacencies, exp_mtx, name, rho_dichotomize=False)
+
+        calc_modules(adjacencies, exp_mtx, name, rho_dichotomize=False)
 
 
 if __name__ == "__main__":
