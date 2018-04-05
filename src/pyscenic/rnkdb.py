@@ -12,6 +12,7 @@ import numpy as np
 from .genesig import GeneSignature
 from cytoolz import memoize
 from feather.api import write_dataframe, FeatherReader
+from tqdm import tqdm
 
 
 class RankingDatabase(metaclass=ABCMeta):
@@ -344,7 +345,7 @@ class InvertedRankingDatabase(RankingDatabase):
 
 
     @classmethod
-    def invert(cls, db: Type[RankingDatabase], fname: str, top_n_identifiers: int = 50.000) -> None:
+    def invert(cls, db: Type[RankingDatabase], fname: str, top_n_identifiers: int = 50000) -> None:
         """
         Create an inverted whole genome rankings database keeping only the top n genes/regions for a feature.
 
@@ -364,17 +365,14 @@ class InvertedRankingDatabase(RankingDatabase):
         identifiers = df_original.columns.values
         with open(index_fname, 'w') as f:
             f.write('\n'.join(identifiers))
-        identifier2idx = {identifier: idx for idx, identifier in identifiers}
+        identifier2idx = {identifier: idx for idx, identifier in enumerate(identifiers)}
 
         inverted_data = np.empty(shape=(n_features, top_n_identifiers), dtype=INVERTED_DB_DTYPE)
-        for idx, (_, row) in enumerate(df_original.iterrows()):
-            row = np.array([identifier2idx[identifier] for identifier in row.sort_values(ascending=True).head(top_n_identifiers).index],
-                           dtype=INVERTED_DB_DTYPE)
-            inverted_data[idx, :] = row
+        df_original.columns = [identifier2idx[identifier] for identifier in df_original.columns]
+        for idx, (_, row) in tqdm(enumerate(df_original.iterrows())):
+            inverted_data[idx, :] = np.array(row.sort_values(ascending=True).head(top_n_identifiers).index, dtype=INVERTED_DB_DTYPE)
+        df = pd.DataFrame(data=inverted_data, index=df_original.index, columns=list(range(top_n_identifiers)))
 
-        df = pd.DataFrame(data=inverted_data,
-                            index=df_original.index,
-                            columns=list(range(top_n_identifiers)))
         df.index.name = INDEX_NAME
         df.reset_index(inplace=True) # Index is not stored in feather format. https://github.com/wesm/feather/issues/200
         write_dataframe(df, fname)
