@@ -396,9 +396,11 @@ class InvertedRankingDatabase(RankingDatabase):
         self.identifier2idx = self._load_identifier2idx(index_fname)
         self.idx2identifier = {idx: identifier for identifier, idx in self.identifier2idx.items()}
 
-        # Load dataframe into memory: df = (n_features, max_rank).
-        self.df = FeatherReader(fname).read().set_index(INDEX_NAME)
-        self.max_rank = len(self.df.columns)
+        # Load dataframe into memory in a format most suited for fast loading of gene signatures.
+        df = FeatherReader(fname).read().set_index(INDEX_NAME)
+        self.max_rank = len(df.columns)
+        self.features = [pd.Series(index=row.values, data=row.index, name=name) for name, row in df.iterrows()]
+
 
     def _load_identifier2idx(self, fname):
         with open(fname, 'r') as f:
@@ -429,21 +431,13 @@ class InvertedRankingDatabase(RankingDatabase):
 
     def load(self, gs: Type[GeneSignature]) -> pd.DataFrame:
         rank_unknown = np.iinfo(INVERTED_DB_DTYPE).max
-        features = self.df.index; n_features = len(features)
         reference_identifiers = np.array([self.identifier2idx[identifier] for identifier in gs.genes])
-        ranked_identifiers = self.df.values
-
-        def gen_series(ranked_identifiers, reference_identifiers, name):
-            idx = np.nonzero(np.isin(ranked_identifiers, reference_identifiers))[0]
-            return pd.Series(index=ranked_identifiers[idx], data=idx, name=name, dtype=INVERTED_DB_DTYPE)
+        return pd.concat([col.reindex(index=reference_identifiers, fill_value=rank_unknown) for col in self.features],
+                         axis=1).T.astype(INVERTED_DB_DTYPE).rename(columns=self.idx2identifier)
 
         #return pd.DataFrame(data=build_rankings(ranked_identifiers, reference_identifiers),
         #                    index=self.df.index,
         #                    columns=gs.genes)
-
-        return pd.concat([gen_series(ranked_identifiers[idx, :], reference_identifiers, features[idx]) for idx in range(n_features)], axis=1).T\
-                                .fillna(rank_unknown).astype(INVERTED_DB_DTYPE)\
-                                .rename(columns=self.idx2identifier, inplace=False)
 
 
 # @njit(signature_or_function=uint32(uint32[:], uint32, uint32))
