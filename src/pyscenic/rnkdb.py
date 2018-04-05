@@ -394,6 +394,7 @@ class InvertedRankingDatabase(RankingDatabase):
         index_fname = InvertedRankingDatabase._derive_identifiers_fname(fname)
         assert os.path.isfile(fname), "Database index {0:s} doesn't exist.".format(index_fname)
         self.identifier2idx = self._load_identifier2idx(index_fname)
+        self.idx2identifier = {idx: identifier for identifier, idx in self.identifier2idx}
 
         # Load dataframe into memory: df = (n_features, max_rank).
         self.df = FeatherReader(fname).read().set_index(INDEX_NAME)
@@ -427,32 +428,41 @@ class InvertedRankingDatabase(RankingDatabase):
         raise NotImplemented
 
     def load(self, gs: Type[GeneSignature]) -> pd.DataFrame:
+        rank_unknown = np.iinfo(INVERTED_DB_DTYPE).max
+        features = self.df.index; n_features = len(features)
         reference_identifiers = np.array([self.identifier2idx[identifier] for identifier in gs.genes])
         ranked_identifiers = self.df.values
-        return pd.DataFrame(data=build_rankings(ranked_identifiers, reference_identifiers),
-                            index=self.df.index,
-                            columns=gs.genes)
+
+        def gen_series(ranked_identifiers, reference_identifiers, name):
+            idx = np.nonzero(np.isin(ranked_identifiers, reference_identifiers))[0]
+            return pd.Series(index=ranked_identifiers[idx], data=idx, name=name, dtype=INVERTED_DB_DTYPE)
+
+        #return pd.DataFrame(data=build_rankings(ranked_identifiers, reference_identifiers),
+        #                    index=self.df.index,
+        #                    columns=gs.genes)
+
+        return pd.concat([gen_series(ranked_identifiers[idx, :], reference_identifiers, features[idx]) for idx in range(n_features)], axis=1).T\
+                                .fillna(rank_unknown).astype(INVERTED_DB_DTYPE)\
+                                .rename(columns=self.idx2identifier, inplace=False)
 
 
-@njit(signature_or_function=uint32(uint32[:], uint32, uint32))
-def find(ranked_identifiers, identifier, default_value):
-    for idx in range(len(ranked_identifiers)):
-        if ranked_identifiers[idx] == identifier:
-            return idx
-    return default_value
-
-
-@njit(signature_or_function=uint32[:, :](uint32[:, :], uint32[:]), parallel=True)
-def build_rankings(ranked_identifiers, reference_identifiers):
-    rank_unknown = np.iinfo(INVERTED_DB_DTYPE).max
-    n_features = ranked_identifiers.shape[0]; n_identifiers = len(reference_identifiers)
-    result = np.empty(shape=(n_features, n_identifiers), dtype=INVERTED_DB_DTYPE)
-    for row_idx in prange(n_features):
-        for col_idx in range(n_identifiers):
-            # TODO: Currently doing brute-force linear search at near C-speed. Time complexity could be greatly reduced
-            # TODO: if resorting to binary search or something similar [from O(N) to O(log2(N)) where N is 50k, i.e. top N features]
-            result[row_idx, col_idx] = find(ranked_identifiers[row_idx, :], reference_identifiers[col_idx], rank_unknown)
-    return result
+# @njit(signature_or_function=uint32(uint32[:], uint32, uint32))
+# def find(ranked_identifiers, identifier, default_value):
+#     for idx in range(len(ranked_identifiers)):
+#         if ranked_identifiers[idx] == identifier:
+#             return idx
+#     return default_value
+#
+#
+# @njit(signature_or_function=uint32[:, :](uint32[:, :], uint32[:]), parallel=True)
+# def build_rankings(ranked_identifiers, reference_identifiers):
+#     rank_unknown = np.iinfo(INVERTED_DB_DTYPE).max
+#     n_features = ranked_identifiers.shape[0]; n_identifiers = len(reference_identifiers)
+#     result = np.empty(shape=(n_features, n_identifiers), dtype=INVERTED_DB_DTYPE)
+#     for row_idx in prange(n_features):
+#         for col_idx in range(n_identifiers):
+#             result[row_idx, col_idx] = find(ranked_identifiers[row_idx, :], reference_identifiers[col_idx], rank_unknown)
+#     return result
 
 
 def convert2feather(fname: str, out_folder: str, name: str, extension: str="feather") -> str:
