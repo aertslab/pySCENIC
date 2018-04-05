@@ -394,7 +394,7 @@ class InvertedRankingDatabase(RankingDatabase):
         index_fname = InvertedRankingDatabase._derive_identifiers_fname(fname)
         assert os.path.isfile(fname), "Database index {0:s} doesn't exist.".format(index_fname)
         self.identifier2idx = self._load_identifier2idx(index_fname)
-        self.idx2identifier = {idx: identifier for identifier, idx in self.identifier2idx}
+        self.idx2identifier = {idx: identifier for identifier, idx in self.identifier2idx.items()}
 
         # Load dataframe into memory: df = (n_features, max_rank).
         self.df = FeatherReader(fname).read().set_index(INDEX_NAME)
@@ -496,7 +496,7 @@ def convert2feather(fname: str, out_folder: str, name: str, extension: str="feat
     return feather_fname
 
 
-def open(fname: str, name: str, nomenclature: str) -> Type['RankingDatabase']:
+def opendb(fname: str, name: str, nomenclature: str) -> Type['RankingDatabase']:
     """
     Open a ranking database.
 
