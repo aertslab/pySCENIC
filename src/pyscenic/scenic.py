@@ -9,7 +9,7 @@ from arboretum.algo import grnboost2
 from arboretum.utils import load_tf_names
 
 from .utils import load_from_yaml
-from .rnkdb import open as opendb, RankingDatabase
+from .rnkdb import opendb, RankingDatabase
 from .prune import prune2df, find_features, _prepare_client
 from .aucell import aucell
 from .genesig import GeneSignature
