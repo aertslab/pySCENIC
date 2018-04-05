@@ -396,7 +396,7 @@ class InvertedRankingDatabase(RankingDatabase):
         self.identifier2idx = self._load_identifier2idx(index_fname)
 
         # Load dataframe into memory: df = (n_features, max_rank).
-        self.df = FeatherReader(self._fname).read().set_index(INDEX_NAME)
+        self.df = FeatherReader(fname).read().set_index(INDEX_NAME)
         self.max_rank = len(self.df.columns)
 
     def _load_identifier2idx(self, fname):
@@ -433,18 +433,25 @@ class InvertedRankingDatabase(RankingDatabase):
                             index=self.df.index,
                             columns=gs.genes)
 
-#TODO: Check if njitable :-)
-#@njit(signature_or_function=uint32[:, :](uint32[:, :], uint32[:]), parallel=True)
-@jit
+
+@njit(signature_or_function=uint32(uint32[:], uint32, uint32))
+def find(ranked_identifiers, identifier, default_value):
+    for idx in range(len(ranked_identifiers)):
+        if ranked_identifiers[idx] == identifier:
+            return idx
+    return default_value
+
+
+@njit(signature_or_function=uint32[:, :](uint32[:, :], uint32[:]), parallel=True)
 def build_rankings(ranked_identifiers, reference_identifiers):
     rank_unknown = np.iinfo(INVERTED_DB_DTYPE).max
     n_features = ranked_identifiers.shape[0]; n_identifiers = len(reference_identifiers)
-    result = np.full(shape=(n_features, n_identifiers), fill_value=rank_unknown, dtype=INVERTED_DB_DTYPE)
+    result = np.empty(shape=(n_features, n_identifiers), dtype=INVERTED_DB_DTYPE)
     for row_idx in prange(n_features):
-        ranked_identifiers4feature = ranked_identifiers[row_idx, :]  # The values of a row are the identifiers
-        ranks = np.array([np.where(ranked_identifiers4feature == elem)[0] for elem in reference_identifiers], dtype=INVERTED_DB_DTYPE)
-        col_idxs = np.nonzero(reference_identifiers.isin(ranked_identifiers4feature))
-        result[row_idx, col_idxs] = ranks
+        for col_idx in range(n_identifiers):
+            # TODO: Currently doing brute-force linear search at near C-speed. Time complexity could be greatly reduced
+            # TODO: if resorting to binary search or something similar [from O(N) to O(log2(N)) where N is 50k, i.e. top N features]
+            result[row_idx, col_idx] = find(ranked_identifiers[row_idx, :], reference_identifiers[col_idx], rank_unknown)
     return result
 
 
