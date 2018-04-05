@@ -290,7 +290,8 @@ def df2regulons(df, nomenclature) -> Sequence[Regulon]:
     # Unpack the type of the module from the context column (dtype = frozenset)
     def get_type(row):
         ctx = row[COLUMN_NAME_CONTEXT]
-        return ACTIVATING_MODULE if ACTIVATING_MODULE in ctx else REPRESSING_MODULE
+        # Activating is the default!
+        return REPRESSING_MODULE if REPRESSING_MODULE in ctx else ACTIVATING_MODULE
     df[COLUMN_NAME_TYPE] = df.apply(get_type,axis=1)
 
     # Group all rows per TF and type (+)/(-). Each group results in a single regulon.
