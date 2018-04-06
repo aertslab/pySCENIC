@@ -26,3 +26,4 @@ matplotlib-venn
 umap-learn
 tqdm
 sphinx
+interlap
