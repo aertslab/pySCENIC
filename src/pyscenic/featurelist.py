@@ -54,6 +54,9 @@ class Feature:
     def end(self):
         return self.interval[1]
 
+    def __repr__(self):
+        return "Feature({})".format(str(self).replace("\t", ","))
+
     def __str__(self):
         r = "{0:s}\t{1:d}\t{2:d}\t{3:s}".format(self.chromosome, self.interval[0], self.interval[1], self.name)
 

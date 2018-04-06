@@ -361,3 +361,6 @@ References
 .. |docstatus| image:: https://readthedocs.org/projects/pyscenic/badge/?version=latest
 .. _docstatus: http://pyscenic.readthedocs.io/en/latest/?badge=latest
 
+.. |bioconda| image:: https://img.shields.io/badge/install%20with-bioconda-brightgreen.svg?style=flat-square
+.. _bioconda: https://anaconda.org/bioconda/pyscenic
+
