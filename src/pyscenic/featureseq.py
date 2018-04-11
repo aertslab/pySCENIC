@@ -163,9 +163,9 @@ class FeatureSeq(object):
 
         def toFeature(interval):
             return Feature(feature.chromosome,
-                       interval.start, interval.end,
-                       interval.value[FeatureSeq.NAME_ATTRIBUTE],
-                       interval.value[FeatureSeq.SCORE_ATTRIBUTE])
+                       interval[0], interval[1],
+                       interval[2][FeatureSeq.NAME_ATTRIBUTE],
+                       interval[2][FeatureSeq.SCORE_ATTRIBUTE])
 
         return list(filter(filter4Fraction,
                       map(toFeature,

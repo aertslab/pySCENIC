@@ -10,30 +10,28 @@ from typing import Tuple, Type
 from .rnkdb import InvertedRankingDatabase
 from .featureseq import FeatureSeq
 from .genesig import GeneSignature
-from cytoolz import mapcat
+from cytoolz import mapcat, memoize
 
 
 REGIONS_BED_EXTENSION = "bed.gz"
 REGION_NOMENCLATURE = "regions"
 
 
-def _strip_suffix(s):
-    return s.split('#')[0]
-
-
 class Delineation(Enum):
-    HG19_500BP_UP = FeatureSeq.from_bed_file(
-        gzip.open(
-            resource_stream('resources.delineations', "hg19-limited-upstream500.bed.gz")),
-            transform=_strip_suffix)
-    HG19_5KBP_CTR = FeatureSeq.from_bed_file(
-        gzip.open(
-            resource_stream('resources.delineations', "hg19-limited-upstream5000-tss-downstream5000-full-transcript.bed.gz")),
-            transform=_strip_suffix)
-    HG19_10KBP_CTR = FeatureSeq.from_bed_file(
-        gzip.open(
-            resource_stream('resources.delineations', "hg19-limited-upstream10000-tss-downstream10000-full-transcript.bed.gz")),
-        transform=_strip_suffix)
+    HG19_500BP_UP = "hg19-limited-upstream500.bed.gz"
+    HG19_5KBP_CTR = "hg19-limited-upstream5000-tss-downstream5000-full-transcript.bed.gz"
+    HG19_10KBP_CTR = "hg19-limited-upstream10000-tss-downstream10000-full-transcript.bed.gz"
+
+
+@memoize
+def load(delineation: Delineation) -> FeatureSeq:
+    def strip_suffix(s):
+        return s.split('#')[0]
+
+    return FeatureSeq.from_bed_file(
+                gzip.open(
+                    resource_stream('resources.delineations', delineation.value), "rt"),
+                        transform=strip_suffix)
 
 
 class RegionRankingDatabase(InvertedRankingDatabase):
@@ -43,7 +41,7 @@ class RegionRankingDatabase(InvertedRankingDatabase):
         basename = os.path.basename(fname).split('.')[0]
         dirname = os.path.dirname(fname)
         region_delineation_fname = os.path.join(dirname, '{}.{}'.format(basename, REGIONS_BED_EXTENSION))
-        with gzip.open(region_delineation_fname) as f:
+        with gzip.open(region_delineation_fname, "rt") as f:
             self._regions = FeatureSeq.from_bed_file(f)
 
     @property
@@ -69,11 +67,12 @@ def convert(sig: Type[GeneSignature], db: RegionRankingDatabase, delineation: De
     assert db
     assert delineation
 
+    #TODO: Keep weights!
     region_identifiers = frozenset(
         map(attrgetter('name'),
             mapcat(list,
                 map(partial(db.regions.intersection, fraction=fraction),
-                   map(delineation.get, sig.genes)))))
+                   map(load(delineation).get, sig.genes)))))
     return sig.copy(gene2weight=region_identifiers, nomenclature=REGION_NOMENCLATURE)
 
 
