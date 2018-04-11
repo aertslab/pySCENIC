@@ -3,9 +3,9 @@ include requirements.txt
 include scripts/*.ini
 include versioneer.py
 include src/pyscenic/_version.py
-include src/resources/*.feather
+include src/resources/tests/*.feather
 include src/resources/*.txt
-include src/resources/*.db
-include src/resources/*.gmt
-include src/resources/*.csv
+include src/resources/tests/*.db
+include src/resources/tests/*.gmt
+include src/resources/tests/*.csv
 include src/pyscenic/*.txt
