@@ -12,7 +12,7 @@ from cytoolz import merge_with, dissoc, keyfilter, first, second
 from frozendict import frozendict
 from itertools import chain
 
-from cytoolz import memoize
+from cytoolz import memoize, merge
 
 
 def convert(genes):
@@ -236,8 +236,10 @@ class GeneSignature(yaml.YAMLObject):
         """
         Create a new gene signature with uniform weights, i.e. all weights are equal and set to 1.0.
         """
-        return GeneSignature(name=self.name, nomenclature=self.nomenclature,
-                             gene2weight=self.genes)
+        return self.copy(gene2weight=self.genes)
+
+    def copy(self, **kwargs) -> Type['GeneSignature']:
+        return GeneSignature(**merge(vars(self), kwargs))
 
     def __len__(self):
         """
@@ -361,13 +363,5 @@ class Regulon(GeneSignature, yaml.YAMLObject):
                          score=max(self.score, getattr(other, 'score', 0.0)),
                          gene2weight=self._intersection_impl(other))
 
-    def noweights(self):
-        """
-        Create a new regulon with uniform weights, i.e. all weights are equal and set to 1.0.
-        """
-        return Regulon(name=self.name,
-                        nomenclature=self.nomenclature,
-                        transcription_factor=self.transcription_factor,
-                        context=self.context,
-                        score=self.score,
-                         gene2weight=self.genes)
+    def copy(self, **kwargs) -> 'Regulon':
+        return Regulon(**merge(vars(self), kwargs))

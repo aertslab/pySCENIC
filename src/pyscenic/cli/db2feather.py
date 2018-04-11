@@ -10,7 +10,7 @@ def derive_db_name(fname:str) -> str:
 
 
 def create_argument_parser():
-    parser = argparse.ArgumentParser(prog='db2feather',
+    parser = argparse.ArgumentParser(prog=os.path.basename(__file__).split('.')[0],
                                      description="Convert a rankings database in legacy SQL format to the new feather format.",
                                      fromfile_prefix_chars='@', add_help=True)
     parser.add_argument('db_fnames', nargs='+',

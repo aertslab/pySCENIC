@@ -79,8 +79,9 @@ setuptools.setup(
     include_package_data=True,
     install_requires=read_requirements('requirements.txt'),
     entry_points = {
-        'console_scripts': ['pyscenic = pyscenic.scenic:scenic',
-                            'db2feather = pyscenic.db2feather:main',
-                            'convert = pyscenic.convert:main'],
+        'console_scripts': ['pyscenic = pyscenic.cli.pyscenic:main',
+                            'db2feather = pyscenic.cli.db2feather:main',
+                            'invertdb = pyscenic.cli.invertdb:main',
+                            'gmt2regions = pyscenic.cli.gmt2regions:main'],
     }
 )

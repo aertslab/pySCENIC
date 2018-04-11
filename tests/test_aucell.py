@@ -11,8 +11,8 @@ from pkg_resources import resource_filename
 
 
 NOMENCLATURE = "HGNC"
-TEST_EXPRESSION_MTX_FNAME = resource_filename('resources', "GSE103322.em.hgnc.sample.cxg.csv")
-TEST_SIGNATURE_FNAME = resource_filename('resources', "c6.all.v6.1.symbols.gmt")
+TEST_EXPRESSION_MTX_FNAME = resource_filename('resources.tests', "GSE103322.em.hgnc.sample.cxg.csv")
+TEST_SIGNATURE_FNAME = resource_filename('resources.tests', "c6.all.v6.1.symbols.gmt")
 
 
 @pytest.fixture

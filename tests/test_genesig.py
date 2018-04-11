@@ -9,7 +9,7 @@ from pkg_resources import resource_filename
 
 
 TEST_SIGNATURE = "msigdb_cancer_c6"
-TEST_SIGNATURE_FNAME = resource_filename('resources', "c6.all.v6.1.symbols.gmt")
+TEST_SIGNATURE_FNAME = resource_filename('resources.tests', "c6.all.v6.1.symbols.gmt")
 NOMENCLATURE = "HGNC"
 
 
@@ -183,4 +183,17 @@ def test_add():
                                  fname=TEST_SIGNATURE_FNAME)
     res = gss[0].add("MEF2")
     assert "MEF2" in res
+
+
+def test_noweights():
+    gs1 = GeneSignature(name="test1", gene2weight={'TP53': 0.8, 'SOX4': 0.75}, nomenclature="HGNC")
+    gs2 = gs1.noweights()
+    assert gs1['TP53'] == 0.8
+    assert gs2['TP53'] == 1.0
+
+    reg1 = Regulon(name='TP53 regulon', gene2weight={'TP53': 0.8, 'SOX4': 0.75}, nomenclature="HGNC", transcription_factor="TP53")
+    reg2 = reg1.noweights()
+    assert reg1['TP53'] == 0.8
+    assert reg2['TP53'] == 1.0
+    assert isinstance(reg2, Regulon)
 

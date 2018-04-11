@@ -8,18 +8,17 @@ from multiprocessing import cpu_count
 from arboretum.algo import grnboost2
 from arboretum.utils import load_tf_names
 
-from .utils import load_from_yaml
-from .rnkdb import opendb, RankingDatabase
-from .prune import prune2df, find_features, _prepare_client
-from .aucell import aucell
-from .genesig import GeneSignature
-from .log import create_logging_handler
+from pyscenic.utils import load_from_yaml, modules_from_adjacencies
+from pyscenic.rnkdb import opendb, RankingDatabase
+from pyscenic.prune import prune2df, find_features, _prepare_client
+from pyscenic.aucell import aucell
+from pyscenic.genesig import GeneSignature
+from pyscenic.log import create_logging_handler
 import pandas as pd
 import sys
 import pickle
 from typing import Type, Sequence
-from .utils import modules_from_adjacencies
-from .transform import df2regulons as df2regs
+from pyscenic.transform import df2regulons as df2regs
 
 
 LOGGER = logging.getLogger(__name__)
@@ -248,7 +247,7 @@ def add_computation_parameters(parser):
 
 
 def create_argument_parser():
-    parser = argparse.ArgumentParser(prog='pySCENIC',
+    parser = argparse.ArgumentParser(prog=os.path.basename(__file__).split('.')[0],
                                      description='Single-CEll regulatory Network Inference and Clustering',
                                      fromfile_prefix_chars='@', add_help=True,
                                      epilog="Arguments can be read from file using a @args.txt construct.")
@@ -328,7 +327,7 @@ def create_argument_parser():
     return parser
 
 
-def scenic(argv=None):
+def main(argv=None):
     # Set logging level.
     logging_debug_opt = False
     LOGGER.addHandler(create_logging_handler(logging_debug_opt))
@@ -344,4 +343,4 @@ def scenic(argv=None):
 
 
 if __name__ == "__main__":
-    scenic()
+    main()

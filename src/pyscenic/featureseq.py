@@ -2,8 +2,11 @@
 
 from interlap import InterLap
 from itertools import chain
-from functools import partial
+from collections import defaultdict
+from typing import List, Optional, Union, Type
 import re
+import io
+from cytoolz import memoize
 
 
 class Feature:
@@ -100,52 +103,45 @@ class FeatureSeq(object):
     SCORE_ATTRIBUTE = "score"
 
     @staticmethod
-    def from_bed_file(filename, transform=lambda x: x):
-        def _feature_iterator(filename):
-            with open(filename, 'r') as f:
-                for line in f:
+    def from_bed_file(file: Union[str, Type[io.IOBase]], transform=lambda x: x):
+        if isinstance(file, io.IOBase):
+            def _feature_iterator():
+                for line in file:
                     yield Feature.from_string(line, transform)
+        else:
+            def _feature_iterator():
+                with open(file, 'r') as f:
+                    for line in f:
+                        yield Feature.from_string(line, transform)
 
-        return FeatureSeq(_feature_iterator(filename))
-
-    @staticmethod
-    def from_string(data, transform=lambda x: x):
-        def _feature_iterator(data):
-            for line in re.split('[\n\r]+', data):
-                if not line or re.match('^[ \t]+$', line):
-                    continue
-                if not line.startswith("track"):
-                    yield Feature.from_string(line, transform)
-
-        return FeatureSeq(_feature_iterator(data))
+        return FeatureSeq(_feature_iterator())
 
     def __init__(self, features_iterator):
-        self.chromosome2tree = dict()
+        # Fast discovery of overlapping intervals.
+        self.chromosome2tree = defaultdict(InterLap)
+        self.name2features = defaultdict(list)
 
         for feature in features_iterator:
-            chromosome = feature.chromosome
-            start, end = feature.interval
-
-            if chromosome not in self.chromosome2tree.keys():
-                self.chromosome2tree[chromosome] = InterLap()
-            self.chromosome2tree[chromosome].add((start, end,
+            self.chromosome2tree[feature.chromosome].add((*feature.interval,
                             {FeatureSeq.NAME_ATTRIBUTE: feature.name,
                              FeatureSeq.SCORE_ATTRIBUTE: feature.score}))
+            self.name2features[feature.name].append(feature)
+
+    @memoize
+    def __len__(self):
+        return sum(map(len, self.name2features.values()))
 
     def __iter__(self):
-        def toFeature(interval, chromosome):
-            return Feature(chromosome,
-                           interval.start, interval.end,
-                           interval.value[FeatureSeq.NAME_ATTRIBUTE],
-                           interval.value[FeatureSeq.SCORE_ATTRIBUTE])
-
-        return chain.from_iterable(map(partial(toFeature, chromosome=chromosome), iter(self.chromosome2tree[chromosome]))
-                                   for chromosome in self.chromosome2tree.keys())
+        return chain.from_iterable(self.name2features.values())
 
     def __str__(self):
         return "\n".join(map(str, self))
 
-    def find(self, feature, fraction=None):
+    def get(self, name: str) -> 'FeatureSeq':
+        # Return a new list as a defensive copy mechanism.
+        return FeatureSeq(self.name2features[name])
+
+    def find(self, feature: Feature, fraction: Optional[float] = None) -> List[Feature]:
         def filter4Fraction(overlap_feature):
             if not fraction:
                 return True
@@ -171,11 +167,11 @@ class FeatureSeq(object):
                        interval.value[FeatureSeq.NAME_ATTRIBUTE],
                        interval.value[FeatureSeq.SCORE_ATTRIBUTE])
 
-        return filter(filter4Fraction,
+        return list(filter(filter4Fraction,
                       map(toFeature,
-                          self.chromosome2tree.get(feature.chromosome, InterLap()).find(feature.interval)))
+                          self.chromosome2tree.get(feature.chromosome, InterLap()).find(feature.interval))))
 
-    def intersection(self, other, fraction=None):
+    def intersection(self, other: 'FeatureSeq', fraction: Optional[float] = None) -> 'FeatureSeq':
         def _feature_iterator(self, other):
             for feature1 in other:
                 for feature2 in self.find(feature1, fraction):

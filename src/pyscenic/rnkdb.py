@@ -3,16 +3,17 @@
 import os
 import pandas as pd
 import numpy as np
-from numba import njit, prange, uint32, jit
 from typing import Tuple, Set, Type
 from abc import ABCMeta, abstractmethod
 import sqlite3
 from operator import itemgetter
-import numpy as np
 from .genesig import GeneSignature
 from cytoolz import memoize
 from feather.api import write_dataframe, FeatherReader
 from tqdm import tqdm
+
+
+UNKNOWN_NOMENCLATURE = "?"
 
 
 class RankingDatabase(metaclass=ABCMeta):
@@ -23,7 +24,7 @@ class RankingDatabase(metaclass=ABCMeta):
     The rankings of the genes are 0-based.
     """
 
-    def __init__(self, name: str, nomenclature: str):
+    def __init__(self, name: str, nomenclature: str = UNKNOWN_NOMENCLATURE):
         """
         Create a new instance.
 
@@ -127,7 +128,7 @@ class SQLiteRankingDatabase(RankingDatabase):
     motifs for a transcription factor.
     """
 
-    def __init__(self, fname: str, name: str, nomenclature: str):
+    def __init__(self, fname: str, name: str, nomenclature: str = UNKNOWN_NOMENCLATURE):
         """
         Create a new instance.
 
@@ -241,7 +242,7 @@ INDEX_NAME = "features"
 
 
 class FeatherRankingDatabase(RankingDatabase):
-    def __init__(self, fname: str, name: str = None, nomenclature: str = None):
+    def __init__(self, fname: str, name: str, nomenclature: str = UNKNOWN_NOMENCLATURE):
         """
         Create a new feather database.
 
@@ -303,7 +304,7 @@ class DataFrameRankingDatabase(RankingDatabase):
     """
     A ranking database from a dataframe.
     """
-    def __init__(self, df: pd.DataFrame, name: str, nomenclature: str):
+    def __init__(self, df: pd.DataFrame, name: str, nomenclature: str = UNKNOWN_NOMENCLATURE):
         self._df = df
         super().__init__(name, nomenclature)
 
@@ -343,7 +344,6 @@ class InvertedRankingDatabase(RankingDatabase):
     def _derive_identifiers_fname(cls, fname):
         return '{}.{}'.format(os.path.splitext(fname)[0], IDENTIFIERS_FNAME_EXTENSION)
 
-
     @classmethod
     def invert(cls, db: Type[RankingDatabase], fname: str, top_n_identifiers: int = 50000) -> None:
         """
@@ -377,8 +377,7 @@ class InvertedRankingDatabase(RankingDatabase):
         df.reset_index(inplace=True) # Index is not stored in feather format. https://github.com/wesm/feather/issues/200
         write_dataframe(df, fname)
 
-
-    def __init__(self, fname: str, name: str = None, nomenclature: str = None):
+    def __init__(self, fname: str, name: str, nomenclature: str = UNKNOWN_NOMENCLATURE):
         """
         Create a new inverted database.
 
@@ -401,7 +400,6 @@ class InvertedRankingDatabase(RankingDatabase):
         self.max_rank = len(df.columns)
         self.features = [pd.Series(index=row.values, data=row.index, name=name) for name, row in df.iterrows()]
 
-
     def _load_identifier2idx(self, fname):
         with open(fname, 'r') as f:
             return {line.strip(): idx for idx, line in enumerate(f)}
@@ -415,10 +413,6 @@ class InvertedRankingDatabase(RankingDatabase):
     def genes(self) -> Tuple[str]:
         # noinspection PyTypeChecker
         return tuple(self.identifier2idx.keys())
-
-    @property
-    def region_identifiers(self) -> Tuple[str]:
-        return self.genes
 
     def is_valid_rank_threshold(self, rank_threshold:int) -> bool:
         return rank_threshold <= self.max_rank
@@ -434,29 +428,6 @@ class InvertedRankingDatabase(RankingDatabase):
         reference_identifiers = np.array([self.identifier2idx[identifier] for identifier in gs.genes])
         return pd.concat([col.reindex(index=reference_identifiers, fill_value=rank_unknown) for col in self.features],
                          axis=1).T.astype(INVERTED_DB_DTYPE).rename(columns=self.idx2identifier)
-
-        #return pd.DataFrame(data=build_rankings(ranked_identifiers, reference_identifiers),
-        #                    index=self.df.index,
-        #                    columns=gs.genes)
-
-
-# @njit(signature_or_function=uint32(uint32[:], uint32, uint32))
-# def find(ranked_identifiers, identifier, default_value):
-#     for idx in range(len(ranked_identifiers)):
-#         if ranked_identifiers[idx] == identifier:
-#             return idx
-#     return default_value
-#
-#
-# @njit(signature_or_function=uint32[:, :](uint32[:, :], uint32[:]), parallel=True)
-# def build_rankings(ranked_identifiers, reference_identifiers):
-#     rank_unknown = np.iinfo(INVERTED_DB_DTYPE).max
-#     n_features = ranked_identifiers.shape[0]; n_identifiers = len(reference_identifiers)
-#     result = np.empty(shape=(n_features, n_identifiers), dtype=INVERTED_DB_DTYPE)
-#     for row_idx in prange(n_features):
-#         for col_idx in range(n_identifiers):
-#             result[row_idx, col_idx] = find(ranked_identifiers[row_idx, :], reference_identifiers[col_idx], rank_unknown)
-#     return result
 
 
 def convert2feather(fname: str, out_folder: str, name: str, extension: str="feather") -> str:
@@ -482,7 +453,7 @@ def convert2feather(fname: str, out_folder: str, name: str, extension: str="feat
     # Caveat: the original storage format of whole genome rankings does not store the metadata, i.e. name and gene
     # nomenclature.
     # The avoid having to specify nomenclature it is set as unknown.
-    db = SQLiteRankingDatabase(fname=fname, name=name, nomenclature="UNKNOWN")
+    db = SQLiteRankingDatabase(fname=fname, name=name, nomenclature=UNKNOWN_NOMENCLATURE)
     df = db.load_full()
     df.index.name = INDEX_NAME
     df.reset_index(inplace=True) # Index is not stored in feather format. https://github.com/wesm/feather/issues/200
@@ -490,7 +461,7 @@ def convert2feather(fname: str, out_folder: str, name: str, extension: str="feat
     return feather_fname
 
 
-def opendb(fname: str, name: str, nomenclature: str) -> Type['RankingDatabase']:
+def opendb(fname: str, name: str, nomenclature: str = UNKNOWN_NOMENCLATURE) -> Type['RankingDatabase']:
     """
     Open a ranking database.
 

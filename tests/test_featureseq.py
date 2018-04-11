@@ -1,7 +1,7 @@
 # coding=utf-8
 
 
-from pyscenic.featurelist import Feature, FeatureSeq
+from pyscenic.featureseq import Feature, FeatureSeq
 
 
 def test_feature_overlap():
