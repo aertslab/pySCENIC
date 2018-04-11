@@ -109,15 +109,17 @@ dm6-5kb-upstream-full-tx_           Drosophila melanogaster     [TSS+5kb,full Tx
 
 2. *Motif annotation* database providing the missing link between an enriched motif and the transcription factor that binds this motif. This pipeline needs a TSV text file where every line represents a particular annotation.
 
-===================  ==============
-  Annotations            Species
-===================  ==============
-`HGNC annotations`_    Homo sapiens
-`MGI annotations`_     Mus musculus
-===================  ==============
+=======================  ==========================
+  Annotations             Species
+=======================  ==========================
+`HGNC annotations`_       Homo sapiens
+`MGI annotations`_        Mus musculus
+`Flybase annotations`_    Drosophila melanogaster
+=======================  ==========================
 
 .. _`HGNC annotations`: http://pyscenic.aertslab.org/resources/motifs-v9-nr.hgnc-m0.001-o0.0.tbl
 .. _`MGI annotations`: http://pyscenic.aertslab.org/resources/motifs-v9-nr.mgi-m0.001-o0.0.tbl
+.. _`Flybase annotations`: http://pyscenic.aertslab.org/resources/motifs-v8-nr.flybase-m0.001-o0.0.tbl
 
 .. caution::
     These ranking databases are 1.1 Gb each so downloading them might take a while. An annotations file is typically 100Mb in size.
