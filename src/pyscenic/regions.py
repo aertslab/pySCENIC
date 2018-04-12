@@ -3,20 +3,23 @@
 import gzip
 import os
 from operator import attrgetter
-from functools import partial
 from enum import Enum
 from pkg_resources import resource_stream
 from typing import Tuple, Type
 from .rnkdb import InvertedRankingDatabase
 from .featureseq import FeatureSeq
 from .genesig import GeneSignature
-from cytoolz import mapcat, memoize
+from cytoolz import merge_with, memoize
+from itertools import repeat
+
 
 
 REGIONS_BED_EXTENSION = "bed.gz"
 REGION_NOMENCLATURE = "regions"
 
 
+# TODO: Dynamic creation of candidate regulatory regions starting from a gene annotation file and a collection of parameters.
+# TODO: would greatly improve the additional functionality provided by the region-based approach.
 class Delineation(Enum):
     HG19_500BP_UP = "hg19-limited-upstream500.bed.gz"
     HG19_5KBP_CTR = "hg19-limited-upstream5000-tss-downstream5000-full-transcript.bed.gz"
@@ -67,13 +70,20 @@ def convert(sig: Type[GeneSignature], db: RegionRankingDatabase, delineation: De
     assert db
     assert delineation
 
-    #TODO: Keep weights!
-    region_identifiers = frozenset(
-        map(attrgetter('name'),
-            mapcat(list,
-                map(partial(db.regions.intersection, fraction=fraction),
-                   map(load(delineation).get, sig.genes)))))
-    return sig.copy(gene2weight=region_identifiers, nomenclature=REGION_NOMENCLATURE)
+    # Every gene is transformed into a dictionary that maps the name of a feature to the weight of the corresponding gene.
+    # These mappings are then combined taking the maximum of multiple values exists for a key.
+    identifier2weight = merge_with(max, (dict(zip(
+                                            map(attrgetter('name'), db.regions.intersection(load(delineation).get(gene),
+                                                                                            fraction=fraction)),
+                                            repeat(weight)))
+                                         for gene, weight in sig.gene2weight.items()))
+
+    #region_identifiers = frozenset(
+    #    map(attrgetter('name'),
+    #        mapcat(list,
+    #            map(partial(db.regions.intersection, fraction=fraction),
+    #               map(load(delineation).get, sig.genes)))))
+    return sig.copy(gene2weight=identifier2weight, nomenclature=REGION_NOMENCLATURE)
 
 
 

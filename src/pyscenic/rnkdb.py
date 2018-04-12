@@ -377,6 +377,8 @@ class InvertedRankingDatabase(RankingDatabase):
         df.reset_index(inplace=True) # Index is not stored in feather format. https://github.com/wesm/feather/issues/200
         write_dataframe(df, fname)
 
+    #TODO: Provide revert option!
+
     def __init__(self, fname: str, name: str, nomenclature: str = UNKNOWN_NOMENCLATURE):
         """
         Create a new inverted database.
@@ -478,6 +480,9 @@ def opendb(fname: str, name: str, nomenclature: str = UNKNOWN_NOMENCLATURE) -> T
     if extension == ".feather":
         # noinspection PyTypeChecker
         return FeatherRankingDatabase(fname, name=name, nomenclature=nomenclature)
+    elif extension == "inverted.feather":
+        # noinspection PyTypeChecker
+        return InvertedRankingDatabase(fname, name=name, nomenclature=nomenclature)
     elif extension in (".db", ".sqlite", ".sqlite3"):
         # noinspection PyTypeChecker
         return SQLiteRankingDatabase(fname, name=name, nomenclature=nomenclature)
