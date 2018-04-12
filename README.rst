@@ -4,7 +4,7 @@ pySCENIC
 
 |buildstatus|_ |pypipackage|_ |docstatus|_
 
-pySCENIC is a lightning-fast python implementation of the SCENIC_ pipeline (Single-CEll regulatory Network Inference and
+pySCENIC is a lightning-fast python implementation of the SCENIC_ pipeline (Single-Cell rEgulatory Network Inference and
 Clustering) which enables biologists to infer transcription factors, gene regulatory networks and cell types from
 single-cell RNA-seq data.
 
