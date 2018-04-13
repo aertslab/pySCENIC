@@ -135,6 +135,7 @@ First we import the necessary modules and declare some constants:
 .. code-block:: python
 
     import os
+    import glob
     import pandas as pd
     import numpy as np
 
@@ -222,7 +223,7 @@ for the co-expression module inference is used.
 .. code-block:: python
 
     N_SAMPLES = ex_matrix.shape[1] # Full dataset
-    adjancencies = grnboost2(expression_data=ex_matrix.T.sample(n=N_SAMPLES, replace=False),
+    adjacencies = grnboost2(expression_data=ex_matrix.T.sample(n=N_SAMPLES, replace=False),
                         tf_names=tf_names, verbose=True)
 
 Derive potential regulons from these co-expression modules

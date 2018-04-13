@@ -228,7 +228,7 @@ def module2df(db: Type[RankingDatabase], module: Regulon, motif_annotations: pd.
 
 
 def modules2df(db: Type[RankingDatabase], modules: Sequence[Regulon], motif_annotations: pd.DataFrame,
-               weighted_recovery=False, module2features_func=module2features) -> pd.DataFrame:
+               weighted_recovery=False, return_recovery_curves=False, module2features_func=module2features) -> pd.DataFrame:
     # Make sure return recovery curves is always set to false because the metadata for the distributed dataframe needs
     # to be fixed for the dask framework.
     #TODO: Remove this restriction.
