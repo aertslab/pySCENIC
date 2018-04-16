@@ -251,7 +251,7 @@ In addition, the transcription factor is added to the module and modules that ha
 
 .. code-block:: python
 
-    modules = list(modules_from_adjacencies(adjacencies, ex_matrix, nomenclature=NOMENCLATURE))
+    modules = list(modules_from_adjacencies(adjacencies, ex_matrix.T, nomenclature=NOMENCLATURE))
 
 
 Phase II: Prune modules for targets with cis regulatory footprints (aka RcisTarget)
