@@ -17,3 +17,5 @@ setuptools
 pyyaml
 tqdm
 interlap
+umap-learn
+loompy

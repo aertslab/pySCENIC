@@ -27,3 +27,4 @@ umap-learn
 tqdm
 sphinx
 interlap
+loompy
