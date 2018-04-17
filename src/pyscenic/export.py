@@ -1,6 +1,7 @@
 # coding=utf-8
 
 import os
+import json
 import numpy as np
 import pandas as pd
 import loompy as lp
@@ -26,18 +27,21 @@ def export2loom(ex_mtx: pd.DataFrame, regulons: List[Regulon], cell_annotations:
     # Information on the general loom file format: http://linnarssonlab.org/loompy/format/index.html
     # Information on the SCope specific alterations: https://github.com/aertslab/SCope/wiki/Data-Format
 
-    # TODO: Add regulon thresholds: not mandatory!
+    # TODO: Not mandatory but adding a section "regulonThresholds" to the general metadata would give
+    # TODO: additional information to the SCope tool to preset a threshold on the AUC distribution of a regulon
+    # TODO: across cells and help with binarization, i.e. deciding if the regulon is "on" or "off" in a cell.
 
     # Calculate regulon enrichment per cell using AUCell.
-    auc_mtx = aucell(ex_mtx, regulons, num_cores) # (n_cells x n_regulons)
+    auc_mtx = aucell(ex_mtx, regulons, num_cores=num_cores) # (n_cells x n_regulons)
 
     # Create an embedding based on UMAP (similar to tSNE but faster).
-    umap_embedding_mtx = UMAP().fit_transform(auc_mtx) # (n_cells, 2)
+    umap_embedding_mtx = pd.DataFrame(data=UMAP().fit_transform(auc_mtx),
+                                      index=ex_mtx.index, columns=['UMAP1', 'UMAP2']) # (n_cells, 2)
 
     # Calculate the number of genes per cell.
     binary_mtx = ex_mtx.copy()
     binary_mtx[binary_mtx != 0] = 1.0
-    ngenes = binary_mtx.sum(axis=1)
+    ngenes = binary_mtx.sum(axis=1).astype(int)
 
     # Encode genes in regulons as "binary" membership matrix.
     genes = np.array(ex_mtx.columns)
@@ -49,6 +53,12 @@ def export2loom(ex_mtx: pd.DataFrame, regulons: List[Regulon], cell_annotations:
     regulon_assignment = pd.DataFrame(data=data,
                                       index=ex_mtx.columns,
                                       columns=list(map(attrgetter('name'), regulons)))
+
+    # Encode cell type clusters.
+    name2idx = dict(map(reversed, enumerate(sorted(set(cell_annotations.values())))))
+    clusterings = pd.DataFrame(data=ex_mtx.index,
+                               index=ex_mtx.index,
+                               columns=['Cell Type']).replace(cell_annotations).replace(name2idx)
 
     # Create meta-data structure.
     def create_structure_array(df):
@@ -63,23 +73,30 @@ def export2loom(ex_mtx: pd.DataFrame, regulons: List[Regulon], cell_annotations:
     title = os.path.splitext(os.path.basename(out_fname))[0]
 
     column_attrs = {
-        "CellID": list(ex_mtx.index),
-        "nGene": list(ngenes.values),
-        "Embedding": create_structure_array(umap_embedding_mtx.T),
+        "CellID": ex_mtx.index.values.astype('str'),
+        "nGene": ngenes.values,
+        "Embedding": create_structure_array(umap_embedding_mtx),
         "RegulonsAUC": create_structure_array(auc_mtx),
-        "ClusterID": list(ex_mtx.index.rename(cell_annotations))
+        "Clusterings": create_structure_array(clusterings),
+        "ClusterID": clusterings.values
         }
     row_attrs = {
-        "Gene": list(ex_mtx.columns),
-        "Regulons": regulon_assignment,
+        "Gene": ex_mtx.columns.values.astype('str'),
+        "Regulons": create_structure_array(regulon_assignment),
         }
     general_attrs = {
         "title": title,
-        "MetaData": {
+        "MetaData": json.dumps({
             "embeddings": [{
                 "id": 0,
                 "name": "UMAP (default)",
-            }]},
+            }]}),
+        "clusterings": json.dumps([{
+                "id": 0,
+                "group": "celltype",
+                "name": "Cell Type",
+                "clusters": [{"id": idx, "description": name} for name, idx in name2idx.items()]
+            }]),
         "Genome": next(iter(nomenclatures))}
 
     # Create loom file for use with the SCope tool.
@@ -88,7 +105,7 @@ def export2loom(ex_mtx: pd.DataFrame, regulons: List[Regulon], cell_annotations:
     # information from disk can only be achieved via column selection. For the ranking databases this is of utmost
     # importance.
     fh = lp.create(filename=out_fname,
-              layers=ex_mtx.T.values,
+              matrix=ex_mtx.T.values,
               row_attrs=row_attrs,
               col_attrs=column_attrs,
               file_attrs=general_attrs)
