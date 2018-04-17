@@ -90,13 +90,17 @@ def export2loom(ex_mtx: pd.DataFrame, regulons: List[Regulon], cell_annotations:
             "embeddings": [{
                 "id": 0,
                 "name": "UMAP (default)",
-            }]}),
-        "clusterings": json.dumps([{
+            }],
+            "annotations": [{
+                "name": "",
+                "values": []
+            }],
+            "clusterings": [{
                 "id": 0,
                 "group": "celltype",
                 "name": "Cell Type",
                 "clusters": [{"id": idx, "description": name} for name, idx in name2idx.items()]
-            }]),
+            }]}),
         "Genome": next(iter(nomenclatures))}
 
     # Create loom file for use with the SCope tool.
