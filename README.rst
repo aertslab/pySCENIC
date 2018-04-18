@@ -289,7 +289,7 @@ Directly calculating regulons without the intermediate dataframe of enriched fea
     regulons = prune(dbs, modules, MOTIF_ANNOTATIONS_FNAME)
 
 
-Clusters can leveraged in the following way:
+Clusters can be leveraged in the following way:
 
 .. code-block:: python
 
