@@ -135,6 +135,8 @@ First we import the necessary modules and declare some constants:
 .. code-block:: python
 
     import os
+    import glob
+    import pickle
     import pandas as pd
     import numpy as np
 
@@ -142,7 +144,7 @@ First we import the necessary modules and declare some constants:
     from arboretum.algo import grnboost2
 
     from pyscenic.rnkdb import FeatherRankingDatabase as RankingDatabase
-    from pyscenic.utils import modules_from_adjacencies, save_to_yaml
+    from pyscenic.utils import modules_from_adjacencies
     from pyscenic.prune import prune, prune2df
     from pyscenic.aucell import aucell
 
@@ -151,11 +153,12 @@ First we import the necessary modules and declare some constants:
     DATA_FOLDER="~/tmp"
     RESOURCES_FOLDER="~/resources"
     DATABASE_FOLDER = "~/databases/"
+    SCHEDULER="123.122.8.24:8786"
     FEATHER_GLOB = os.path.join(DATABASE_FOLDER, "mm9-*.feather")
     MOTIF_ANNOTATIONS_FNAME = os.path.join(RESOURCES_FOLDER, "motifs-v9-nr.mgi-m0.001-o0.0.tbl")
     MM_TFS_FNAME = os.path.join(RESOURCES_FOLDER, 'mm_tfs.txt')
     SC_EXP_FNAME = os.path.join(RESOURCES_FOLDER, "GSE60361_C1-3005-Expression.txt")
-    REGULONS_FNAME = os.path.join(DATA_FOLDER, "regulons.yaml")
+    REGULONS_FNAME = os.path.join(DATA_FOLDER, "regulons.p")
     NOMENCLATURE = "MGI"
 
 
@@ -195,7 +198,7 @@ Finally the ranking databases are loaded:
     db_fnames = glob.glob(FEATHER_GLOB)
     def name(fname):
         return os.path.basename(fname).split(".")[0]
-    dbs = [RankingDatabase(fname=fname, name=name(fname), nomenclature="MGI") for fname in db_fnames]
+    dbs = [RankingDatabase(fname=fname, name=name(fname), nomenclature=NOMENCLATURE) for fname in db_fnames]
     dbs
 
 ::
@@ -222,7 +225,7 @@ for the co-expression module inference is used.
 .. code-block:: python
 
     N_SAMPLES = ex_matrix.shape[1] # Full dataset
-    adjancencies = grnboost2(expression_data=ex_matrix.T.sample(n=N_SAMPLES, replace=False),
+    adjacencies = grnboost2(expression_data=ex_matrix.T.sample(n=N_SAMPLES, replace=False),
                         tf_names=tf_names, verbose=True)
 
 Derive potential regulons from these co-expression modules
@@ -259,31 +262,42 @@ Phase II: Prune modules for targets with cis regulatory footprints (aka RcisTarg
 
 .. code-block:: python
 
+    # Calculate a list of enriched motifs and the corresponding target genes for all modules.
     df = prune2df(dbs, modules, MOTIF_ANNOTATIONS_FNAME)
+
+    # Create regulons from this table of enriched motifs.
     regulons = df2regulons(df, NOMENCLATURE)
+
+    # Save these regulons to disk in binary "pickled" format.
+    with open(REGULONS_FNAME, "wb") as f:
+        pickle.dump(regulons, f)
+
+If running on a single multi-core machine, the following code snippet exploits all cores and provides you
+a progress bar:
+
+.. code-block:: python
+
+    from dask.diagnostics import ProgressBar
+
+    with ProgressBar():
+	    df = prune2df(dbs, modules, MOTIF_ANNOTATIONS_FNAME, client_or_address="dask_multiprocessing")
 
 Directly calculating regulons without the intermediate dataframe of enriched features is also possible:
 
 .. code-block:: python
 
     regulons = prune(dbs, modules, MOTIF_ANNOTATIONS_FNAME)
-    save_to_yaml(regulons, REGULONS_FNAME)
 
-Multi-core systems and clusters can leveraged in the following way:
+
+Clusters can leveraged in the following way:
 
 .. code-block:: python
 
-    # The fastest multi-core implementation:
-    df = prune2df(dbs, modules, MOTIF_ANNOTATIONS_FNAME,
-                        client_or_address="custom_multiprocessing", num_workers=8)
-    # or alternatively:
-    regulons = prune(dbs, modules, MOTIF_ANNOTATIONS_FNAME,
-                        client_or_address="custom_multiprocessing", num_workers=8)
-
     # The clusters can be leveraged via the dask framework:
-    df = prune2df(dbs, modules, MOTIF_ANNOTATIONS_FNAME, client_or_address="local")
+    df = prune2df(dbs, modules, MOTIF_ANNOTATIONS_FNAME, client_or_address=SCHEDULER)
+
     # or alternatively:
-    regulons = prune(dbs, modules, MOTIF_ANNOTATIONS_FNAME, client_or_address="local")
+    regulons = prune(dbs, modules, MOTIF_ANNOTATIONS_FNAME, client_or_address=SCHEDULER)
 
 Phase III: Cellular regulon enrichment matrix (aka AUCell)
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
