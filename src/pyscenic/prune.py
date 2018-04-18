@@ -257,7 +257,7 @@ def _distributed_calc(rnkdbs: Sequence[Type[RankingDatabase]], modules: Sequence
             # ... via dask.distributed framework.
             client, shutdown_callback = _prepare_client(client_or_address, num_workers=num_workers if num_workers else cpu_count())
             try:
-                return client.compute(create_graph(client))
+                return client.compute(create_graph(client), sync=True)
             finally:
                 shutdown_callback(False)
 
@@ -314,7 +314,7 @@ def prune2df(rnkdbs: Sequence[Type[RankingDatabase]], modules: Sequence[Regulon]
              rank_threshold: int = 1500, auc_threshold: float = 0.05, nes_threshold=3.0,
              motif_similarity_fdr: float = 0.001, orthologuous_identity_threshold: float = 0.0,
              avgrcc_sample_frac: float = None,
-             weighted_recovery=False, client_or_address='custom_multiprocessing',
+             weighted_recovery=False, client_or_address='dask_multiprocessing',
              num_workers=None, module_chunksize=100, filter_for_annotation=True) -> pd.DataFrame:
     """
     Calculate all regulons for a given sequence of ranking databases and a sequence of co-expression modules.
