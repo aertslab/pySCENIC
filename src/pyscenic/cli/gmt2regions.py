@@ -31,7 +31,7 @@ def create_argument_parser():
 
 def gmt2regions(gmt_fname, db_fname, delineation_code, fraction):
     db = RegionRankingDatabase(fname=db_fname, name=os.path.basename(db_fname))
-    signatures = GeneSignature.from_gmt(gmt_fname, nomenclature=db.nomenclature)
+    signatures = GeneSignature.from_gmt(gmt_fname)
     delineation = CODE2DELINEATION[delineation_code]
     for signature in signatures:
         sys.stdout(signature.name + ',' + ','.join(convert(signature, db, delineation, fraction).genes))

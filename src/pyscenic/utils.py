@@ -158,30 +158,27 @@ def add_correlation(adjacencies: pd.DataFrame, ex_mtx: pd.DataFrame,
     return adjacencies
 
 
-def modules4thr(adjacencies, threshold, nomenclature="MGI", context=frozenset()):
+def modules4thr(adjacencies, threshold, context=frozenset()):
     """
 
     :param adjacencies:
     :param threshold:
-    :param nomenclature:
     :return:
     """
     for tf_name, df_grp in adjacencies[adjacencies[COLUMN_NAME_WEIGHT] > threshold].groupby(by=COLUMN_NAME_TF):
         if len(df_grp) > 0:
             yield Regulon(
                 name="Regulon for {}".format(tf_name),
-                nomenclature=nomenclature,
                 context=frozenset(["weight>{}".format(threshold)]).union(context),
                 transcription_factor=tf_name,
                 gene2weight=list(zip(df_grp[COLUMN_NAME_TARGET].values, df_grp[COLUMN_NAME_WEIGHT].values)))
 
 
-def modules4top_targets(adjacencies, n, nomenclature="MGI", context=frozenset()):
+def modules4top_targets(adjacencies, n, context=frozenset()):
     """
 
     :param adjacencies:
     :param n:
-    :param nomenclature:
     :return:
     """
     for tf_name, df_grp in adjacencies.groupby(by=COLUMN_NAME_TF):
@@ -189,18 +186,16 @@ def modules4top_targets(adjacencies, n, nomenclature="MGI", context=frozenset())
         if len(module) > 0:
             yield Regulon(
                 name="Regulon for {}".format(tf_name),
-                nomenclature=nomenclature,
                 context=frozenset(["top{}".format(n)]).union(context),
                 transcription_factor=tf_name,
                 gene2weight=list(zip(module[COLUMN_NAME_TARGET].values, module[COLUMN_NAME_WEIGHT].values)))
 
 
-def modules4top_factors(adjacencies, n, nomenclature="MGI", context=frozenset()):
+def modules4top_factors(adjacencies, n, context=frozenset()):
     """
 
     :param adjacencies:
     :param n:
-    :param nomenclature:
     :return:
     """
     df = adjacencies.groupby(by=COLUMN_NAME_TARGET).apply(lambda grp: grp.nlargest(n, COLUMN_NAME_WEIGHT))
@@ -208,7 +203,6 @@ def modules4top_factors(adjacencies, n, nomenclature="MGI", context=frozenset())
         if len(df_grp) > 0:
             yield Regulon(
                 name=tf_name,
-                nomenclature=nomenclature,
                 context=frozenset(["top{}perTarget".format(n)]).union(context),
                 transcription_factor=tf_name,
                 gene2weight=list(zip(df_grp[COLUMN_NAME_TARGET].values, df_grp[COLUMN_NAME_WEIGHT].values)))
@@ -220,7 +214,6 @@ REPRESSING_MODULE = "repressing"
 
 def modules_from_adjacencies(adjacencies: pd.DataFrame,
                              ex_mtx: pd.DataFrame,
-                        nomenclature: str,
                         thresholds=(0.001,0.005),
                         top_n_targets=(50,),
                         top_n_regulators=(5,10,50),
@@ -233,7 +226,6 @@ def modules_from_adjacencies(adjacencies: pd.DataFrame,
     
     :param adjacencies: The dataframe with the TF-target links.
     :param ex_mtx: The expression matrix (n_cells x n_genes).
-    :param nomenclature: The nomenclature of the genes.
     :param thresholds: the first method to create the TF-modules based on the best targets for each transcription factor.
     :param top_n_targets: the second method is to select the top targets for a given TF.
     :param top_n_regulators: the alternative way to create the TF-modules is to select the best regulators for each gene.
@@ -248,9 +240,9 @@ def modules_from_adjacencies(adjacencies: pd.DataFrame,
     """
 
     def iter_modules(adjc, context):
-        yield from chain(chain.from_iterable(modules4thr(adjc, thr, nomenclature, context) for thr in thresholds),
-                         chain.from_iterable(modules4top_targets(adjc, n, nomenclature, context) for n in top_n_targets),
-                         chain.from_iterable(modules4top_factors(adjc, n, nomenclature, context) for n in top_n_regulators))
+        yield from chain(chain.from_iterable(modules4thr(adjc, thr, context) for thr in thresholds),
+                         chain.from_iterable(modules4top_targets(adjc, n, context) for n in top_n_targets),
+                         chain.from_iterable(modules4top_factors(adjc, n, context) for n in top_n_regulators))
 
     if not rho_dichotomize:
         # Do not differentiate between activating and repressing modules.

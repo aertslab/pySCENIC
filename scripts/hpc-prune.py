@@ -85,11 +85,10 @@ def run(args):
     modules = list(filter(lambda m: len(m) >= min_genes, modules))
 
     LOGGER.info("Loading databases.")
-    nomenclature = cfg['parameters']['nomenclature']
     def name(fname):
         return os.path.basename(fname).split(".")[0]
     db_fnames = list(mapcat(glob.glob, cfg['data']['databases'].split(";")))
-    dbs = [RankingDatabase(fname=fname, name=name(fname), nomenclature=nomenclature) for fname in db_fnames]
+    dbs = [RankingDatabase(fname=fname, name=name(fname)) for fname in db_fnames]
 
     LOGGER.info("Calculating regulons.")
     motif_annotations_fname = cfg['data']['motif_annotations']

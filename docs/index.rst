@@ -159,7 +159,6 @@ First we import the necessary modules and declare some constants:
     MM_TFS_FNAME = os.path.join(RESOURCES_FOLDER, 'mm_tfs.txt')
     SC_EXP_FNAME = os.path.join(RESOURCES_FOLDER, "GSE60361_C1-3005-Expression.txt")
     REGULONS_FNAME = os.path.join(DATA_FOLDER, "regulons.p")
-    NOMENCLATURE = "MGI"
 
 
 Preliminary work
@@ -198,17 +197,17 @@ Finally the ranking databases are loaded:
     db_fnames = glob.glob(FEATHER_GLOB)
     def name(fname):
         return os.path.basename(fname).split(".")[0]
-    dbs = [RankingDatabase(fname=fname, name=name(fname), nomenclature=NOMENCLATURE) for fname in db_fnames]
+    dbs = [RankingDatabase(fname=fname, name=name(fname)) for fname in db_fnames]
     dbs
 
 ::
 
-        [FeatherRankingDatabase(name="mm9-tss-centered-10kb-10species",nomenclature=MGI),
-         FeatherRankingDatabase(name="mm9-500bp-upstream-7species",nomenclature=MGI),
-         FeatherRankingDatabase(name="mm9-500bp-upstream-10species",nomenclature=MGI),
-         FeatherRankingDatabase(name="mm9-tss-centered-5kb-10species",nomenclature=MGI),
-         FeatherRankingDatabase(name="mm9-tss-centered-10kb-7species",nomenclature=MGI),
-         FeatherRankingDatabase(name="mm9-tss-centered-5kb-7species",nomenclature=MGI)]
+        [FeatherRankingDatabase(name="mm9-tss-centered-10kb-10species",
+         FeatherRankingDatabase(name="mm9-500bp-upstream-7species"),
+         FeatherRankingDatabase(name="mm9-500bp-upstream-10species"),
+         FeatherRankingDatabase(name="mm9-tss-centered-5kb-10species"),
+         FeatherRankingDatabase(name="mm9-tss-centered-10kb-7species"),
+         FeatherRankingDatabase(name="mm9-tss-centered-5kb-7species")]
 
 Phase I: Inference of co-expression modules
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -254,7 +253,7 @@ In addition, the transcription factor is added to the module and modules that ha
 
 .. code-block:: python
 
-    modules = list(modules_from_adjacencies(adjacencies, ex_matrix.T, nomenclature=NOMENCLATURE))
+    modules = list(modules_from_adjacencies(adjacencies, ex_matrix.T))
 
 
 Phase II: Prune modules for targets with cis regulatory footprints (aka RcisTarget)
@@ -266,7 +265,7 @@ Phase II: Prune modules for targets with cis regulatory footprints (aka RcisTarg
     df = prune2df(dbs, modules, MOTIF_ANNOTATIONS_FNAME)
 
     # Create regulons from this table of enriched motifs.
-    regulons = df2regulons(df, NOMENCLATURE)
+    regulons = df2regulons(df)
 
     # Save these regulons to disk in binary "pickled" format.
     with open(REGULONS_FNAME, "wb") as f:

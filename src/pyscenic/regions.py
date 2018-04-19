@@ -15,7 +15,6 @@ from itertools import repeat
 
 
 REGIONS_BED_EXTENSION = "bed.gz"
-REGION_NOMENCLATURE = "regions"
 
 
 # TODO: Dynamic creation of candidate regulatory regions starting from a gene annotation file and a collection of parameters.
@@ -38,8 +37,8 @@ def load(delineation: Delineation) -> FeatureSeq:
 
 
 class RegionRankingDatabase(InvertedRankingDatabase):
-    def __init__(self, fname: str, name: str, nomenclature: str = REGION_NOMENCLATURE):
-        super().__init__(fname, name, nomenclature)
+    def __init__(self, fname: str, name: str):
+        super().__init__(fname, name)
 
         basename = os.path.basename(fname).split('.')[0]
         dirname = os.path.dirname(fname)
@@ -83,7 +82,7 @@ def convert(sig: Type[GeneSignature], db: RegionRankingDatabase, delineation: De
     #        mapcat(list,
     #            map(partial(db.regions.intersection, fraction=fraction),
     #               map(load(delineation).get, sig.genes)))))
-    return sig.copy(gene2weight=identifier2weight, nomenclature=REGION_NOMENCLATURE)
+    return sig.copy(gene2weight=identifier2weight)
 
 
 

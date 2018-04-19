@@ -236,7 +236,7 @@ def modules2df(db: Type[RankingDatabase], modules: Sequence[Regulon], motif_anno
                       for module in modules])
 
 
-def _regulon4group(tf_name, context, df_group, nomenclature) -> Optional[Regulon]:
+def _regulon4group(tf_name, context, df_group) -> Optional[Regulon]:
     def score(nes, motif_similarity_qval, orthologuous_identity):
         # The combined score starts from the NES score which is then corrected for less confidence in the TF annotation
         # in two steps:
@@ -264,7 +264,6 @@ def _regulon4group(tf_name, context, df_group, nomenclature) -> Optional[Regulon
                         score=score(row[COLUMN_NAME_NES],
                                     row[COLUMN_NAME_MOTIF_SIMILARITY_QVALUE],
                                     row[COLUMN_NAME_ORTHOLOGOUS_IDENTITY]),
-                        nomenclature=nomenclature,
                         context=context,
                         transcription_factor=tf_name,
                         gene2weight=row[COLUMN_NAME_TARGET_GENES])
@@ -275,12 +274,11 @@ def _regulon4group(tf_name, context, df_group, nomenclature) -> Optional[Regulon
     return reduce(Regulon.union, (row2regulon(row) for _, row in df_group.iterrows()))
 
 
-def df2regulons(df, nomenclature) -> Sequence[Regulon]:
+def df2regulons(df) -> Sequence[Regulon]:
     """
     Create regulons from a dataframe of enriched features.
 
     :param df: The dataframe.
-    :param nomenclature: The nomenclature of the genes.
     :return: A sequence of regulons.
     """
     # Normally the columns index has two levels. For convenience of the following code the first level is removed.
@@ -296,7 +294,7 @@ def df2regulons(df, nomenclature) -> Sequence[Regulon]:
 
     # Group all rows per TF and type (+)/(-). Each group results in a single regulon.
     not_none = lambda r: r is not None
-    return list(filter(not_none, (_regulon4group(tf_name, frozenset([interaction_type]), df_grp, nomenclature)
+    return list(filter(not_none, (_regulon4group(tf_name, frozenset([interaction_type]), df_grp)
                                   for (tf_name, interaction_type), df_grp in df.groupby(by=[COLUMN_NAME_TF,
                                                                                                   COLUMN_NAME_TYPE]))))
 
@@ -310,7 +308,7 @@ def module2regulon(db: Type[RankingDatabase], module: Regulon, motif_annotations
                    module2features_func=module2features_func)
     if len(df) == 0:
         return None
-    regulons = df2regulons(df, module.nomenclature)
+    regulons = df2regulons(df)
     return first(regulons) if len(regulons) > 0 else None
 
 
@@ -319,8 +317,7 @@ def modules2regulons(db: Type[RankingDatabase], modules: Sequence[Regulon], moti
                      module2features_func=module2features) -> Sequence[Regulon]:
     assert len(modules) > 0
 
-    nomenclature = modules[0].nomenclature
     df = modules2df(db, modules, motif_annotations, weighted_recovery=weighted_recovery,
                     return_recovery_curves=return_recovery_curves,
                     module2features_func=module2features_func)
-    return [] if len(df) == 0 else df2regulons(df, nomenclature)
+    return [] if len(df) == 0 else df2regulons(df)

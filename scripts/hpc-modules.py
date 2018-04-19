@@ -8,7 +8,6 @@ from pyscenic.utils import modules_from_adjacencies
 
 
 RESOURCES_FOLDER="."
-NOMENCLATURE = "HGNC"
 RHO_THRESHOLDS = [0.03, 0.1, 0.3]
 MODULES_EXT = "modules.dat"
 EXP_MTX_EXT = "mtx.tsv"
@@ -38,7 +37,7 @@ def calc_modules(adjacencies, exp_mtx, name, rho_dichotomize, rho_threshold=None
     if os.path.isfile(out_fname):
         return
 
-    modules = list(modules_from_adjacencies(adjacencies, exp_mtx, NOMENCLATURE,
+    modules = list(modules_from_adjacencies(adjacencies, exp_mtx,
                                             rho_dichotomize=rho_dichotomize,
                                             rho_threshold=rho_threshold,
                                             rho_mask_dropouts=mask_dropouts))

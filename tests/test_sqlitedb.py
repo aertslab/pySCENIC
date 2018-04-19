@@ -7,7 +7,6 @@ from pkg_resources import resource_filename
 
 
 
-NOMENCLATURE = "HGNC"
 TEST_DATABASE_FNAME = resource_filename('resources.tests', "hg19-tss-centered-5kb-10species.mc9nr.db")
 TEST_DATABASE_NAME = "hg19-tss-centered-5kb-10species"
 TEST_SIGNATURE_FNAME = resource_filename('resources.tests', "c6.all.v6.1.symbols.gmt")
@@ -15,17 +14,16 @@ TEST_SIGNATURE_FNAME = resource_filename('resources.tests', "c6.all.v6.1.symbols
 
 @pytest.fixture
 def db():
-    return RankingDatabase(TEST_DATABASE_FNAME, TEST_DATABASE_NAME, NOMENCLATURE)
+    return RankingDatabase(TEST_DATABASE_FNAME, TEST_DATABASE_NAME)
 
 @pytest.fixture
 def gs():
-    return GeneSignature.from_gmt(TEST_SIGNATURE_FNAME, NOMENCLATURE,
+    return GeneSignature.from_gmt(TEST_SIGNATURE_FNAME,
                                   gene_separator="\t", field_separator="\t", )[0]
 
 
 def test_init(db):
     assert db.name == TEST_DATABASE_NAME
-    assert db.nomenclature == NOMENCLATURE
 
 def test_total_genes(db):
     assert db.total_genes == 29

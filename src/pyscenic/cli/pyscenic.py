@@ -47,10 +47,10 @@ def _load_modules(fname: str) -> Sequence[Type[GeneSignature]]:
         sys.exit(1)
 
 
-def _load_dbs(fnames: Sequence[str], nomenclature: str) -> Sequence[Type[RankingDatabase]]:
+def _load_dbs(fnames: Sequence[str]) -> Sequence[Type[RankingDatabase]]:
     def get_name(fname):
         return os.path.basename(fname).split(".")[0]
-    return [opendb(fname=fname.name, name=get_name(fname.name), nomenclature=nomenclature) for fname in fnames]
+    return [opendb(fname=fname.name, name=get_name(fname.name)) for fname in fnames]
 
 
 FILE_EXTENSION2SEPARATOR = {
@@ -64,19 +64,18 @@ def _df2modules(args):
     adjacencies = pd.read_csv(args.module_fname.name, sep=FILE_EXTENSION2SEPARATOR[ext])
     ex_mtx = pd.read_csv(args.expression_mtx_fname, sep='\t', header=0, index_col=0)
     return modules_from_adjacencies(adjacencies, ex_mtx,
-                                    nomenclature = args.nomenclature,
                                     thresholds=args.thresholds,
                                     top_n_targets=args.top_n_targets,
                                     top_n_regulators=args.top_n_regulators,
                                     min_genes=args.min_genes)
 
 
-def _df2regulons(fname, nomenclature):
+def _df2regulons(fname):
     ext = os.path.splitext(fname,)[1]
     df = pd.read_csv(fname, sep=FILE_EXTENSION2SEPARATOR[ext], index_col=[0,1], header=[0,1], skipinitialspace=True)
     df[('Enrichment', 'Context')] = df[('Enrichment', 'Context')].apply(lambda s: eval(s))
     df[('Enrichment', 'TargetGenes')] = df[('Enrichment', 'TargetGenes')].apply(lambda s: eval(s))
-    return df2regs(df, nomenclature=nomenclature)
+    return df2regs(df)
 
 
 def _load_expression_matrix(args):
@@ -137,8 +136,7 @@ def prune_targets_command(args):
         sys.exit(1)
 
     LOGGER.info("Loading databases.")
-    nomenclature = modules[0].nomenclature
-    dbs = _load_dbs(args.database_fname, nomenclature)
+    dbs = _load_dbs(args.database_fname)
 
     LOGGER.info("Calculating regulons.")
     motif_annotations_fname = args.annotations_fname.name
@@ -165,10 +163,10 @@ def aucell_command(args):
 
     if any(args.regulons_fname.name.endswith(ext) for ext in FILE_EXTENSION2SEPARATOR.keys()):
         LOGGER.info("Creating regulons.")
-        regulons = _df2regulons(args.regulons_fname.name, args.nomenclature)
+        regulons = _df2regulons(args.regulons_fname.name)
     elif args.regulons_fname.name.endswith('.gmt'):
         LOGGER.info("Loading regulons.")
-        regulons = GeneSignature.from_gmt(args.regulons_fname.name, args.nomenclature,
+        regulons = GeneSignature.from_gmt(args.regulons_fname.name,
                                            field_separator='\t', gene_separator='\t')
     else:
         LOGGER.info("Loading regulons.")
@@ -224,9 +222,6 @@ def add_module_parameters(parser):
     group.add_argument('--min_genes',
                        type=int, default=20,
                        help='The minimum number of genes in a module (default: 20).')
-    group.add_argument('--nomenclature',
-                       type=str, default="HGNC",
-                       help='The nomenclature (default: HGNC).')
     group.add_argument('--expression_mtx_fname',
                        type=argparse.FileType('r'),
                        help='The name of the file that contains the expression matrix (CSV).'
@@ -308,9 +303,6 @@ def create_argument_parser():
                           type=argparse.FileType('r'),
                                help='The name of the file that contains the co-expression modules (YAML or pickled DAT).'
                                     'A CSV with adjacencies can also be supplied or a GMT file containing gene signatures.')
-    parser_aucell.add_argument('-n','--nomenclature',
-                               type=str, default='HGNC',
-                               help='The nomenclature used for the gene signatures.')
     parser_aucell.add_argument('-o', '--output',
                             type=argparse.FileType('w'), default=sys.stdout,
                             help='Output file/stream, a matrix of AUC values (CSV; rows=cells x columns=regulons).')

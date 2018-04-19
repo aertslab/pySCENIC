@@ -22,7 +22,7 @@ def exp_matrix():
 
 @pytest.fixture
 def gs():
-    return GeneSignature.from_gmt(TEST_SIGNATURE_FNAME, NOMENCLATURE,
+    return GeneSignature.from_gmt(TEST_SIGNATURE_FNAME,
                                   gene_separator="\t", field_separator="\t", )
 
 

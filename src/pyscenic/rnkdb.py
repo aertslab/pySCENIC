@@ -13,9 +13,6 @@ from feather.api import write_dataframe, FeatherReader
 from tqdm import tqdm
 
 
-UNKNOWN_NOMENCLATURE = "?"
-
-
 class RankingDatabase(metaclass=ABCMeta):
     """
     A class of a database of whole genome rankings. The whole genome is ranked for regulatory features of interest, e.g.
@@ -24,18 +21,15 @@ class RankingDatabase(metaclass=ABCMeta):
     The rankings of the genes are 0-based.
     """
 
-    def __init__(self, name: str, nomenclature: str = UNKNOWN_NOMENCLATURE):
+    def __init__(self, name: str):
         """
         Create a new instance.
 
-        :param nomenclature: The gene nomenclature.
         :param name: The name of the database.
         """
         assert name, "Name must be specified."
-        assert nomenclature, "Nomenclature must be specified."
 
         self._name = name
-        self._nomenclature = nomenclature
 
     @property
     def name(self) -> str:
@@ -43,13 +37,6 @@ class RankingDatabase(metaclass=ABCMeta):
         The name of this database of rankings.
         """
         return self._name
-
-    @property
-    def nomenclature(self) -> str:
-        """
-        The nomenclature used for specifying the genes.
-        """
-        return self._nomenclature
 
     @property
     @abstractmethod
@@ -104,10 +91,9 @@ class RankingDatabase(metaclass=ABCMeta):
         """
         Returns a unambiguous string representation.
         """
-        return "{}(name=\"{}\",nomenclature={})".format(
+        return "{}(name=\"{}\")".format(
             self.__class__.__name__,
-            self._name,
-            self._nomenclature)
+            self._name)
 
 
 # SQL query to get the total number of genes in the database.
@@ -128,15 +114,14 @@ class SQLiteRankingDatabase(RankingDatabase):
     motifs for a transcription factor.
     """
 
-    def __init__(self, fname: str, name: str, nomenclature: str = UNKNOWN_NOMENCLATURE):
+    def __init__(self, fname: str, name: str):
         """
         Create a new instance.
 
         :param fname: The name of the SQLite database file.
-        :param nomenclature: The gene nomenclature.
         :param name: The name of the database.
         """
-        super().__init__(name, nomenclature)
+        super().__init__(name)
 
         assert os.path.isfile(fname), "Database {0:s} doesn't exist.".format(fname)
 
@@ -242,15 +227,14 @@ INDEX_NAME = "features"
 
 
 class FeatherRankingDatabase(RankingDatabase):
-    def __init__(self, fname: str, name: str, nomenclature: str = UNKNOWN_NOMENCLATURE):
+    def __init__(self, fname: str, name: str):
         """
         Create a new feather database.
 
         :param fname: The filename of the database.
         :param name: The name of the database.
-        :param nomenclature: The nomenclature used for the genes that are being ranked.
         """
-        super().__init__(name=name, nomenclature=nomenclature)
+        super().__init__(name=name)
 
         assert os.path.isfile(fname), "Database {0:s} doesn't exist.".format(fname)
         # FeatherReader cannot be pickle (important for dask framework) so filename is field instead.
@@ -283,7 +267,7 @@ class MemoryDecorator(RankingDatabase):
         assert db, "Database should be supplied."
         self._db = db
         self._df = db.load_full()
-        super().__init__(db.name, db.nomenclature)
+        super().__init__(db.name)
 
     @property
     def total_genes(self) -> int:
@@ -304,9 +288,9 @@ class DataFrameRankingDatabase(RankingDatabase):
     """
     A ranking database from a dataframe.
     """
-    def __init__(self, df: pd.DataFrame, name: str, nomenclature: str = UNKNOWN_NOMENCLATURE):
+    def __init__(self, df: pd.DataFrame, name: str):
         self._df = df
-        super().__init__(name, nomenclature)
+        super().__init__(name)
 
     @property
     def total_genes(self) -> int:
@@ -377,17 +361,31 @@ class InvertedRankingDatabase(RankingDatabase):
         df.reset_index(inplace=True) # Index is not stored in feather format. https://github.com/wesm/feather/issues/200
         write_dataframe(df, fname)
 
-    #TODO: Provide revert option!
+    @classmethod
+    def revert(cls, db: 'InvertedRankingDatabase', fname: str) -> None:
+        """
+        Revert an inverted database to a normal format.
 
-    def __init__(self, fname: str, name: str, nomenclature: str = UNKNOWN_NOMENCLATURE):
+        :param db: The inverted database
+        :param fname: the filename for the new database.
+        """
+        # TODO: The memory requirement of this method might be prohibitively large!
+        n = len(db.genes) - db.max_rank
+        rank_unknown = np.iinfo(INVERTED_DB_DTYPE).max
+        df = db.load(GeneSignature(name="all", gene2weight=db.genes))
+        for ridx, row in df.iterrows():
+            df[ridx, row == rank_unknown] = np.random.randint(low=0, high=n, size=n)
+        DataFrameRankingDatabase(df=df, name=db.name).save(fname)
+
+
+    def __init__(self, fname: str, name: str):
         """
         Create a new inverted database.
 
         :param fname: The filename of the database.
         :param name: The name of the database.
-        :param nomenclature: The nomenclature used for the genes that are being ranked.
         """
-        super().__init__(name=name, nomenclature=nomenclature)
+        super().__init__(name=name)
 
         assert os.path.isfile(fname), "Database {0:s} doesn't exist.".format(fname)
 
@@ -452,10 +450,8 @@ def convert2feather(fname: str, out_folder: str, name: str, extension: str="feat
     assert not os.path.exists(feather_fname), "{} already exists.".format(feather_fname)
 
     # Load original database into memory.
-    # Caveat: the original storage format of whole genome rankings does not store the metadata, i.e. name and gene
-    # nomenclature.
-    # The avoid having to specify nomenclature it is set as unknown.
-    db = SQLiteRankingDatabase(fname=fname, name=name, nomenclature=UNKNOWN_NOMENCLATURE)
+    # Caveat: the original storage format of whole genome rankings does not store the metadata, i.e. name.
+    db = SQLiteRankingDatabase(fname=fname, name=name)
     df = db.load_full()
     df.index.name = INDEX_NAME
     df.reset_index(inplace=True) # Index is not stored in feather format. https://github.com/wesm/feather/issues/200
@@ -463,28 +459,27 @@ def convert2feather(fname: str, out_folder: str, name: str, extension: str="feat
     return feather_fname
 
 
-def opendb(fname: str, name: str, nomenclature: str = UNKNOWN_NOMENCLATURE) -> Type['RankingDatabase']:
+def opendb(fname: str, name: str) -> Type['RankingDatabase']:
     """
     Open a ranking database.
 
     :param fname: The filename of the database.
     :param name: The name of the database.
-    :param nomenclature: The nomenclature used for the genes that are being ranked.
     :return: A ranking database.
     """
     assert os.path.isfile(fname), "{} does not exist.".format(fname)
     assert name, "A database should be given a proper name."
-    assert nomenclature, "Nomenclature for the genes in a database should be given."
 
     extension = os.path.splitext(fname)[1]
     if extension == ".feather":
-        # noinspection PyTypeChecker
-        return FeatherRankingDatabase(fname, name=name, nomenclature=nomenclature)
-    elif extension == "inverted.feather":
-        # noinspection PyTypeChecker
-        return InvertedRankingDatabase(fname, name=name, nomenclature=nomenclature)
+        if fname.endswith(".inverted.feather"):
+            # noinspection PyTypeChecker
+            return InvertedRankingDatabase(fname, name=name)
+        else:
+            # noinspection PyTypeChecker
+            return FeatherRankingDatabase(fname, name=name)
     elif extension in (".db", ".sqlite", ".sqlite3"):
         # noinspection PyTypeChecker
-        return SQLiteRankingDatabase(fname, name=name, nomenclature=nomenclature)
+        return SQLiteRankingDatabase(fname, name=name)
     else:
         raise ValueError("{} is an unknown extension.".format(extension))
