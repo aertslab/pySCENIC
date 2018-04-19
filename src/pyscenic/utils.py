@@ -3,7 +3,8 @@
 import pandas as pd
 from urllib.parse import urljoin
 from .genesig import Regulon, GeneSignature
-from .math import masked_rho_2d, masked_rho4pairs
+from .math import masked_rho4pairs
+from .transform import COLUMN_NAME_TARGET_GENES, COLUMN_NAME_CONTEXT
 from itertools import chain
 import numpy as np
 from functools import partial
@@ -308,4 +309,16 @@ def add_motif_url(df: pd.DataFrame, base_url: str):
     :return:
     """
     df[("Enrichment", COLUMN_NAME_MOTIF_URL)] = list(map(partial(urljoin, base=base_url), df.index.get_level_values(COLUMN_NAME_MOTIF_ID)))
+    return df
+
+
+def load_motifs(fname: str) -> pd.DataFrame:
+    """
+
+    :param fname:
+    :return:
+    """
+    df = pd.read_csv(fname, index_col=[0,1], header=[0,1], skipinitialspace=True)
+    df[('Enrichment', COLUMN_NAME_CONTEXT)] = df[('Enrichment', COLUMN_NAME_CONTEXT)].apply(lambda s: eval(s))
+    df[('Enrichment', COLUMN_NAME_TARGET_GENES)] = df[('Enrichment', COLUMN_NAME_TARGET_GENES)].apply(lambda s: eval(s))
     return df
