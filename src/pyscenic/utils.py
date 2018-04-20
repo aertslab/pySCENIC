@@ -4,7 +4,6 @@ import pandas as pd
 from urllib.parse import urljoin
 from .genesig import Regulon, GeneSignature
 from .math import masked_rho4pairs
-from .transform import COLUMN_NAME_TARGET_GENES, COLUMN_NAME_CONTEXT
 from itertools import chain
 import numpy as np
 from functools import partial
@@ -22,7 +21,6 @@ LOGGER = logging.getLogger(__name__)
 
 COLUMN_NAME_TF = "TF"
 COLUMN_NAME_MOTIF_ID = "MotifID"
-COLUMN_NAME_MOTIF_URL = "MotifURL"
 COLUMN_NAME_MOTIF_SIMILARITY_QVALUE = 'MotifSimilarityQvalue'
 COLUMN_NAME_ORTHOLOGOUS_IDENTITY = 'OrthologousIdentity'
 COLUMN_NAME_ANNOTATION = 'Annotation'
@@ -159,7 +157,7 @@ def add_correlation(adjacencies: pd.DataFrame, ex_mtx: pd.DataFrame,
     return adjacencies
 
 
-def modules4thr(adjacencies, threshold, nomenclature="MGI", context=frozenset()):
+def modules4thr(adjacencies, threshold, nomenclature="MGI", context=frozenset(), pattern="weight>{:.3f}"):
     """
 
     :param adjacencies:
@@ -172,7 +170,7 @@ def modules4thr(adjacencies, threshold, nomenclature="MGI", context=frozenset())
             yield Regulon(
                 name="Regulon for {}".format(tf_name),
                 nomenclature=nomenclature,
-                context=frozenset(["weight>{:.3f}".format(threshold)]).union(context),
+                context=frozenset([pattern.format(threshold)]).union(context),
                 transcription_factor=tf_name,
                 gene2weight=list(zip(df_grp[COLUMN_NAME_TARGET].values, df_grp[COLUMN_NAME_WEIGHT].values)))
 
@@ -222,7 +220,7 @@ REPRESSING_MODULE = "repressing"
 def modules_from_adjacencies(adjacencies: pd.DataFrame,
                              ex_mtx: pd.DataFrame,
                         nomenclature: str,
-                        thresholds=(0.05, 0.10),
+                        thresholds=(0.50, 0.75, 0.90),
                         top_n_targets=(50,),
                         top_n_regulators=(5,10,50),
                         min_genes=20,
@@ -254,10 +252,15 @@ def modules_from_adjacencies(adjacencies: pd.DataFrame,
     # To make the pySCENIC code more robust to the selection of the network inference method in the first step of
     # the pipeline, it is better to use percentiles instead of absolute values for the weight thresholds.
     if not absolute_thresholds:
-        thresholds = list(adjacencies[COLUMN_NAME_WEIGHT].quantiles(thresholds))
-
-    def iter_modules(adjc, context):
-        yield from chain(chain.from_iterable(modules4thr(adjc, thr, nomenclature, context) for thr in thresholds),
+        def iter_modules(adjc, context):
+            yield from chain(chain.from_iterable(
+                                    modules4thr(adjc, thr, nomenclature, context, pattern="weight>{}%".format(frac*100))
+                                    for thr, frac in zip(list(adjacencies[COLUMN_NAME_WEIGHT].quantile(thresholds)), thresholds)),
+                             chain.from_iterable(modules4top_targets(adjc, n, nomenclature, context) for n in top_n_targets),
+                             chain.from_iterable(modules4top_factors(adjc, n, nomenclature, context) for n in top_n_regulators))
+    else:
+        def iter_modules(adjc, context):
+            yield from chain(chain.from_iterable(modules4thr(adjc, thr, nomenclature, context) for thr in thresholds),
                          chain.from_iterable(modules4top_targets(adjc, n, nomenclature, context) for n in top_n_targets),
                          chain.from_iterable(modules4top_factors(adjc, n, nomenclature, context) for n in top_n_regulators))
 
@@ -309,6 +312,9 @@ def load_from_yaml(fname: str) -> Sequence[Type[GeneSignature]]:
         return load(f.read(), Loader=Loader)
 
 
+COLUMN_NAME_MOTIF_URL = "MotifURL"
+
+
 def add_motif_url(df: pd.DataFrame, base_url: str):
     """
 
@@ -326,6 +332,8 @@ def load_motifs(fname: str) -> pd.DataFrame:
     :param fname:
     :return:
     """
+    from .transform import COLUMN_NAME_TARGET_GENES, COLUMN_NAME_CONTEXT
+
     df = pd.read_csv(fname, index_col=[0,1], header=[0,1], skipinitialspace=True)
     df[('Enrichment', COLUMN_NAME_CONTEXT)] = df[('Enrichment', COLUMN_NAME_CONTEXT)].apply(lambda s: eval(s))
     df[('Enrichment', COLUMN_NAME_TARGET_GENES)] = df[('Enrichment', COLUMN_NAME_TARGET_GENES)].apply(lambda s: eval(s))
