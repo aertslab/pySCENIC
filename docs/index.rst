@@ -235,8 +235,9 @@ Regulons are derived from adjacencies based on three methods.
 
 The first method to create the TF-modules is to select the best targets for each transcription factor:
 
-1. Targets with weight > 0.001
-2. Targets with weight > 0.005
+1. Targets with importance > the 50th percentile.
+2. Targets with importance > the 75th percentile
+2. Targets with importance > the 90th percentile.
 
 The second method is to select the top targets for a given TF:
 
