@@ -10,8 +10,7 @@ from .rnkdb import InvertedRankingDatabase
 from .featureseq import FeatureSeq
 from .genesig import GeneSignature
 from cytoolz import merge_with, memoize
-from itertools import repeat
-
+from itertools import repeat, chain
 
 
 REGIONS_BED_EXTENSION = "bed.gz"
@@ -83,7 +82,9 @@ def convert(sig: Type[GeneSignature], db: RegionRankingDatabase, delineation: De
     #        mapcat(list,
     #            map(partial(db.regions.intersection, fraction=fraction),
     #               map(load(delineation).get, sig.genes)))))
-    return sig.copy(gene2weight=identifier2weight, nomenclature=REGION_NOMENCLATURE)
+    return sig.copy(gene2weight=identifier2weight,
+                    nomenclature=REGION_NOMENCLATURE,
+                    context=frozenset(chain(sig.context, [str(delineation)])))
 
 
 
