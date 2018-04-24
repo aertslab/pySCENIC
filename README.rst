@@ -145,7 +145,7 @@ First we import the necessary modules and declare some constants:
 
     from pyscenic.rnkdb import FeatherRankingDatabase as RankingDatabase
     from pyscenic.utils import modules_from_adjacencies
-    from pyscenic.prune import prune, prune2df
+    from pyscenic.prune import prune, prune2df, df2regulons
     from pyscenic.aucell import aucell
 
     import seaborn as sns
