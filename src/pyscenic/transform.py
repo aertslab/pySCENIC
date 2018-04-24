@@ -47,7 +47,7 @@ LOGGER = logging.getLogger(__name__)
 
 def module2features_rcc4all_impl(db: Type[RankingDatabase], module: Regulon, motif_annotations: pd.DataFrame,
                                  rank_threshold: int = 1500, auc_threshold: float = 0.05, nes_threshold=3.0,
-                                 avgrcc_sample_frac: float = None, weighted_recovery=False,
+                                 weighted_recovery=False,
                                  filter_for_annotation=True):
     """
     Create a dataframe of enriched and annotated features a given ranking database and a co-expression module.
@@ -58,8 +58,6 @@ def module2features_rcc4all_impl(db: Type[RankingDatabase], module: Regulon, mot
     :param auc_threshold: The fraction of the ranked genome to take into account for the calculation of the
         Area Under the recovery Curve.
     :param nes_threshold: The Normalized Enrichment Score (NES) threshold to select enriched features.
-    :param avgrcc_sample_frac: The fraction of the features to use for the calculation of the average curve, If None
-        then all features are used.
     :param weighted_recovery: Use weighted recovery in the analysis.
     :return: A dataframe with enriched and annotated features.
     """
@@ -90,14 +88,9 @@ def module2features_rcc4all_impl(db: Type[RankingDatabase], module: Regulon, mot
         return pd.DataFrame(), None, None, genes, None
 
     # Calculated leading edge for the remaining enriched features that have annotations.
-    if avgrcc_sample_frac is None:
-        avgrcc = rccs.mean(axis=0)
-        avg2stdrcc =  avgrcc + 2.0 * rccs.std(axis=0)
-    else:
-        n_features = len(features)
-        sample_idx = np.random.randint(0, int(n_features*avgrcc_sample_frac))
-        avgrcc = rccs[sample_idx, :].mean(axis=0)
-        avg2stdrcc = avgrcc + 2.0 * rccs[sample_idx, :].std(axis=0)
+    avgrcc = rccs.mean(axis=0)
+    avg2stdrcc =  avgrcc + 2.0 * rccs.std(axis=0)
+
     rccs = rccs[enriched_features_idx, :][annotated_features_idx, :]
     rankings = rankings[enriched_features_idx, :][annotated_features_idx, :]
 
@@ -111,7 +104,7 @@ def module2features_rcc4all_impl(db: Type[RankingDatabase], module: Regulon, mot
 
 def module2features_auc1st_impl(db: Type[RankingDatabase], module: Regulon, motif_annotations: pd.DataFrame,
                                 rank_threshold: int = 1500, auc_threshold: float = 0.05, nes_threshold=3.0,
-                                avgrcc_sample_frac: float = None, weighted_recovery=False,
+                                weighted_recovery=False,
                                 filter_for_annotation=True):
     """
     Create a dataframe of enriched and annotated features a given ranking database and a co-expression module.
@@ -122,8 +115,6 @@ def module2features_auc1st_impl(db: Type[RankingDatabase], module: Regulon, moti
     :param auc_threshold: The fraction of the ranked genome to take into account for the calculation of the
         Area Under the recovery Curve.
     :param nes_threshold: The Normalized Enrichment Score (NES) threshold to select enriched features.
-    :param avgrcc_sample_frac: The fraction of the features to use for the calculation of the average curve, If None
-        then all features are used.
     :param weighted_recovery: Use weighted recovery in the analysis.
     :return: A dataframe with enriched and annotated features.
     """
@@ -154,15 +145,17 @@ def module2features_auc1st_impl(db: Type[RankingDatabase], module: Regulon, moti
     if len(annotated_features[annotated_features_idx]) == 0:
         return pd.DataFrame(), None, None, genes, None
 
-    # Calculated leading edge for the remaining enriched features that have annotations.
-    if avgrcc_sample_frac is None:
-        rccs, _ = recovery(df, db.total_genes, np.full(len(genes), 1.0), rank_threshold, auc_threshold, no_auc=True)
-        avgrcc = rccs.mean(axis=0)
-        avg2stdrcc =  avgrcc + 2.0 * rccs.std(axis=0)
-    else:
-        rccs, _ = recovery(df.sample(frac=avgrcc_sample_frac), db.total_genes, np.full(len(genes), 1.0), rank_threshold, auc_threshold, no_auc=True)
-        avgrcc = rccs.mean(axis=0)
-        avg2stdrcc = avgrcc + 2.0 * rccs.std(axis=0)
+    # Calculated leading edge for the remaining enriched features that have annotations. The leading edge is calculated
+    # based on the average recovery curve so we still no to calculate all recovery curves. Currently this is done via
+    # preallocating memory. This introduces a huge burden on memory when using region-based databases and multiple cores
+    # on a cluster node. E.g.
+    #   (24,000 features * 25,000 rank_threshold * 8 bytes)/(1,024*1,024*1,024) = 4,4Gb
+    #   This creates a potential peak on memory of 48 cores * 4,4Gb = 214 Gb
+    # TODO: Solution could be to go for an iterative approach boosted by numba.
+    rccs, _ = recovery(df, db.total_genes, weights, rank_threshold, auc_threshold, no_auc=True)
+    avgrcc = rccs.mean(axis=0)
+    avg2stdrcc = avgrcc + 2.0 * rccs.std(axis=0)
+
     rccs = rccs[enriched_features_idx, :][annotated_features_idx, :]
     rankings = rankings[enriched_features_idx, :][annotated_features_idx, :]
 
@@ -176,7 +169,7 @@ def module2features_auc1st_impl(db: Type[RankingDatabase], module: Regulon, moti
 
 module2features = partial(module2features_auc1st_impl,
                           rank_threshold = 1500, auc_threshold = 0.05, nes_threshold=3.0,
-                          avgrcc_sample_frac = None, filter_for_annotation=True)
+                          filter_for_annotation=True)
 
 
 def module2df(db: Type[RankingDatabase], module: Regulon, motif_annotations: pd.DataFrame,
