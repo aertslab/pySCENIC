@@ -308,7 +308,7 @@ regulons. Enrichment of a regulon is measured as the Area Under the recovery Cur
 
 .. code-block:: python
 
-    auc_mtx = aucell(ex_matrix.T, regulons, num_workers=4)
+    auc_mtx = aucell(ex_matrix.T, regulons, num_cores=4)
     sns.clustermap(auc_mtx, figsize=(8,8))
 
 Command Line Interface
