@@ -151,7 +151,9 @@ def module2features_auc1st_impl(db: Type[RankingDatabase], module: Regulon, moti
     # on a cluster node. E.g.
     #   (24,000 features * 25,000 rank_threshold * 8 bytes)/(1,024*1,024*1,024) = 4,4Gb
     #   This creates a potential peak on memory of 48 cores * 4,4Gb = 214 Gb
-    # TODO: Solution could be to go for an iterative approach boosted by numba.
+    # TODO: Solution could be to go for an iterative approach boosted by numba. But before doing so investigate the
+    # broader issue with creep in memory usage when using the dask framework: use a memory profile tool
+    # (https://pythonhosted.org/Pympler/muppy.html) to check what is kept in memory in all subprocesses/workers.
     rccs, _ = recovery(df, db.total_genes, weights, rank_threshold, auc_threshold, no_auc=True)
     avgrcc = rccs.mean(axis=0)
     avg2stdrcc = avgrcc + 2.0 * rccs.std(axis=0)

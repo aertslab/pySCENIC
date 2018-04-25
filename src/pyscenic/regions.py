@@ -5,20 +5,20 @@ import os
 from operator import attrgetter
 from enum import Enum
 from pkg_resources import resource_stream
-from typing import Tuple, Type
+from typing import Tuple, Type, Iterator, Sequence
 from .rnkdb import InvertedRankingDatabase
 from .featureseq import FeatureSeq
-from .genesig import GeneSignature
+from .genesig import GeneSignature, Regulon
 from cytoolz import merge_with, memoize
 from itertools import repeat, chain
-
+import pandas as pd
 
 REGIONS_BED_EXTENSION = "bed.gz"
 REGION_NOMENCLATURE = "regions"
 
 
 # TODO: Dynamic creation of candidate regulatory regions starting from a gene annotation file and a collection of parameters.
-# TODO: would greatly improve the additional functionality provided by the region-based approach.
+# would greatly improve the additional functionality provided by the region-based approach.
 class Delineation(Enum):
     HG19_500BP_UP = "hg19-limited-upstream500.bed.gz"
     HG19_5KBP_CTR = "hg19-limited-upstream5000-tss-downstream5000-full-transcript.bed.gz"
@@ -37,6 +37,14 @@ def load(delineation: Delineation) -> FeatureSeq:
 
 
 class RegionRankingDatabase(InvertedRankingDatabase):
+    # TODO: Improve read performance of inverted design
+    # the inverted database design can significantly reduce the size on disk (from 120Gb to 4,7Gb for the 1M regions-24K
+    # features human database) but with a huge impact on read performance (from 1 second to several minutes for a typical
+    # signature). Potential mitigation challenges are:
+    #  - Recoding the decompression of the inverted design using C++ and its standard template library. Impact will only
+    #    be a constant factor while personal investment will be substantial.
+    #  - Break the clean interface between database storage and AUC and recovery curve calculation. The exact order of
+    #    the genes is not really required for AUC calculation so decompression times could be significantly reduced.
     def __init__(self, fname: str, name: str, nomenclature: str = REGION_NOMENCLATURE):
         super().__init__(fname, name, nomenclature)
 
@@ -77,15 +85,40 @@ def convert(sig: Type[GeneSignature], db: RegionRankingDatabase, delineation: De
                                             repeat(weight)))
                                          for gene, weight in sig.gene2weight.items()))
 
-    #region_identifiers = frozenset(
-    #    map(attrgetter('name'),
-    #        mapcat(list,
-    #            map(partial(db.regions.intersection, fraction=fraction),
-    #               map(load(delineation).get, sig.genes)))))
     return sig.copy(gene2weight=identifier2weight,
                     nomenclature=REGION_NOMENCLATURE,
                     context=frozenset(chain(sig.context, [str(delineation)])))
 
 
+def df2regulons(df: pd.DataFrame, gene_regulons: Sequence[Regulon],
+                db: RegionRankingDatabase,
+                delineations: Iterator[Delineation] = Delineation) -> Sequence[Regulon]:
+    """
+    Create gene-based regulons from a dataframe of enriched motifs.
+    """
 
+    # TODO: This method needs to be implemented to have a fully functional regions-based pipeline.
+    # There are many ways to provide the link from enhancer-based regulons back to the original and pruned gene-based
+    # regulons. From a high level there are two approaches: either the software does the bookkeeping (i.e. we keep
+    # the link between regions and their corresponding genes when converting from gene to region-based regulons) or
+    # the end user has to this himselves. The current function signature implements the latter strategy, i.e. the
+    # user has to supply the candidate regulatory regions for genes and the original gene-based regulons to
+    # be able to do the conversion.
+
+    # Algorithm's skeleton: For each row:
+    # 1. Find the appropriate delineation and convert regions in the TargetGenes column of the dataframe to their
+    #    corresponding geneIDs.
+    # 1.1. This mapping between a region ID and (multiple) gene IDs needs the regions property of a RegionRankingDatabase
+    #      together with a regulatory region delineation which can be derived from an element in the context field.
+    #      Caveat: (1) Either we provide the delineation instance itself or a string representation. Currently the later
+    #      is being done and therefore we need the list of all potential delineations as an extra input parameter.
+    #      (2) It is better the precalculate or at least cache this operation because it will be needed for many more
+    #      rows.
+    # 2. Filter the list of gene IDs based on presence in the original corresponding gene-based regulon.
+    # 2.1 The main challenge is to find the corresponding gene-based regulon for each row in the enriched motif dataframe.
+    #     This mapping can be resolved by using the name of transcription factor together with elements provided in the
+    #     context column (mainly method used for defining a module from the adjacencies; the name of the database is
+    #     less informational).
+
+    raise NotImplemented
 
