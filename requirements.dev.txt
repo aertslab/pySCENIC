@@ -1,7 +1,7 @@
 cytoolz
 arboretum
 multiprocessing_on_dill
-numba
+numba==0.37.0
 attrs
 frozendict
 numpy
