@@ -3,7 +3,7 @@
 import pandas as pd
 from urllib.parse import urljoin
 from .genesig import Regulon, GeneSignature
-from .math import masked_rho_2d, masked_rho4pairs
+from .math import masked_rho4pairs
 from itertools import chain
 import numpy as np
 from functools import partial
@@ -21,7 +21,6 @@ LOGGER = logging.getLogger(__name__)
 
 COLUMN_NAME_TF = "TF"
 COLUMN_NAME_MOTIF_ID = "MotifID"
-COLUMN_NAME_MOTIF_URL = "MotifURL"
 COLUMN_NAME_MOTIF_SIMILARITY_QVALUE = 'MotifSimilarityQvalue'
 COLUMN_NAME_ORTHOLOGOUS_IDENTITY = 'OrthologousIdentity'
 COLUMN_NAME_ANNOTATION = 'Annotation'
@@ -158,7 +157,7 @@ def add_correlation(adjacencies: pd.DataFrame, ex_mtx: pd.DataFrame,
     return adjacencies
 
 
-def modules4thr(adjacencies, threshold, context=frozenset()):
+def modules4thr(adjacencies, threshold, context=frozenset(), pattern="weight>{:.3f}"):
     """
 
     :param adjacencies:
@@ -169,7 +168,7 @@ def modules4thr(adjacencies, threshold, context=frozenset()):
         if len(df_grp) > 0:
             yield Regulon(
                 name="Regulon for {}".format(tf_name),
-                context=frozenset(["weight>{}".format(threshold)]).union(context),
+                context=frozenset([pattern.format(threshold)]).union(context),
                 transcription_factor=tf_name,
                 gene2weight=list(zip(df_grp[COLUMN_NAME_TARGET].values, df_grp[COLUMN_NAME_WEIGHT].values)))
 
@@ -214,22 +213,25 @@ REPRESSING_MODULE = "repressing"
 
 def modules_from_adjacencies(adjacencies: pd.DataFrame,
                              ex_mtx: pd.DataFrame,
-                        thresholds=(0.001,0.005),
+                        thresholds=(0.50, 0.75, 0.90),
                         top_n_targets=(50,),
                         top_n_regulators=(5,10,50),
                         min_genes=20,
+                        absolute_thresholds=False,
                         rho_dichotomize=True,
                         rho_threshold=RHO_THRESHOLD,
                         rho_mask_dropouts=False) -> Sequence[Regulon]:
     """
     Create modules from a dataframe containing weighted adjacencies between a TF and its target genes.
     
-    :param adjacencies: The dataframe with the TF-target links.
+    :param adjacencies: The dataframe with the TF-target links. This dataframe should have the following columns:
+        :py:const:`pyscenic.utils.COLUMN_NAME_TF`, :py:const:`pyscenic.utils.COLUMN_NAME_TARGET` and :py:const:`pyscenic.utils.COLUMN_NAME_WEIGHT` .
     :param ex_mtx: The expression matrix (n_cells x n_genes).
     :param thresholds: the first method to create the TF-modules based on the best targets for each transcription factor.
     :param top_n_targets: the second method is to select the top targets for a given TF.
     :param top_n_regulators: the alternative way to create the TF-modules is to select the best regulators for each gene.
     :param min_genes: The required minimum number of genes in a resulting module.
+    :param absolute_thresholds: Use absolute thresholds or percentiles to define modules based on best targets of a TF.
     :param rho_dichotomize: Differentiate between activating and repressing modules based on the correlation patterns of
         the expression of the TF and its target genes.
     :param rho_threshold: The threshold on the correlation to decide if a target gene is activated
@@ -239,8 +241,18 @@ def modules_from_adjacencies(adjacencies: pd.DataFrame,
     :return: A sequence of regulons.
     """
 
-    def iter_modules(adjc, context):
-        yield from chain(chain.from_iterable(modules4thr(adjc, thr, context) for thr in thresholds),
+    # To make the pySCENIC code more robust to the selection of the network inference method in the first step of
+    # the pipeline, it is better to use percentiles instead of absolute values for the weight thresholds.
+    if not absolute_thresholds:
+        def iter_modules(adjc, context):
+            yield from chain(chain.from_iterable(
+                                    modules4thr(adjc, thr, context, pattern="weight>{}%".format(frac*100))
+                                    for thr, frac in zip(list(adjacencies[COLUMN_NAME_WEIGHT].quantile(thresholds)), thresholds)),
+                             chain.from_iterable(modules4top_targets(adjc, n, context) for n in top_n_targets),
+                             chain.from_iterable(modules4top_factors(adjc, n, context) for n in top_n_regulators))
+    else:
+        def iter_modules(adjc, context):
+            yield from chain(chain.from_iterable(modules4thr(adjc, thr, context) for thr in thresholds),
                          chain.from_iterable(modules4top_targets(adjc, n, context) for n in top_n_targets),
                          chain.from_iterable(modules4top_factors(adjc, n, context) for n in top_n_regulators))
 
@@ -292,6 +304,9 @@ def load_from_yaml(fname: str) -> Sequence[Type[GeneSignature]]:
         return load(f.read(), Loader=Loader)
 
 
+COLUMN_NAME_MOTIF_URL = "MotifURL"
+
+
 def add_motif_url(df: pd.DataFrame, base_url: str):
     """
 
@@ -300,4 +315,18 @@ def add_motif_url(df: pd.DataFrame, base_url: str):
     :return:
     """
     df[("Enrichment", COLUMN_NAME_MOTIF_URL)] = list(map(partial(urljoin, base=base_url), df.index.get_level_values(COLUMN_NAME_MOTIF_ID)))
+    return df
+
+
+def load_motifs(fname: str) -> pd.DataFrame:
+    """
+
+    :param fname:
+    :return:
+    """
+    from .transform import COLUMN_NAME_TARGET_GENES, COLUMN_NAME_CONTEXT
+
+    df = pd.read_csv(fname, index_col=[0,1], header=[0,1], skipinitialspace=True)
+    df[('Enrichment', COLUMN_NAME_CONTEXT)] = df[('Enrichment', COLUMN_NAME_CONTEXT)].apply(lambda s: eval(s))
+    df[('Enrichment', COLUMN_NAME_TARGET_GENES)] = df[('Enrichment', COLUMN_NAME_TARGET_GENES)].apply(lambda s: eval(s))
     return df

@@ -266,7 +266,6 @@ def prune(rnkdbs: Sequence[Type[RankingDatabase]], modules: Sequence[Regulon],
                          motif_annotations_fname: str,
                          rank_threshold: int = 1500, auc_threshold: float = 0.05, nes_threshold=3.0,
                          motif_similarity_fdr: float = 0.001, orthologuous_identity_threshold: float = 0.0,
-                         avgrcc_sample_frac: float = None,
                          weighted_recovery=False, client_or_address='custom_multiprocessing',
                          num_workers=None, module_chunksize=100) -> Sequence[Regulon]:
     """
@@ -284,8 +283,6 @@ def prune(rnkdbs: Sequence[Type[RankingDatabase]], modules: Sequence[Regulon],
     :param motif_similarity_fdr: The maximum False Discovery Rate to find factor annotations for enriched motifs.
     :param orthologuous_identity_threshold: The minimum orthologuous identity to find factor annotations
         for enriched motifs.
-    :param avgrcc_sample_frac: The fraction of the features to use for the calculation of the average curve, If None
-        then all features are used.
     :param weighted_recovery: Use weights of a gene signature when calculating recovery curves?
     :param num_workers: If not using a cluster, the number of workers to use for the calculation.
         None of all available CPUs need to be used.
@@ -299,7 +296,6 @@ def prune(rnkdbs: Sequence[Type[RankingDatabase]], modules: Sequence[Regulon],
                                    rank_threshold=rank_threshold,
                                    auc_threshold=auc_threshold,
                                    nes_threshold=nes_threshold,
-                                   avgrcc_sample_frac=avgrcc_sample_frac,
                                    filter_for_annotation=True)
     transformation_func = partial(modules2regulons, module2features_func=module2features_func, weighted_recovery=weighted_recovery)
     from toolz.curried import reduce
@@ -313,7 +309,6 @@ def prune2df(rnkdbs: Sequence[Type[RankingDatabase]], modules: Sequence[Regulon]
              motif_annotations_fname: str,
              rank_threshold: int = 1500, auc_threshold: float = 0.05, nes_threshold=3.0,
              motif_similarity_fdr: float = 0.001, orthologuous_identity_threshold: float = 0.0,
-             avgrcc_sample_frac: float = None,
              weighted_recovery=False, client_or_address='dask_multiprocessing',
              num_workers=None, module_chunksize=100, filter_for_annotation=True) -> pd.DataFrame:
     """
@@ -331,8 +326,6 @@ def prune2df(rnkdbs: Sequence[Type[RankingDatabase]], modules: Sequence[Regulon]
     :param motif_similarity_fdr: The maximum False Discovery Rate to find factor annotations for enriched motifs.
     :param orthologuous_identity_threshold: The minimum orthologuous identity to find factor annotations
         for enriched motifs.
-    :param avgrcc_sample_frac: The fraction of the features to use for the calculation of the average curve, If None
-        then all features are used.
     :param weighted_recovery: Use weights of a gene signature when calculating recovery curves?
     :param num_workers: If not using a cluster, the number of workers to use for the calculation.
         None of all available CPUs need to be used.
@@ -346,7 +339,6 @@ def prune2df(rnkdbs: Sequence[Type[RankingDatabase]], modules: Sequence[Regulon]
                                    rank_threshold=rank_threshold,
                                    auc_threshold=auc_threshold,
                                    nes_threshold=nes_threshold,
-                                   avgrcc_sample_frac=avgrcc_sample_frac,
                                    filter_for_annotation=filter_for_annotation)
     transformation_func = partial(modules2df,
                                   module2features_func=module2features_func, weighted_recovery=weighted_recovery)
@@ -373,8 +365,6 @@ def find_features(rnkdbs: Sequence[Type[RankingDatabase]], signatures: Sequence[
     :param motif_similarity_fdr: The maximum False Discovery Rate to find factor annotations for enriched motifs.
     :param orthologuous_identity_threshold: The minimum orthologuous identity to find factor annotations
         for enriched motifs.
-    :param avgrcc_sample_frac: The fraction of the features to use for the calculation of the average curve, If None
-        then all features are used.
     :param weighted_recovery: Use weights of a gene signature when calculating recovery curves?
     :param client_or_address: The client of IP address of the scheduler when working with dask. For local multi-core
         systems 'custom_multiprocessing' or 'dask_multiprocessing' can be supplied.
