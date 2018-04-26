@@ -211,8 +211,8 @@ def add_annotation_parameters(parser):
 def add_module_parameters(parser):
     group = parser.add_argument_group('module generation arguments')
     group.add_argument('--thresholds',
-                       type=float, nargs='+', default=[0.001,0.005],
-                       help='The first method to create the TF-modules based on the best targets for each transcription factor (default: 0.001 0.005).')
+                       type=float, nargs='+', default=[0.75,0.90],
+                       help='The first method to create the TF-modules based on the best targets for each transcription factor (default: 0.75 0.90).')
     group.add_argument('--top_n_targets',
                        type=int, nargs='+', default=[50],
                        help='The second method is to select the top targets for a given TF. (default: 50)')

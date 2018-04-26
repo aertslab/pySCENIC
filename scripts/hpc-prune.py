@@ -12,6 +12,7 @@ from pyscenic.rnkdb import FeatherRankingDatabase as RankingDatabase
 from pyscenic.prune import prune2df
 from dask.diagnostics import ProgressBar
 from cytoolz import mapcat
+from multiprocessing import cpu_count
 
 
 CONFIG_FILENAME = os.path.join(os.path.dirname(__file__), "hpc-prune.ini")
@@ -57,6 +58,10 @@ def create_argument_parser():
     parser.add_argument('-o', '--output',
                         type=str,
                         help='Output file/stream.')
+    parser.add_argument('--num_workers',
+                       type=int, default=cpu_count(),
+                       help='The number of workers to use. Only valid of using dask_multiprocessing, custom_multiprocessing or local as mode. (default: {}).'.format(cpu_count()))
+
     return parser
 
 
@@ -100,7 +105,7 @@ def run(args):
                                   nes_threshold=float(cfg['parameters']['nes_threshold']),
                                   client_or_address=mode,
                                   module_chunksize=cfg['parameters']['chunk_size'],
-                                  num_workers=int(cfg['parameters']['num_cores']))
+                                  num_workers=args.num_workers)
 
     LOGGER.info("Writing results to file.")
     df.to_csv(cfg['parameters']['output'] if not args.output else args.output)
