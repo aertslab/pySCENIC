@@ -213,7 +213,7 @@ REPRESSING_MODULE = "repressing"
 
 def modules_from_adjacencies(adjacencies: pd.DataFrame,
                              ex_mtx: pd.DataFrame,
-                        thresholds=(0.50, 0.75, 0.90),
+                        thresholds=(0.75, 0.90),
                         top_n_targets=(50,),
                         top_n_regulators=(5,10,50),
                         min_genes=20,
