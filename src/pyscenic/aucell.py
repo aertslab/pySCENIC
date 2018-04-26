@@ -81,7 +81,7 @@ def _enrichment(shared_ro_memory_array, modules, genes, cells, auc_threshold, au
 
 
 def aucell4r(df_rnk: pd.DataFrame, signatures: Sequence[Type[GeneSignature]],
-             auc_threshold: float = 0.05, noweights: bool = False, num_cores: int = cpu_count()) -> pd.DataFrame:
+             auc_threshold: float = 0.05, noweights: bool = False, num_workers: int = cpu_count()) -> pd.DataFrame:
     """
     Calculate enrichment of gene signatures for single cells.
 
@@ -90,10 +90,10 @@ def aucell4r(df_rnk: pd.DataFrame, signatures: Sequence[Type[GeneSignature]],
     :param auc_threshold: The fraction of the ranked genome to take into account for the calculation of the
         Area Under the recovery Curve.
     :param noweights: Should the weights of the genes part of a signature be used in calculation of enrichment?
-    :param num_cores: The number of cores to use.
+    :param num_workers: The number of cores to use.
     :return: A dataframe with the AUCs (n_cells x n_modules).
     """
-    if num_cores == 1:
+    if num_workers == 1:
         # Show progress bar ...
         aucs = pd.concat([enrichment4cells(df_rnk,
                                      module.noweights() if noweights else module,
@@ -120,7 +120,7 @@ def aucell4r(df_rnk: pd.DataFrame, signatures: Sequence[Type[GeneSignature]],
             signatures = list(map(lambda m: m.noweights(), signatures))
 
         # Do the analysis in separate child processes.
-        chunk_size = ceil(float(len(signatures)) / num_cores)
+        chunk_size = ceil(float(len(signatures)) / num_workers)
         processes = [Process(target=_enrichment, args=(shared_ro_memory_array, chunk,
                                                        genes, cells, auc_threshold,
                                                        auc_mtx, (chunk_size*len(cells))*idx))
