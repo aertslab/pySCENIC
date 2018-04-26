@@ -241,6 +241,10 @@ def modules_from_adjacencies(adjacencies: pd.DataFrame,
     :return: A sequence of regulons.
     """
 
+    # Duplicate genes need to be removed from the expression matrix to avoid lookup problems in the correlation
+    # matrix.
+    ex_mtx = ex_mtx.T[~ex_mtx.columns.duplicated(keep='first')].T
+
     # To make the pySCENIC code more robust to the selection of the network inference method in the first step of
     # the pipeline, it is better to use percentiles instead of absolute values for the weight thresholds.
     if not absolute_thresholds:
