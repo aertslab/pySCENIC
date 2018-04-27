@@ -37,7 +37,7 @@ def test_create_rankings():
 def test_aucell():
     ex_mtx = exp_matrix()
     percentiles = derive_auc_threshold(ex_mtx)
-    aucs_mtx = aucell(ex_mtx, gs(), auc_threshold=percentiles[0.01], num_cores=1)
+    aucs_mtx = aucell(ex_mtx, gs(), auc_threshold=percentiles[0.01], num_workers=1)
 
 
 
