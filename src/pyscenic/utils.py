@@ -220,7 +220,7 @@ def modules_from_adjacencies(adjacencies: pd.DataFrame,
                         absolute_thresholds=False,
                         rho_dichotomize=True,
                         rho_threshold=RHO_THRESHOLD,
-                        rho_mask_dropouts=False) -> Sequence[Regulon]:
+                        rho_mask_dropouts=True) -> Sequence[Regulon]:
     """
     Create modules from a dataframe containing weighted adjacencies between a TF and its target genes.
     
