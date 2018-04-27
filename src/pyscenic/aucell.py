@@ -137,7 +137,7 @@ def aucell4r(df_rnk: pd.DataFrame, signatures: Sequence[Type[GeneSignature]],
 
 
 def aucell(exp_mtx: pd.DataFrame, signatures: Sequence[Type[GeneSignature]],
-           auc_threshold: float = 0.05, noweights: bool = False, num_cores: int = cpu_count()) -> pd.DataFrame:
+           auc_threshold: float = 0.05, noweights: bool = False, num_workers: int = cpu_count()) -> pd.DataFrame:
     """
     Calculate enrichment of gene signatures for single cells.
 
@@ -146,8 +146,8 @@ def aucell(exp_mtx: pd.DataFrame, signatures: Sequence[Type[GeneSignature]],
     :param auc_threshold: The fraction of the ranked genome to take into account for the calculation of the
         Area Under the recovery Curve.
     :param noweights: Should the weights of the genes part of a signature be used in calculation of enrichment?
-    :param num_cores: The number of cores to use.
+    :param num_workers: The number of cores to use.
     :return: A dataframe with the AUCs (n_cells x n_modules).
     """
-    return aucell4r(create_rankings(exp_mtx), signatures, auc_threshold, noweights, num_cores)
+    return aucell4r(create_rankings(exp_mtx), signatures, auc_threshold, noweights, num_workers)
 

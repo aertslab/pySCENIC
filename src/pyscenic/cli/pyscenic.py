@@ -174,7 +174,7 @@ def aucell_command(args):
 
     LOGGER.info("Calculating enrichment.")
     auc_heatmap = aucell(ex_mtx, regulons, auc_threshold=args.auc_threshold,
-                         noweights=args.weights != 'yes', num_cores=args.num_workers)
+                         noweights=args.weights != 'yes', num_workers=args.num_workers)
 
     LOGGER.info("Writing results to file.")
     auc_heatmap.to_csv(args.output)
