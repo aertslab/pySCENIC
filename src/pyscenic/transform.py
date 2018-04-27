@@ -276,6 +276,10 @@ def df2regulons(df) -> Sequence[Regulon]:
     :param df: The dataframe.
     :return: A sequence of regulons.
     """
+
+    # Because the code below will alter the dataframe we need to make a defensive copy of it.
+    df = df.copy()
+
     # Normally the columns index has two levels. For convenience of the following code the first level is removed.
     if df.columns.nlevels == 2:
         df.columns = df.columns.droplevel(0)
