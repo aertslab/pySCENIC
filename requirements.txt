@@ -5,7 +5,7 @@ llvmlite==0.22.0
 attrs
 frozendict
 numpy
-pandas
+pandas>=0.20.1
 dask
 pyarrow==0.8.0
 feather-format
