@@ -81,7 +81,8 @@ def _enrichment(shared_ro_memory_array, modules, genes, cells, auc_threshold, au
 
 
 def aucell4r(df_rnk: pd.DataFrame, signatures: Sequence[Type[GeneSignature]],
-             auc_threshold: float = 0.05, noweights: bool = False, num_workers: int = cpu_count()) -> pd.DataFrame:
+             auc_threshold: float = 0.05, noweights: bool = False, normalize: bool = False,
+             num_workers: int = cpu_count()) -> pd.DataFrame:
     """
     Calculate enrichment of gene signatures for single cells.
 
@@ -90,6 +91,7 @@ def aucell4r(df_rnk: pd.DataFrame, signatures: Sequence[Type[GeneSignature]],
     :param auc_threshold: The fraction of the ranked genome to take into account for the calculation of the
         Area Under the recovery Curve.
     :param noweights: Should the weights of the genes part of a signature be used in calculation of enrichment?
+    :param normalize: Normalize the AUC values to a maximum of 1.0 per regulon.
     :param num_workers: The number of cores to use.
     :return: A dataframe with the AUCs (n_cells x n_modules).
     """
@@ -99,7 +101,6 @@ def aucell4r(df_rnk: pd.DataFrame, signatures: Sequence[Type[GeneSignature]],
                                      module.noweights() if noweights else module,
                                      auc_threshold=auc_threshold) for module in tqdm(signatures)]).unstack("Regulon")
         aucs.columns = aucs.columns.droplevel(0)
-        return aucs
     else:
         # Decompose the rankings dataframe: the index and columns are shared with the child processes via pickling.
         genes = df_rnk.columns.values
@@ -131,13 +132,15 @@ def aucell4r(df_rnk: pd.DataFrame, signatures: Sequence[Type[GeneSignature]],
             p.join()
 
         # Reconstitute the results array. Using C or row-major ordering.
-        return pd.DataFrame(data=np.ctypeslib.as_array(auc_mtx.get_obj()).reshape(len(signatures), len(cells)),
+        aucs = pd.DataFrame(data=np.ctypeslib.as_array(auc_mtx.get_obj()).reshape(len(signatures), len(cells)),
                             columns=pd.Index(data=cells, name='Cell'),
                             index=pd.Index(data=list(map(attrgetter("name"), signatures)), name='Regulon')).T
+    return aucs/aucs.max(axis=0) if normalize else aucs
 
 
 def aucell(exp_mtx: pd.DataFrame, signatures: Sequence[Type[GeneSignature]],
-           auc_threshold: float = 0.05, noweights: bool = False, num_workers: int = cpu_count()) -> pd.DataFrame:
+           auc_threshold: float = 0.05, noweights: bool = False, normalize: bool = False,
+           num_workers: int = cpu_count()) -> pd.DataFrame:
     """
     Calculate enrichment of gene signatures for single cells.
 
@@ -146,8 +149,9 @@ def aucell(exp_mtx: pd.DataFrame, signatures: Sequence[Type[GeneSignature]],
     :param auc_threshold: The fraction of the ranked genome to take into account for the calculation of the
         Area Under the recovery Curve.
     :param noweights: Should the weights of the genes part of a signature be used in calculation of enrichment?
+    :param normalize: Normalize the AUC values to a maximum of 1.0 per regulon.
     :param num_workers: The number of cores to use.
     :return: A dataframe with the AUCs (n_cells x n_modules).
     """
-    return aucell4r(create_rankings(exp_mtx), signatures, auc_threshold, noweights, num_workers)
+    return aucell4r(create_rankings(exp_mtx), signatures, auc_threshold, noweights, normalize, num_workers)
 
