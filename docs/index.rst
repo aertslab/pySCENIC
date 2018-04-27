@@ -140,12 +140,14 @@ First we import the necessary modules and declare some constants:
     import pandas as pd
     import numpy as np
 
+    from dask.diagnostics import ProgressBar
+
     from arboretum.utils import load_tf_names
     from arboretum.algo import grnboost2
 
     from pyscenic.rnkdb import FeatherRankingDatabase as RankingDatabase
     from pyscenic.utils import modules_from_adjacencies
-    from pyscenic.prune import prune, prune2df
+    from pyscenic.prune import prune, prune2df, df2regulons
     from pyscenic.aucell import aucell
 
     import seaborn as sns
@@ -168,19 +170,12 @@ The scRNA-Seq data is downloaded from GEO: https://www.ncbi.nlm.nih.gov/geo/quer
 
 .. code-block:: python
 
-    ex_matrix = pd.read_csv(SC_EXP_FNAME, sep='\t', header=0, index_col=0)
-
-
-Subsequently duplicate genes are removed:
-
-.. code-block:: python
-
-    ex_matrix = ex_matrix[~ex_matrix.index.duplicated(keep='first')]
+    ex_matrix = pd.read_csv(SC_EXP_FNAME, sep='\t', header=0, index_col=0).T
     ex_matrix.shape
 
 ::
 
-    (19970, 3005)
+    (3005, 19970)
 
 and the list of Transcription Factors (TF) for *Mus musculus* are read from file.
 The list of known TFs for Mm was prepared from TFCat (cf. notebooks_ section).
@@ -202,7 +197,7 @@ Finally the ranking databases are loaded:
 
 ::
 
-        [FeatherRankingDatabase(name="mm9-tss-centered-10kb-10species",
+        [FeatherRankingDatabase(name="mm9-tss-centered-10kb-10species"),
          FeatherRankingDatabase(name="mm9-500bp-upstream-7species"),
          FeatherRankingDatabase(name="mm9-500bp-upstream-10species"),
          FeatherRankingDatabase(name="mm9-tss-centered-5kb-10species"),
@@ -223,9 +218,7 @@ for the co-expression module inference is used.
 
 .. code-block:: python
 
-    N_SAMPLES = ex_matrix.shape[1] # Full dataset
-    adjacencies = grnboost2(expression_data=ex_matrix.T.sample(n=N_SAMPLES, replace=False),
-                        tf_names=tf_names, verbose=True)
+    adjacencies = grnboost2(expression_data=ex_matrix, tf_names=tf_names, verbose=True)
 
 Derive potential regulons from these co-expression modules
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -254,7 +247,7 @@ In addition, the transcription factor is added to the module and modules that ha
 
 .. code-block:: python
 
-    modules = list(modules_from_adjacencies(adjacencies, ex_matrix.T))
+    modules = list(modules_from_adjacencies(adjacencies, ex_matrix))
 
 
 Phase II: Prune modules for targets with cis regulatory footprints (aka RcisTarget)
@@ -263,7 +256,8 @@ Phase II: Prune modules for targets with cis regulatory footprints (aka RcisTarg
 .. code-block:: python
 
     # Calculate a list of enriched motifs and the corresponding target genes for all modules.
-    df = prune2df(dbs, modules, MOTIF_ANNOTATIONS_FNAME)
+    with ProgressBar():
+	    df = prune2df(dbs, modules, MOTIF_ANNOTATIONS_FNAME)
 
     # Create regulons from this table of enriched motifs.
     regulons = df2regulons(df)
@@ -271,16 +265,6 @@ Phase II: Prune modules for targets with cis regulatory footprints (aka RcisTarg
     # Save these regulons to disk in binary "pickled" format.
     with open(REGULONS_FNAME, "wb") as f:
         pickle.dump(regulons, f)
-
-If running on a single multi-core machine, the following code snippet exploits all cores and provides you
-a progress bar:
-
-.. code-block:: python
-
-    from dask.diagnostics import ProgressBar
-
-    with ProgressBar():
-	    df = prune2df(dbs, modules, MOTIF_ANNOTATIONS_FNAME, client_or_address="dask_multiprocessing")
 
 Directly calculating regulons without the intermediate dataframe of enriched features is also possible:
 
@@ -307,7 +291,7 @@ regulons. Enrichment of a regulon is measured as the Area Under the recovery Cur
 
 .. code-block:: python
 
-    auc_mtx = aucell(ex_matrix.T, regulons, num_workers=4)
+    auc_mtx = aucell(ex_matrix, regulons, num_workers=4)
     sns.clustermap(auc_mtx, figsize=(8,8))
 
 Command Line Interface
@@ -346,11 +330,11 @@ License
 
 GNU General Public License v3
 
+
 Acknowledgments
 ---------------
 
 We are grateful to all providers of TF-annotated position weight matrices, in particular Martha Bulyk (UNIPROBE), Wyeth Wasserman and Albin Sandelin (JASPAR), BioBase (TRANSFAC), Scot Wolfe and Michael Brodsky (FlyFactorSurvey) and Timothy Hughes (cisBP).
-
 
 References
 ----------
@@ -378,4 +362,7 @@ References
 
 .. |docstatus| image:: https://readthedocs.org/projects/pyscenic/badge/?version=latest
 .. _docstatus: http://pyscenic.readthedocs.io/en/latest/?badge=latest
+
+.. |bioconda| image:: https://img.shields.io/badge/install%20with-bioconda-brightgreen.svg?style=flat-square
+.. _bioconda: https://anaconda.org/bioconda/pyscenic
 
