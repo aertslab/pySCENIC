@@ -224,6 +224,21 @@ def _distributed_calc(rnkdbs: Sequence[Type[RankingDatabase]], modules: Sequence
             delayed_or_future_annotations = client.scatter(motif_annotations, broadcast=True) if client \
                                                 else delayed(motif_annotations, pure=True)
 
+            # TODO: Also broadcast the databases. Although they are just a stub to the disk they still take up
+            # TODO: substantial information (1.7Mb TBI) and therefore necessitate  broadcasting. The weird thing
+            # TODO: here is that it should only contain name and fname! But memoization could increase it!
+            #/user/leuven/304/vsc30402/data/miniconda3/envs/pyscenic/lib/python3.6/site-packages/distributed/worker.py:742: UserWarning: Large object of size 1.71 MB detected in task graph:
+            # (FeatherRankingDatabase(name="mm9-tss-centered-10k ... 00817ba90c387')
+            #  Consider scattering large objects ahead of time
+            #  with client.scatter to reduce scheduler burden and
+            #  keep data on workers
+            #
+            #  future = client.submit(func, big_data)    # bad
+            #
+            # big_future = client.scatter(big_data)     # good
+            # future = client.submit(func, big_future)  # good
+            #          % (format_bytes(len(b)), s)`
+
             # Chunking the gene signatures might not be necessary anymore because the overhead of the dask
             # scheduler is minimal (cf. blog http://matthewrocklin.com/blog/work/2016/05/05/performant-task-scheduling).
             # The original behind the decision to implement this was the refuted assumption that fast executing tasks
