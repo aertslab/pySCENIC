@@ -146,7 +146,7 @@ First we import the necessary modules and declare some constants:
     from arboretum.algo import grnboost2
 
     from pyscenic.rnkdb import FeatherRankingDatabase as RankingDatabase
-    from pyscenic.utils import modules_from_adjacencies
+    from pyscenic.utils import modules_from_adjacencies, load_motifs
     from pyscenic.prune import prune, prune2df, df2regulons
     from pyscenic.aucell import aucell
 
@@ -161,6 +161,7 @@ First we import the necessary modules and declare some constants:
     MM_TFS_FNAME = os.path.join(RESOURCES_FOLDER, 'mm_tfs.txt')
     SC_EXP_FNAME = os.path.join(RESOURCES_FOLDER, "GSE60361_C1-3005-Expression.txt")
     REGULONS_FNAME = os.path.join(DATA_FOLDER, "regulons.p")
+    MOTIFS_FNAME = os.path.join(DATA_FOLDER, "motifs.csv")
 
 
 Preliminary work
@@ -262,7 +263,8 @@ Phase II: Prune modules for targets with cis regulatory footprints (aka RcisTarg
     # Create regulons from this table of enriched motifs.
     regulons = df2regulons(df)
 
-    # Save these regulons to disk in binary "pickled" format.
+    # Save the enriched motifs and the discovered regulons to disk.
+    df.to_csv(MOTIFS_FNAME)
     with open(REGULONS_FNAME, "wb") as f:
         pickle.dump(regulons, f)
 
@@ -282,6 +284,14 @@ Clusters can be leveraged in the following way:
 
     # or alternatively:
     regulons = prune(dbs, modules, MOTIF_ANNOTATIONS_FNAME, client_or_address=SCHEDULER)
+
+Reloading the enriched motifs and regulons from file should be done as follows:
+
+.. code-block:: python
+
+    df = load_motifs(MOTIFS_FNAME)
+    with open(REGULONS_FNAME, "rb") as f:
+        regulons = pickle.load(f)
 
 Phase III: Cellular regulon enrichment matrix (aka AUCell)
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
