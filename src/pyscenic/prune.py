@@ -261,6 +261,18 @@ def _distributed_calc(rnkdbs: Sequence[Type[RankingDatabase]], modules: Sequence
             # of recovery curves - 20K features (max. enriched) * rank_threshold * 8 bytes (float) * num_cores),
             # this might not be a sound idea to do.
 
+            # NOTE ON REMAINING WARNINGS:
+            # >> distributed.worker - WARNING - Memory use is high but worker has no data to store to disk.
+            # >> Perhaps some other process is leaking memory?  Process memory: 1.51 GB -- Worker memory limit: 2.15 GB
+            # My current idea is that this cannot be avoided processing a single module can sometimes required
+            # substantial amount of memory because of pre-allocation of recovery curves (see code notes on how to
+            # mitigate this problem). Setting module_chunksize=1 also limits this problem.
+            #
+            # >> distributed.utils_perf - WARNING - full garbage collections took 10% CPU time recently (threshold: 10%)
+            # The current implementation of module2df removes substantial amounts of memory (i.e. the RCCs) so this might
+            # again be unavoidable. TBI + See following stackoverflow question:
+            # https://stackoverflow.com/questions/47776936/why-is-a-computation-much-slower-within-a-dask-distributed-worker
+
             return aggregate_func(
                         (delayed(transform_func)
                             (db, gs_chunk, delayed_or_future_annotations)
