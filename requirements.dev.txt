@@ -29,3 +29,4 @@ tqdm
 sphinx
 interlap
 loompy
+Pillow>=5.0.0
