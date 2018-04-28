@@ -156,7 +156,7 @@ First we import the necessary modules and declare some constants:
     RESOURCES_FOLDER="~/resources"
     DATABASE_FOLDER = "~/databases/"
     SCHEDULER="123.122.8.24:8786"
-    FEATHER_GLOB = os.path.join(DATABASE_FOLDER, "mm9-*.feather")
+    DATABASES_GLOB = os.path.join(DATABASE_FOLDER, "mm9-*.feather")
     MOTIF_ANNOTATIONS_FNAME = os.path.join(RESOURCES_FOLDER, "motifs-v9-nr.mgi-m0.001-o0.0.tbl")
     MM_TFS_FNAME = os.path.join(RESOURCES_FOLDER, 'mm_tfs.txt')
     SC_EXP_FNAME = os.path.join(RESOURCES_FOLDER, "GSE60361_C1-3005-Expression.txt")
@@ -190,7 +190,7 @@ Finally the ranking databases are loaded:
 
 .. code-block:: python
 
-    db_fnames = glob.glob(FEATHER_GLOB)
+    db_fnames = glob.glob(DATABASES_GLOB)
     def name(fname):
         return os.path.basename(fname).split(".")[0]
     dbs = [RankingDatabase(fname=fname, name=name(fname)) for fname in db_fnames]
@@ -219,7 +219,7 @@ for the co-expression module inference is used.
 
 .. code-block:: python
 
-    adjacencies = grnboost2(expression_data=ex_matrix, tf_names=tf_names, verbose=True)
+    adjacencies = grnboost2(ex_matrix, tf_names=tf_names, verbose=True)
 
 Derive potential regulons from these co-expression modules
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
