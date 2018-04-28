@@ -42,8 +42,10 @@ class RegionRankingDatabase(InvertedRankingDatabase):
     # signature). Potential mitigation challenges are:
     #  - Recoding the decompression of the inverted design using C++ and its standard template library. Impact will only
     #    be a constant factor while personal investment will be substantial.
-    #  - Break the clean interface between database storage and AUC and recovery curve calculation. The exact order of
-    #    the genes is not really required for AUC calculation so decompression times could be significantly reduced.
+    #  - Break the clean interface between database storage and AUC and recovery curve calculation. The name of the
+    #    genes that are at the top of a feature ranking is not necessary to calculate the AUC for enrichment of this
+    #    feature. This fact can be used so that decompression times could be significantly reduced.
+    #
     def __init__(self, fname: str, name: str):
         super().__init__(fname, name)
 
