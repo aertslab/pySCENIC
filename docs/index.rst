@@ -258,7 +258,7 @@ Phase II: Prune modules for targets with cis regulatory footprints (aka RcisTarg
 
     # Calculate a list of enriched motifs and the corresponding target genes for all modules.
     with ProgressBar():
-	    df = prune2df(dbs, modules, MOTIF_ANNOTATIONS_FNAME)
+        df = prune2df(dbs, modules, MOTIF_ANNOTATIONS_FNAME)
 
     # Create regulons from this table of enriched motifs.
     regulons = df2regulons(df)
