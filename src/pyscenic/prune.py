@@ -241,16 +241,24 @@ def _distributed_calc(rnkdbs: Sequence[Type[RankingDatabase]], modules: Sequence
             # the name and location on shared storage as fields. For consistency reason we do broadcast these database
             # objects to the workers. If we decide to have all information of a database loaded into memory we can still
             # safely use clusters.
+            #def memoize(db: Type[RankingDatabase]) -> Type[RankingDatabase]:
+            #    return MemoryDecorator(db)
+            #delayed_or_future_dbs = list(map(wrap, map(memoize, rnkdbs)))
             delayed_or_future_dbs = list(map(wrap, rnkdbs))
             # 3. The gene signatures: these signatures become large when chunking them, therefore chunking is overruled
             # when using dask.distributed.
             if client:
                 module_chunksize = 1
 
-            # NOTE ON RANKING DATABASES ON DISK:
-            # Remark on sharing ranking databases across a cluster. Because the frontnodes of the VSC for the LCB share
-            # a file server and have a common home folder configured, these database (stored on this shared drive)
-            # can be accessed from all nodes in the cluster and can all use the same path in the configuration file.
+            # NOTE ON SHARING RANKING DATABASES ACROSS NODES:
+            # Because the frontnodes of the VSC share the staging disk, these databases can be accessed from all nodes
+            # in the cluster and can all use the same path in the configuration file. The RankingDatabase objects shared
+            # from scheduler to workers can therefore be just contain information on database file location.
+            # There might be a need to be able to run on clusters that do not share a network drive. This can be
+            # achieved via by loading all data in from the scheduler and use the broadcasting system to share data
+            # across nodes. The only element that needs to be adapted to cater for this need is loading the databases
+            # in memory on the scheduler via the already available MemoryDecorator for databases. But make sure the
+            # adapt memory limits for workers to avoid "distributed.nanny - WARNING - Worker exceeded 95% memory budget.".
 
             # NOTE ON REMOVING I/O CONTENTION:
             # A potential improvement to reduce I/O contention for this shared drive (accessing the ranking
