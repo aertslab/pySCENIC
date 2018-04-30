@@ -34,10 +34,16 @@ def test_create_rankings():
     assert (df_rnk + 1).sum(axis=1).unique()[0] == (n_genes * (n_genes+1))/2.0
 
 
-def test_aucell():
+def test_aucell_w1():
     ex_mtx = exp_matrix()
     percentiles = derive_auc_threshold(ex_mtx)
     aucs_mtx = aucell(ex_mtx, gs(), auc_threshold=percentiles[0.01], num_workers=1)
+
+
+def test_aucell_w2():
+    ex_mtx = exp_matrix()
+    percentiles = derive_auc_threshold(ex_mtx)
+    aucs_mtx = aucell(ex_mtx, gs(), auc_threshold=percentiles[0.01], num_workers=4)
 
 
 
