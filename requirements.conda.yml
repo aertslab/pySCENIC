@@ -1,0 +1,79 @@
+name: pyscenic
+channels:
+- defaults
+dependencies:
+- bokeh=0.12.15=py36_0
+- ca-certificates=2018.03.07=0
+- certifi=2018.4.16=py36_0
+- click=6.7=py36h5253387_0
+- cloudpickle=0.5.2=py36_1
+- cytoolz=0.9.0.1=py36h14c3975_0
+- dask=0.17.2=py36_0
+- dask-core=0.17.2=py36_0
+- distributed=1.21.6=py36_0
+- heapdict=1.0.0=py36_2
+- intel-openmp=2018.0.0=8
+- jinja2=2.10=py36ha16c418_0
+- libedit=3.1=heed3624_0
+- libffi=3.2.1=hd88cf55_4
+- libgcc-ng=7.2.0=hdf63c60_3
+- libgfortran-ng=7.2.0=hdf63c60_3
+- libopenblas=0.2.20=h9ac9557_4
+- libstdcxx-ng=7.2.0=hdf63c60_3
+- llvmlite=0.22.0=py36ha27ea49_0
+- locket=0.2.0=py36h787c0ad_1
+- markupsafe=1.0=py36hd9260cd_1
+- mkl=2018.0.2=1
+- mkl_fft=1.0.1=py36h3010b51_0
+- mkl_random=1.0.1=py36h629b387_0
+- msgpack-python=0.5.6=py36h6bb024c_0
+- ncurses=6.0=h9df7e31_2
+- numba=0.37.0=np114py36h5fcf951_0
+- numpy=1.14.2=py36hdbf6ddf_1
+- openblas=0.2.20=4
+- openblas-devel=0.2.20=4
+- openssl=1.0.2o=h20670df_0
+- packaging=17.1=py36_0
+- pandas=0.22.0=py36hf484d3e_0
+- partd=0.3.8=py36h36fd896_0
+- pip=9.0.3=py36_0
+- psutil=5.4.5=py36h14c3975_0
+- pyparsing=2.2.0=py36hee85983_1
+- python=3.6.5=hc3d631a_1
+- python-dateutil=2.7.2=py36_0
+- pytz=2018.4=py36_0
+- pyyaml=3.12=py36hafb9ca4_1
+- readline=7.0=ha6073c6_4
+- setuptools=39.0.1=py36_0
+- six=1.11.0=py36h372c433_1
+- sortedcontainers=1.5.10=py36_0
+- sqlite=3.23.1=he433501_0
+- tblib=1.3.2=py36h34cf8b6_0
+- tk=8.6.7=hc745277_3
+- toolz=0.9.0=py36_0
+- tornado=5.0.2=py36_0
+- wheel=0.31.0=py36_0
+- xz=5.2.3=h5e939de_4
+- yaml=0.1.7=had09818_2
+- zict=0.1.3=py36h3a3bf81_0
+- zlib=1.2.11=ha838bed_2
+- pip:
+  - arboretum==0.1.3
+  - attrs==17.4.0
+  - boltons==18.0.0
+  - dill==0.2.7.1
+  - feather-format==0.4.0
+  - frozendict==1.2
+  - h5py==2.7.1
+  - interlap==0.2.6
+  - loompy==2.0.8
+  - mkl-fft==1.0.0
+  - mkl-random==1.0.1
+  - multiprocessing-on-dill==3.5.0a4
+  - pyarrow==0.8.0
+  - pyscenic==0.8.1
+  - scikit-learn==0.19.1
+  - scipy==1.0.1
+  - tqdm==4.23.1
+  - typing==3.6.4
+  - umap-learn==0.2.3
