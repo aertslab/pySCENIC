@@ -46,4 +46,12 @@ def test_aucell_w2():
     aucs_mtx = aucell(ex_mtx, gs(), auc_threshold=percentiles[0.01], num_workers=4)
 
 
+def test_aucell_mismatch():
+    ex_mtx = exp_matrix()
+    percentiles = derive_auc_threshold(ex_mtx)
+    gss = [GeneSignature(name="test", gene2weight=list(map("FAKE{}".format, range(100))))] + gs()
+    aucs_mtx = aucell(ex_mtx, gss, auc_threshold=percentiles[0.01], num_workers=1)
+    print(aucs_mtx.head())
+
+
 
