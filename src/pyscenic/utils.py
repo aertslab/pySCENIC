@@ -80,34 +80,6 @@ def _create_idx_pairs(adjacencies: pd.DataFrame, exp_mtx: pd.DataFrame) -> np.nd
     return np.array([[symbol2idx[s1], symbol2idx[s2]] for s1, s2 in zip(adjacencies.TF, adjacencies.target)])
 
 
-def _create_apply_function(adjacencies: pd.DataFrame, ex_mtx: pd.DataFrame,
-                           rho_threshold=RHO_THRESHOLD, mask_dropouts=False):
-    if mask_dropouts:
-        ex_mtx = ex_mtx.sort_index(axis=1)
-        col_idx_pairs = _create_idx_pairs(adjacencies, ex_mtx)
-        rhos = masked_rho4pairs(ex_mtx.values, col_idx_pairs, 0.0)
-        link2rho = {(tf, target): rho for tf, target, rho in zip(adjacencies.TF, adjacencies.target, rhos)}
-        def add_regulation(row):
-            tf = row[COLUMN_NAME_TF]
-            target = row[COLUMN_NAME_TARGET]
-            rho = link2rho[(tf, target)]
-            return pd.Series(index=[COLUMN_NAME_REGULATION, COLUMN_NAME_CORRELATION],
-                             data=[int(rho > rho_threshold) - int(rho < -rho_threshold), rho])
-        return add_regulation
-    else:
-        genes = list(set(adjacencies[COLUMN_NAME_TF]).union(set(adjacencies[COLUMN_NAME_TARGET])))
-        ex_mtx = ex_mtx[ex_mtx.columns[ex_mtx.columns.isin(genes)]]
-        corr_mtx = pd.DataFrame(index=ex_mtx.columns, columns=ex_mtx.columns,
-                                data=np.corrcoef(ex_mtx.values.T))
-        def add_regulation(row):
-            tf = row[COLUMN_NAME_TF]
-            target = row[COLUMN_NAME_TARGET]
-            rho = corr_mtx[target][tf]
-            return pd.Series(index=[COLUMN_NAME_REGULATION, COLUMN_NAME_CORRELATION],
-                         data=[int(rho > rho_threshold) - int(rho < -rho_threshold), rho])
-        return add_regulation
-
-
 def add_correlation(adjacencies: pd.DataFrame, ex_mtx: pd.DataFrame,
                     rho_threshold=RHO_THRESHOLD, mask_dropouts=False) -> pd.DataFrame:
     """
@@ -123,8 +95,9 @@ def add_correlation(adjacencies: pd.DataFrame, ex_mtx: pd.DataFrame,
     """
     assert rho_threshold > 0, "rho_threshold should be greater than 0."
 
-    # Take defensive copy of adjacencies.
-    adjacencies = adjacencies.copy()
+    # TODO: Use Spearman correlation instead of Pearson correlation coefficient: Using a non-parametric test like
+    # Spearman rank correlation makes much more sense because we want to capture monotonic and not specifically linear
+    # relationships between TF and target genes.
 
     # Assessment of best optimization strategy for calculating dropout masked correlations between TF-target expression:
     #
@@ -151,10 +124,24 @@ def add_correlation(adjacencies: pd.DataFrame, ex_mtx: pd.DataFrame,
     # below.
 
     # Calculate Pearson correlation to infer repression or activation.
-    func = _create_apply_function(adjacencies, ex_mtx, rho_threshold, mask_dropouts)
-    adjacencies[[COLUMN_NAME_REGULATION, COLUMN_NAME_CORRELATION]] = adjacencies.apply(func, axis=1)
+    if mask_dropouts:
+        ex_mtx = ex_mtx.sort_index(axis=1)
+        col_idx_pairs = _create_idx_pairs(adjacencies, ex_mtx)
+        rhos = masked_rho4pairs(ex_mtx.values, col_idx_pairs, 0.0)
+    else:
+        genes = list(set(adjacencies[COLUMN_NAME_TF]).union(set(adjacencies[COLUMN_NAME_TARGET])))
+        ex_mtx = ex_mtx[ex_mtx.columns[ex_mtx.columns.isin(genes)]]
+        corr_mtx = pd.DataFrame(index=ex_mtx.columns, columns=ex_mtx.columns,
+                                data=np.corrcoef(ex_mtx.values.T))
+        rhos = np.array([corr_mtx[s2][s1] for s1, s2 in zip(adjacencies.TF, adjacencies.target)])
 
-    return adjacencies
+    regulations = (rhos > rho_threshold).astype(int) - (rhos < -rho_threshold).astype(int)
+    return pd.DataFrame(data={
+        COLUMN_NAME_TF: adjacencies[COLUMN_NAME_TF].values,
+        COLUMN_NAME_TARGET: adjacencies[COLUMN_NAME_TARGET].values,
+        COLUMN_NAME_WEIGHT: adjacencies[COLUMN_NAME_WEIGHT].values,
+        COLUMN_NAME_REGULATION: regulations,
+        COLUMN_NAME_CORRELATION: rhos})
 
 
 def modules4thr(adjacencies, threshold, context=frozenset(), pattern="weight>{:.3f}"):
