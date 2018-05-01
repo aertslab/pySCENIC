@@ -285,6 +285,9 @@ Clusters can be leveraged in the following way:
     # or alternatively:
     regulons = prune(dbs, modules, MOTIF_ANNOTATIONS_FNAME, client_or_address=SCHEDULER)
 
+.. caution::
+    The nodes of the clusters need to have access to a shared network drive on which the ranking databases are stored.
+
 Reloading the enriched motifs and regulons from file should be done as follows:
 
 .. code-block:: python

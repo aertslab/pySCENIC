@@ -268,6 +268,10 @@ def _distributed_calc(rnkdbs: Sequence[Type[RankingDatabase]], modules: Sequence
             # However, because of the memory need of a node running pyscenic is already high (i.e. pre-allocation
             # of recovery curves - 20K features (max. enriched) * rank_threshold * 8 bytes (float) * num_cores),
             # this might not be a sound idea to do.
+            # Another approach to overcome the I/O bottleneck in a clustered infrastructure is to assign each cluster
+            # to a different database which is achievable in the dask framework. This approach has of course many
+            # limitations: for 6 database you need at least 6 cores and you cannot take advantage of more
+            # (http://distributed.readthedocs.io/en/latest/locality.html)
 
             # NOTE ON REMAINING WARNINGS:
             # >> distributed.worker - WARNING - Memory use is high but worker has no data to store to disk.
