@@ -1,4 +1,3 @@
-
 pySCENIC
 ========
 
@@ -20,7 +19,7 @@ The pipeline has three steps:
 3. Finally, the original cells are differentiated and clustered on the activity of these discovered regulons.
 
 .. note::
-The most impactfull speed improvement is introduced by the arboretum_ package in step 1. This package provides an alternative to GENIE3 [3]_ called GRNBoost2. This package can be controlled from within pySCENIC.
+    The most impactfull speed improvement is introduced by the arboretum_ package in step 1. This package provides an alternative to GENIE3 [3]_ called GRNBoost2. This package can be controlled from within pySCENIC.
 
 .. sidebar:: **Quick Start**
 
@@ -46,7 +45,7 @@ Installation
 The lastest stable release of the **package** itself can be installed via :code:`pip install pyscenic`.
 
 .. caution::
-pySCENIC needs a python 3.5 or greater interpreter.
+    pySCENIC needs a python 3.5 or greater interpreter.
 
 You can also install the bleeding edge (i.e. less stable) version of the package directly from the source:
 
@@ -122,7 +121,7 @@ dm6-5kb-upstream-full-tx_           Drosophila melanogaster     [TSS+5kb,full Tx
 .. _`Flybase annotations`: http://pyscenic.aertslab.org/resources/motifs-v8-nr.flybase-m0.001-o0.0.tbl
 
 .. caution::
-These ranking databases are 1.1 Gb each so downloading them might take a while. An annotations file is typically 100Mb in size.
+    These ranking databases are 1.1 Gb each so downloading them might take a while. An annotations file is typically 100Mb in size.
 
 Tutorial
 --------
@@ -230,7 +229,7 @@ The first method to create the TF-modules is to select the best targets for each
 
 1. Targets with importance > the 50th percentile.
 2. Targets with importance > the 75th percentile
-2. Targets with importance > the 90th percentile.
+3. Targets with importance > the 90th percentile.
 
 The second method is to select the top targets for a given TF:
 
