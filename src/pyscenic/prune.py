@@ -145,7 +145,7 @@ def _distributed_calc(rnkdbs: Sequence[Type[RankingDatabase]], modules: Sequence
                       transform_func: Callable[[Type[RankingDatabase], Sequence[Type[GeneSignature]], str], T],
                       aggregate_func: Callable[[Sequence[T]], T],
                       motif_similarity_fdr: float = 0.001, orthologuous_identity_threshold: float = 0.0,
-                      client_or_address='custom_multiprocessing',
+                      client_or_address='dask_multiprocessing',
                       num_workers=None, module_chunksize=100) -> T:
     """
     Perform a parallelized or distributed calculation, either pruning targets or finding enriched motifs.
@@ -178,6 +178,9 @@ def _distributed_calc(rnkdbs: Sequence[Type[RankingDatabase]], modules: Sequence
             return True
         return False
     assert is_valid(client_or_address), "\"{}\"is not valid for parameter client_or_address.".format(client_or_address)
+
+    if client_or_address not in {'custom_multiprocessing', 'dask_multiprocessing'}:
+        module_chunksize = 1
 
     # Make sure warnings and info are being logged.
     if not len(LOGGER.handlers):
@@ -226,7 +229,7 @@ def _distributed_calc(rnkdbs: Sequence[Type[RankingDatabase]], modules: Sequence
             # would greatly be impacted by scheduler overhead. The chunking of signatures seemed to corroborate
             # this assumption. However, the benefit was through less pickling and unpickling of the motif annotations
             # dataframe as this was not wrapped in a delayed() construct.
-            # When using a distributed scheduler chuncking is overruled to avoid having these large chunks to be shipped
+            # When using a distributed scheduler chunking is overruled to avoid having these large chunks to be shipped
             # to different workers across cluster nodes.
 
             # NOTE ON BROADCASTING DATASET:
@@ -247,8 +250,7 @@ def _distributed_calc(rnkdbs: Sequence[Type[RankingDatabase]], modules: Sequence
             delayed_or_future_dbs = list(map(wrap, rnkdbs))
             # 3. The gene signatures: these signatures become large when chunking them, therefore chunking is overruled
             # when using dask.distributed.
-            if client:
-                module_chunksize = 1
+            # See earlier.
 
             # NOTE ON SHARING RANKING DATABASES ACROSS NODES:
             # Because the frontnodes of the VSC share the staging disk, these databases can be accessed from all nodes
@@ -308,7 +310,7 @@ def prune(rnkdbs: Sequence[Type[RankingDatabase]], modules: Sequence[Regulon],
                          motif_annotations_fname: str,
                          rank_threshold: int = 1500, auc_threshold: float = 0.05, nes_threshold=3.0,
                          motif_similarity_fdr: float = 0.001, orthologuous_identity_threshold: float = 0.0,
-                         weighted_recovery=False, client_or_address='custom_multiprocessing',
+                         weighted_recovery=False, client_or_address='dask_multiprocessing',
                          num_workers=None, module_chunksize=100) -> Sequence[Regulon]:
     """
     Calculate all regulons for a given sequence of ranking databases and a sequence of co-expression modules.
