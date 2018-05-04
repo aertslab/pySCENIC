@@ -162,3 +162,13 @@ def test_noweights():
     assert reg2['TP53'] == 1.0
     assert isinstance(reg2, Regulon)
 
+def test_head():
+    gs1 = GeneSignature(name="test1", gene2weight={'TP53': 0.8, 'SOX4': 0.75})
+    gs2 = gs1.head(1)
+    assert gs2['TP53'] == 0.8
+    assert len(gs2) == 1
+    gs2 = gs1.head(2)
+    assert gs2['TP53'] == 0.8
+    assert gs2['SOX4'] == 0.75
+    assert len(gs2) == 2
+
