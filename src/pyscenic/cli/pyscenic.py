@@ -282,8 +282,8 @@ def create_argument_parser():
     parser_ctx.add_argument('-n', '--no_pruning', action='store_const', const = 'yes',
                               help='Do not perform pruning, i.e. find enriched motifs.')
     parser_ctx.add_argument('--chunk_size',
-                       type=int, default=1,
-                       help='The size of the module chunks assigned to a node in the dask graph (default: 1).')
+                       type=int, default=100,
+                       help='The size of the module chunks assigned to a node in the dask graph (default: 100).')
     parser_ctx.add_argument('--mode',
                        choices=['custom_multiprocessing', 'dask_multiprocessing', 'dask_cluster'],
                        default='dask_multiprocessing',
