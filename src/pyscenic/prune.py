@@ -36,6 +36,12 @@ from .transform import module2features_auc1st_impl, modules2regulons, modules2df
 __all__ = ['prune', 'prune2df', 'find_features', 'df2regulons']
 
 
+#TODO: Performance benchmarking has shown that the custom_multiprocessing strategy performs equally well as
+#the dask-based approach. It is therefore better to remove this custom approach all together.
+#TODO: A second simplification would be to only use the distributed scheduler (similar to the arboretum package).
+# A progressbar can still be provided: http://dask.pydata.org/en/latest/diagnostics-distributed.html
+
+
 # Taken from: https://www.regular-expressions.info/ip.html
 IP_PATTERN = re.compile(
     r"""(25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[1-9]?[0-9])\.""" 
@@ -146,7 +152,7 @@ def _distributed_calc(rnkdbs: Sequence[Type[RankingDatabase]], modules: Sequence
                       aggregate_func: Callable[[Sequence[T]], T],
                       motif_similarity_fdr: float = 0.001, orthologuous_identity_threshold: float = 0.0,
                       client_or_address='dask_multiprocessing',
-                      num_workers=None, module_chunksize=100) -> T:
+                      num_workers=None) -> T:
     """
     Perform a parallelized or distributed calculation, either pruning targets or finding enriched motifs.
 
@@ -165,10 +171,9 @@ def _distributed_calc(rnkdbs: Sequence[Type[RankingDatabase]], modules: Sequence
         systems 'custom_multiprocessing' or 'dask_multiprocessing' can be supplied.
     :param num_workers: If not using a cluster, the number of workers to use for the calculation.
         None of all available CPUs need to be used.
-    :param module_chunksize: The size of the chunk in signatures to use when using the dask framework with the
-        multiprocessing scheduler.
     :return: A pandas dataframe or a sequence of regulons (depends on aggregate function supplied).
     """
+    # Validate arguments.
     def is_valid(client_or_address):
         if isinstance(client_or_address, str) and ((client_or_address in
                                                     {"custom_multiprocessing", "dask_multiprocessing", "local"})
@@ -179,19 +184,16 @@ def _distributed_calc(rnkdbs: Sequence[Type[RankingDatabase]], modules: Sequence
         return False
     assert is_valid(client_or_address), "\"{}\"is not valid for parameter client_or_address.".format(client_or_address)
 
-    if client_or_address not in {'custom_multiprocessing', 'dask_multiprocessing'}:
-        module_chunksize = 1
-
     # Make sure warnings and info are being logged.
     if not len(LOGGER.handlers):
         LOGGER.addHandler(create_logging_handler(False))
         if LOGGER.getEffectiveLevel() > logging.INFO:
             LOGGER.setLevel(logging.INFO)
 
-    if client_or_address == 'custom_multiprocessing': # CUSTOM parallelized implementation.
+    # CUSTOM parallelized implementation ===============================================================================
+    if client_or_address == 'custom_multiprocessing':
         # This implementation overcomes the I/O-bounded performance. Each worker (subprocess) loads a dedicated ranking
-        # database and motif annotation table into its own memory space before consuming module. The implementation of
-        # each worker uses the AUC-first numba JIT based implementation of the algorithm.
+        # database and motif annotation table into its own memory space before consuming modules.
         assert len(rnkdbs) <= num_workers if num_workers else cpu_count(), "The number of databases is larger than the number of cores."
         amplifier = int((num_workers if num_workers else cpu_count())/len(rnkdbs))
         LOGGER.info("Using {} workers.".format(len(rnkdbs) * amplifier))
@@ -214,7 +216,8 @@ def _distributed_calc(rnkdbs: Sequence[Type[RankingDatabase]], modules: Sequence
             # Remove temporary files.
             for fname in fnames:
                 os.remove(fname)
-    else: # DASK framework.
+    # DASK framework based implementation ==============================================================================
+    else:
         # Load motif annotations.
         motif_annotations = load_motif_annotations(motif_annotations_fname,
                                                    motif_similarity_fdr=motif_similarity_fdr,
@@ -222,60 +225,32 @@ def _distributed_calc(rnkdbs: Sequence[Type[RankingDatabase]], modules: Sequence
 
         # Create dask graph.
         def create_graph(client=None):
-            # NOTE ON CHUNKING SIGNATURES:
-            # Chunking the gene signatures might not be necessary anymore because the overhead of the dask
-            # scheduler is minimal (cf. blog http://matthewrocklin.com/blog/work/2016/05/05/performant-task-scheduling).
-            # The original behind the decision to implement this was the refuted assumption that fast executing tasks
-            # would greatly be impacted by scheduler overhead. The chunking of signatures seemed to corroborate
-            # this assumption. However, the benefit was through less pickling and unpickling of the motif annotations
-            # dataframe as this was not wrapped in a delayed() construct.
-            # When using a distributed scheduler chunking is overruled to avoid having these large chunks to be shipped
-            # to different workers across cluster nodes.
-
-            # NOTE ON BROADCASTING DATASET:
-            # There are three large pieces of data that need to be orchestrated between scheduler and workers:
-            # 1. In a cluster the motif annotations need to be broadcasted to all nodes. Otherwise
-            # the motif annotations need to wrapped in a delayed() construct to avoid needless pickling and
-            # unpicking between processes.
-            def wrap(data):
+            def broadcast_singleton(data):
                 return client.scatter(data, broadcast=True) if client else delayed(data, pure=True)
-            delayed_or_future_annotations = wrap(motif_annotations)
-            # 2. The databases: these database objects are typically should proxies to the data on disk. The only have
-            # the name and location on shared storage as fields. For consistency reason we do broadcast these database
+
+            def broadcast(items):
+                return client.scatter(items, broadcast=True) if client else list(map(partial(delayed, pure=True), items))
+
+            def scatter(items):
+                return client.scatter(items, broadcast=False) if client else items
+
+            # NOTE ON BROADCASTING/SCATTERING DATASETS:
+            # There are three large pieces of data that need to be orchestrated between scheduler and workers:
+            # 1. The motif annotation dataframe: In a cluster the motif annotations need to be broadcasted to all nodes.
+            # On a single node, the motif annotations need to wrapped in a delayed() construct to avoid needless pickling
+            # and unpicking between processes.
+            delayed_or_future_annotations = broadcast_singleton(motif_annotations)
+            # 2. The databases: these database objects are "proxies" to the data on disk, i.e. they only have
+            # the name and location on shared storage as fields. For reasons of consistency, we do broadcast these database
             # objects to the workers. If we decide to have all information of a database loaded into memory we can still
             # safely use clusters.
-            #def memoize(db: Type[RankingDatabase]) -> Type[RankingDatabase]:
-            #    return MemoryDecorator(db)
-            #delayed_or_future_dbs = list(map(wrap, map(memoize, rnkdbs)))
-            delayed_or_future_dbs = list(map(wrap, rnkdbs))
-            # 3. The gene signatures: these signatures become large when chunking them, therefore chunking is overruled
-            # when using dask.distributed.
-            # See earlier.
+            delayed_or_future_dbs = broadcast(rnkdbs)
+            # 3. The gene signatures or modules: these signatures are quite small and therefore do not really need to be
+            # wrapped in a delayed() construct when dask is used in a multiprocessing setting. When running on a cluster
+            # it is better to explicitly inform the framework that these modules need to be scatter across workers.
+            delayed_or_future_modules = scatter(modules)
 
-            # NOTE ON SHARING RANKING DATABASES ACROSS NODES:
-            # Because the frontnodes of the VSC share the staging disk, these databases can be accessed from all nodes
-            # in the cluster and can all use the same path in the configuration file. The RankingDatabase objects shared
-            # from scheduler to workers can therefore be just contain information on database file location.
-            # There might be a need to be able to run on clusters that do not share a network drive. This can be
-            # achieved via by loading all data in from the scheduler and use the broadcasting system to share data
-            # across nodes. The only element that needs to be adapted to cater for this need is loading the databases
-            # in memory on the scheduler via the already available MemoryDecorator for databases. But make sure the
-            # adapt memory limits for workers to avoid "distributed.nanny - WARNING - Worker exceeded 95% memory budget.".
-
-            # NOTE ON REMOVING I/O CONTENTION:
-            # A potential improvement to reduce I/O contention for this shared drive (accessing the ranking
-            # database) would be to load the database in memory (using the available decorator) for each task.
-            # The penalty of loading the database in memory should be shared across multiple gene signature so
-            # in this case chunking of gene signatures is mandatory to avoid severe performance penalties.
-            # However, because of the memory need of a node running pyscenic is already high (i.e. pre-allocation
-            # of recovery curves - 20K features (max. enriched) * rank_threshold * 8 bytes (float) * num_cores),
-            # this might not be a sound idea to do.
-            # Another approach to overcome the I/O bottleneck in a clustered infrastructure is to assign each cluster
-            # to a different database which is achievable in the dask framework. This approach has of course many
-            # limitations: for 6 database you need at least 6 cores and you cannot take advantage of more
-            # (http://distributed.readthedocs.io/en/latest/locality.html)
-
-            # NOTE ON REMAINING WARNINGS:
+            # NOTE ON REMAINING WARNINGS WHEN RUNNING VIA DISTRIBUTED SCHEDULER:
             # >> distributed.worker - WARNING - Memory use is high but worker has no data to store to disk.
             # >> Perhaps some other process is leaking memory?  Process memory: 1.51 GB -- Worker memory limit: 2.15 GB
             # My current idea is that this cannot be avoided processing a single module can sometimes required
@@ -289,9 +264,9 @@ def _distributed_calc(rnkdbs: Sequence[Type[RankingDatabase]], modules: Sequence
 
             return aggregate_func(
                         (delayed(transform_func)
-                            (db, gs_chunk, delayed_or_future_annotations)
+                            (db, [module], delayed_or_future_annotations)
                                 for db in delayed_or_future_dbs
-                                    for gs_chunk in chunked_iter(modules, module_chunksize)))
+                                    for module in delayed_or_future_modules))
 
         # Compute dask graph ...
         if client_or_address == "dask_multiprocessing":
@@ -311,7 +286,7 @@ def prune(rnkdbs: Sequence[Type[RankingDatabase]], modules: Sequence[Regulon],
                          rank_threshold: int = 1500, auc_threshold: float = 0.05, nes_threshold=3.0,
                          motif_similarity_fdr: float = 0.001, orthologuous_identity_threshold: float = 0.0,
                          weighted_recovery=False, client_or_address='dask_multiprocessing',
-                         num_workers=None, module_chunksize=100) -> Sequence[Regulon]:
+                         num_workers=None) -> Sequence[Regulon]:
     """
     Calculate all regulons for a given sequence of ranking databases and a sequence of co-expression modules.
     The number of regulons derived from the supplied modules is usually much lower. In addition, the targets of the
@@ -330,7 +305,6 @@ def prune(rnkdbs: Sequence[Type[RankingDatabase]], modules: Sequence[Regulon],
     :param weighted_recovery: Use weights of a gene signature when calculating recovery curves?
     :param num_workers: If not using a cluster, the number of workers to use for the calculation.
         None of all available CPUs need to be used.
-    :param module_chunksize: The size of the chunk to use when using the dask framework.
     :param client_or_address: The client of IP address of the scheduler when working with dask. For local multi-core
         systems 'custom_multiprocessing' or 'dask_multiprocessing' can be supplied.
     :return: A sequence of regulons.
@@ -346,7 +320,7 @@ def prune(rnkdbs: Sequence[Type[RankingDatabase]], modules: Sequence[Regulon],
     aggregation_func = delayed(reduce(concat)) if client_or_address != 'custom_multiprocessing' else reduce(concat)
     return _distributed_calc(rnkdbs, modules, motif_annotations_fname, transformation_func, aggregation_func,
                       motif_similarity_fdr, orthologuous_identity_threshold, client_or_address,
-                      num_workers, module_chunksize)
+                      num_workers)
 
 
 def prune2df(rnkdbs: Sequence[Type[RankingDatabase]], modules: Sequence[Regulon],
@@ -354,7 +328,7 @@ def prune2df(rnkdbs: Sequence[Type[RankingDatabase]], modules: Sequence[Regulon]
              rank_threshold: int = 1500, auc_threshold: float = 0.05, nes_threshold=3.0,
              motif_similarity_fdr: float = 0.001, orthologuous_identity_threshold: float = 0.0,
              weighted_recovery=False, client_or_address='dask_multiprocessing',
-             num_workers=None, module_chunksize=100, filter_for_annotation=True) -> pd.DataFrame:
+             num_workers=None, filter_for_annotation=True) -> pd.DataFrame:
     """
     Calculate all regulons for a given sequence of ranking databases and a sequence of co-expression modules.
     The number of regulons derived from the supplied modules is usually much lower. In addition, the targets of the
@@ -373,12 +347,10 @@ def prune2df(rnkdbs: Sequence[Type[RankingDatabase]], modules: Sequence[Regulon]
     :param weighted_recovery: Use weights of a gene signature when calculating recovery curves?
     :param num_workers: If not using a cluster, the number of workers to use for the calculation.
         None of all available CPUs need to be used.
-    :param module_chunksize: The size of the chunk to use when using the dask framework.
     :param client_or_address: The client of IP address of the scheduler when working with dask. For local multi-core
         systems 'custom_multiprocessing' or 'dask_multiprocessing' can be supplied.
     :return: A dataframe.
     """
-    # Always use module2features_auc1st_impl not only because of speed impact but also because of reduced memory footprint.
     module2features_func = partial(module2features_auc1st_impl,
                                    rank_threshold=rank_threshold,
                                    auc_threshold=auc_threshold,
@@ -390,7 +362,7 @@ def prune2df(rnkdbs: Sequence[Type[RankingDatabase]], modules: Sequence[Regulon]
     aggregation_func = partial(from_delayed, meta=DF_META_DATA) if client_or_address != 'custom_multiprocessing' else pd.concat
     return _distributed_calc(rnkdbs, modules, motif_annotations_fname, transformation_func, aggregation_func,
                              motif_similarity_fdr, orthologuous_identity_threshold, client_or_address,
-                             num_workers, module_chunksize)
+                             num_workers)
 
 
 def find_features(rnkdbs: Sequence[Type[RankingDatabase]], signatures: Sequence[Type[GeneSignature]],
@@ -414,10 +386,10 @@ def find_features(rnkdbs: Sequence[Type[RankingDatabase]], signatures: Sequence[
         systems 'custom_multiprocessing' or 'dask_multiprocessing' can be supplied.
     :param num_workers:  If not using a cluster, the number of workers to use for the calculation.
         None of all available CPUs need to be used.
-    :param module_chunksize: The size of the chunk to use when using the dask framework.
     :param motif_base_url:
     :return: A dataframe with the enriched features.
     """
+    #TODO: This function needs to be tested thoroughly.
     return add_motif_url(prune2df(rnkdbs, signatures, motif_annotations_fname,
                                   filter_for_annotation=False, **kwargs), base_url=motif_base_url)
 

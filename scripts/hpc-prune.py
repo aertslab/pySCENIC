@@ -104,7 +104,6 @@ def run(args):
                                   auc_threshold=float(cfg['parameters']['auc_threshold']),
                                   nes_threshold=float(cfg['parameters']['nes_threshold']),
                                   client_or_address=mode,
-                                  module_chunksize=cfg['parameters']['chunk_size'],
                                   num_workers=args.num_workers)
 
     LOGGER.info("Writing results to file.")
