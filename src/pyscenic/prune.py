@@ -60,7 +60,8 @@ def _prepare_client(client_or_address, num_workers):
     # https://github.com/tmoerman/arboretum/blob/b065c6eade325ace104b2bb772ad15c78d573b1b/arboretum/algo.py#L139-L185
 
     if client_or_address is None or str(client_or_address).lower() == 'local':
-        local_cluster = LocalCluster(diagnostics_port=None, n_workers=num_workers)
+        local_cluster = LocalCluster(n_workers=num_workers,
+                                     threads_per_worker=1)
         client = Client(local_cluster)
 
         def close_client_and_local_cluster(verbose=False):
@@ -226,21 +227,21 @@ def _distributed_calc(rnkdbs: Sequence[Type[RankingDatabase]], modules: Sequence
             # Chunking the gene signatures might not be necessary anymore because the overhead of the dask
             # scheduler is minimal (cf. blog http://matthewrocklin.com/blog/work/2016/05/05/performant-task-scheduling).
             # The original behind the decision to implement this was the refuted assumption that fast executing tasks
-            # would greatly be impacted by scheduler overhead. The chunking of signatures seemed to corroborate
-            # this assumption. However, the benefit was through less pickling and unpickling of the motif annotations
-            # dataframe as this was not wrapped in a delayed() construct.
-            # When using a distributed scheduler chunking is overruled to avoid having these large chunks to be shipped
-            # to different workers across cluster nodes.
+            # would greatly be impacted by scheduler overhead. The performance gain introduced by chunking of signatures
+            # seemed to corroborate this assumption. However, the benefit was through less pickling and unpickling of
+            # the motif annotations dataframe as this was not wrapped in a delayed() construct.
+            # When using a distributed scheduler chunking even has a negative impact and is therefore overruled. The
+            # negative impact is due to having these large chunks to be shipped to different workers across cluster nodes.
 
             # NOTE ON BROADCASTING DATASET:
-            # There are three large pieces of data that need to be orchestrated between scheduler and workers:
+            # There are three large pieces of data that need to be orchestrated between client/scheduler and workers:
             # 1. In a cluster the motif annotations need to be broadcasted to all nodes. Otherwise
             # the motif annotations need to wrapped in a delayed() construct to avoid needless pickling and
             # unpicking between processes.
             def wrap(data):
                 return client.scatter(data, broadcast=True) if client else delayed(data, pure=True)
             delayed_or_future_annotations = wrap(motif_annotations)
-            # 2. The databases: these database objects are typically should proxies to the data on disk. The only have
+            # 2. The databases: these database objects are typically proxies to the data on disk. They only have
             # the name and location on shared storage as fields. For consistency reason we do broadcast these database
             # objects to the workers. If we decide to have all information of a database loaded into memory we can still
             # safely use clusters.
