@@ -31,3 +31,4 @@ interlap
 loompy
 Pillow>=5.0.0
 distributed>=1.21.6
+networkx

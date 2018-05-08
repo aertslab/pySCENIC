@@ -66,7 +66,8 @@ def _prepare_client(client_or_address, num_workers):
     # https://github.com/tmoerman/arboretum/blob/b065c6eade325ace104b2bb772ad15c78d573b1b/arboretum/algo.py#L139-L185
 
     if client_or_address is None or str(client_or_address).lower() == 'local':
-        local_cluster = LocalCluster(diagnostics_port=None, n_workers=num_workers)
+        local_cluster = LocalCluster(n_workers=num_workers,
+                                     threads_per_worker=1)
         client = Client(local_cluster)
 
         def close_client_and_local_cluster(verbose=False):

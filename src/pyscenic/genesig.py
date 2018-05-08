@@ -214,6 +214,13 @@ class GeneSignature(yaml.YAMLObject):
         """
         return self.copy(gene2weight=self.genes)
 
+    def head(self, n: int = 5) -> Type['GeneSignature']:
+        """
+        Returns a gene signature with only the top n targets.
+        """
+        assert n >= 1, "n must be greater than or equal to one."
+        genes = self.genes[0:n] # Genes are sorted in ascending order according to weight.
+        return self.copy(gene2weight=keyfilter(lambda k: k in genes, self.gene2weight))
 
     def __len__(self):
         """
