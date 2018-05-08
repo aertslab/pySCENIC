@@ -21,3 +21,4 @@ interlap
 umap-learn
 loompy
 networkx
+matplotlib
