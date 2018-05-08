@@ -20,3 +20,4 @@ tqdm
 interlap
 umap-learn
 loompy
+networkx
