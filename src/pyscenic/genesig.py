@@ -222,6 +222,14 @@ class GeneSignature(yaml.YAMLObject):
         genes = self.genes[0:n] # Genes are sorted in ascending order according to weight.
         return self.copy(gene2weight=keyfilter(lambda k: k in genes, self.gene2weight))
 
+    def jaccard_index(self, other: Type['GeneSignature']) -> float:
+        """
+        Calculate the symmetrical similarity metric between this and another signature.
+        The JI is a value between 0.0 and 1.0.
+        """
+        ss = set(self.genes); so = set(other.genes)
+        return float(len(ss.intersection(so)))/len(ss.union(so))
+
     def __len__(self):
         """
         The number of genes in this signature.
