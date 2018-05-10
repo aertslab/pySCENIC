@@ -11,10 +11,11 @@ from .genesig import Regulon
 from typing import List, Mapping
 from operator import attrgetter
 from multiprocessing import cpu_count
+from .binarization import binarize
 
 
 def export2loom(ex_mtx: pd.DataFrame, regulons: List[Regulon], cell_annotations: Mapping[str,str],
-                out_fname: str, num_cores=cpu_count()):
+                out_fname: str, num_workers=cpu_count()):
     """
     Create a loom file for a single cell experiment to be used in SCope.
 
@@ -22,17 +23,15 @@ def export2loom(ex_mtx: pd.DataFrame, regulons: List[Regulon], cell_annotations:
     :param regulons: A list of Regulons.
     :param cell_annotations: A dictionary that maps a cell ID to its corresponding cell type annotation.
     :param out_fname: The name of the file to create.
-    :param num_cores: The number of cores to use for AUCell regulon enrichment.
+    :param num_workers: The number of cores to use for AUCell regulon enrichment.
     """
     # Information on the general loom file format: http://linnarssonlab.org/loompy/format/index.html
     # Information on the SCope specific alterations: https://github.com/aertslab/SCope/wiki/Data-Format
 
-    # TODO: Not mandatory but adding a section "regulonThresholds" to the general metadata would give
-    # TODO: additional information to the SCope tool to preset a threshold on the AUC distribution of a regulon
-    # TODO: across cells and help with binarization, i.e. deciding if the regulon is "on" or "off" in a cell.
-
     # Calculate regulon enrichment per cell using AUCell.
-    auc_mtx = aucell(ex_mtx, regulons, num_cores=num_cores) # (n_cells x n_regulons)
+    auc_mtx = aucell(ex_mtx, regulons, num_workers=num_workers) # (n_cells x n_regulons)
+    # Binarize matrix for AUC thresholds.
+    _, auc_thresholds = binarize(auc_mtx)
 
     # Create an embedding based on UMAP (similar to tSNE but faster).
     umap_embedding_mtx = pd.DataFrame(data=UMAP().fit_transform(auc_mtx),
@@ -84,6 +83,13 @@ def export2loom(ex_mtx: pd.DataFrame, regulons: List[Regulon], cell_annotations:
         "Gene": ex_mtx.columns.values.astype('str'),
         "Regulons": create_structure_array(regulon_assignment),
         }
+
+    regulon_thresholds = [{"regulon": name,
+                            "defaultThresholdValue": threshold,
+                            "defaultThresholdName": "guassian_mixture_split",
+                            "allThresholds": {"guassian_mixture_split": threshold},
+                            "motifData": ""} for name, threshold in auc_thresholds.iteritems()]
+
     general_attrs = {
         "title": title,
         "MetaData": json.dumps({
@@ -100,7 +106,9 @@ def export2loom(ex_mtx: pd.DataFrame, regulons: List[Regulon], cell_annotations:
                 "group": "celltype",
                 "name": "Cell Type",
                 "clusters": [{"id": idx, "description": name} for name, idx in name2idx.items()]
-            }]}),
+            }],
+            "regulonThresholds": regulon_thresholds
+        }),
         "Genome": next(iter(nomenclatures))}
 
     # Create loom file for use with the SCope tool.

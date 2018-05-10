@@ -2,7 +2,6 @@
 
 import pandas as pd
 from sklearn import mixture
-from math import sqrt
 import numpy as np
 import matplotlib.pyplot as plt
 
