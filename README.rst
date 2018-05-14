@@ -134,6 +134,11 @@ Tutorial
 For this tutorial 3,005 single cell transcriptomes taken from the mouse brain (somatosensory cortex and
 hippocampal regions) are used as an example [4]_. The analysis is done in a Jupyter_ notebook.
 
+.. caution::
+    If you run this from a python script instead of a Jupyter_ notebook, please enclose the code in
+    a :code:`if __name__ == '__main__':` construct.
+
+
 First we import the necessary modules and declare some constants:
 
 .. code-block:: python
