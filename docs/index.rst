@@ -84,27 +84,27 @@ mm10-500bp-up-100bp-down-tss_       Mus musculus                [TSS+500bp,TSS-1
 dm6-5kb-upstream-full-tx_           Drosophila melanogaster     [TSS+5kb,full Tx]        11
 =================================  ==========================  ======================= ============================
 
-.. _hg19-500bp-upstream-10species: http://pyscenic.aertslab.org/databases/hg19-500bp-upstream-10species.mc9nr.feather
-.. _hg19-500bp-upstream-7species: http://pyscenic.aertslab.org/databases/hg19-500bp-upstream-7species.mc9nr.feather
-.. _hg19-tss-centered-10kb-10species: http://pyscenic.aertslab.org/databases/hg19-tss-centered-10kb-10species.mc9nr.feather
-.. _hg19-tss-centered-10kb-7species: http://pyscenic.aertslab.org/databases/hg19-tss-centered-10kb-7species.mc9nr.feather
-.. _hg19-tss-centered-5kb-10species: http://pyscenic.aertslab.org/databases/hg19-tss-centered-5kb-10species.mc9nr.feather
-.. _hg19-tss-centered-5kb-7species: http://pyscenic.aertslab.org/databases/hg19-tss-centered-5kb-7species.mc9nr.feather
+.. _hg19-500bp-upstream-10species: https://resources.aertslab.org/cistarget/databases/gene_based/hg19-500bp-upstream-10species.mc9nr.feather
+.. _hg19-500bp-upstream-7species: https://resources.aertslab.org/cistarget/databases/gene_based/hg19-500bp-upstream-7species.mc9nr.feather
+.. _hg19-tss-centered-10kb-10species: https://resources.aertslab.org/cistarget/databases/gene_based/hg19-tss-centered-10kb-10species.mc9nr.feather
+.. _hg19-tss-centered-10kb-7species: https://resources.aertslab.org/cistarget/databases/gene_based/hg19-tss-centered-10kb-7species.mc9nr.feather
+.. _hg19-tss-centered-5kb-10species: https://resources.aertslab.org/cistarget/databases/gene_based/hg19-tss-centered-5kb-10species.mc9nr.feather
+.. _hg19-tss-centered-5kb-7species: https://resources.aertslab.org/cistarget/databases/gene_based/hg19-tss-centered-5kb-7species.mc9nr.feather
 
-.. _hg38-10kb-up-and-down-tss: http://pyscenic.aertslab.org/databases/hg38__refseq-r80__10kb_up_and_down_tss.mc9nr.feather
-.. _hg38-500bp-up-100bp-down-tss: http://pyscenic.aertslab.org/databases/hg38__refseq-r80__500bp_up_and_100bp_down_tss.mc9nr.feather
+.. _hg38-10kb-up-and-down-tss: https://resources.aertslab.org/cistarget/databases/gene_based/hg38__refseq-r80__10kb_up_and_down_tss.mc9nr.feather
+.. _hg38-500bp-up-100bp-down-tss: https://resources.aertslab.org/cistarget/databases/gene_based/hg38__refseq-r80__500bp_up_and_100bp_down_tss.mc9nr.feather
 
-.. _mm9-500bp-upstream-10species: http://pyscenic.aertslab.org/databases/mm9-500bp-upstream-10species.mc9nr.feather
-.. _mm9-500bp-upstream-7species: http://pyscenic.aertslab.org/databases/mm9-500bp-upstream-7species.mc9nr.feather
-.. _mm9-tss-centered-10kb-10species: http://pyscenic.aertslab.org/databases/mm9-tss-centered-10kb-10species.mc9nr.feather
-.. _mm9-tss-centered-10kb-7species: http://pyscenic.aertslab.org/databases/mm9-tss-centered-10kb-7species.mc9nr.feather
-.. _mm9-tss-centered-5kb-10species: http://pyscenic.aertslab.org/databases/mm9-tss-centered-5kb-10species.mc9nr.feather
-.. _mm9-tss-centered-5kb-7species: http://pyscenic.aertslab.org/databases/mm9-tss-centered-5kb-7species.mc9nr.feather
+.. _mm9-500bp-upstream-10species: https://resources.aertslab.org/cistarget/databases/gene_based/mm9-500bp-upstream-10species.mc9nr.feather
+.. _mm9-500bp-upstream-7species: https://resources.aertslab.org/cistarget/databases/gene_based/mm9-500bp-upstream-7species.mc9nr.feather
+.. _mm9-tss-centered-10kb-10species: https://resources.aertslab.org/cistarget/databases/gene_based/mm9-tss-centered-10kb-10species.mc9nr.feather
+.. _mm9-tss-centered-10kb-7species: https://resources.aertslab.org/cistarget/databases/gene_based/mm9-tss-centered-10kb-7species.mc9nr.feather
+.. _mm9-tss-centered-5kb-10species: https://resources.aertslab.org/cistarget/databases/gene_based/mm9-tss-centered-5kb-10species.mc9nr.feather
+.. _mm9-tss-centered-5kb-7species: https://resources.aertslab.org/cistarget/databases/gene_based/mm9-tss-centered-5kb-7species.mc9nr.feather
 
-.. _mm10-10kb-up-and-down-tss: http://pyscenic.aertslab.org/databases/mm10__refseq-r80__10kb_up_and_down_tss.mc9nr.feather
-.. _mm10-500bp-up-100bp-down-tss: http://pyscenic.aertslab.org/databases/mm10__refseq-r80__500bp_up_and_100bp_down_tss.mc9nr.feather
+.. _mm10-10kb-up-and-down-tss: https://resources.aertslab.org/cistarget/databases/gene_based/databases/mm10__refseq-r80__10kb_up_and_down_tss.mc9nr.feather
+.. _mm10-500bp-up-100bp-down-tss: https://resources.aertslab.org/cistarget/databases/gene_based/mm10__refseq-r80__500bp_up_and_100bp_down_tss.mc9nr.feather
 
-.. _dm6-5kb-upstream-full-tx: http://pyscenic.aertslab.org/databases/dm6-5kb-upstream-full-tx-11species.mc8nr.feather
+.. _dm6-5kb-upstream-full-tx: https://resources.aertslab.org/cistarget/databases/gene_based/dm6-5kb-upstream-full-tx-11species.mc8nr.feather
 
 2. *Motif annotation* database providing the missing link between an enriched motif and the transcription factor that binds this motif. This pipeline needs a TSV text file where every line represents a particular annotation.
 
