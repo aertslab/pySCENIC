@@ -57,55 +57,7 @@ You can also install the bleeding edge (i.e. less stable) version of the package
 
 To successfully use this pipeline you also need **auxilliary datasets**:
 
-1. *Databases ranking the whole genome* of your species of interest based on regulatory features (i.e. transcription factors). Ranking databases are typically stored in the feather_ format.
-
-=================================  ==========================  ======================= ============================
-  Database                          Species                     Search space            # of orthologous species
-=================================  ==========================  ======================= ============================
-hg19-500bp-upstream-10species_      Homo sapiens                [TSS+500bp,TSS[          10
-hg19-500bp-upstream-7species_       Homo sapiens                [TSS+500bp,TSS[          7
-hg19-tss-centered-10kb-10species_   Homo sapiens                TSS+/-10kbp              10
-hg19-tss-centered-10kb-7species_    Homo sapiens                TSS+/-10kbp              7
-hg19-tss-centered-5kb-10species_    Homo sapiens                TSS+/-5kbp               10
-hg19-tss-centered-5kb-7species_     Homo sapiens                TSS+/-5kbp               7
-
-hg38-10kb-up-and-down-tss_          Homo sapiens                [TSS+10kb,TSS-10kb]      9
-hg38-500bp-up-100bp-down-tss_       Homo sapiens                [TSS+500bp,TSS-100bp]    9
-
-mm9-500bp-upstream-10species_       Mus musculus                [TSS+500bp,TSS[          10
-mm9-500bp-upstream-7species_        Mus musculus                [TSS+500bp,TSS[          7
-mm9-tss-centered-10kb-10species_    Mus musculus                TSS+/-10kbp              10
-mm9-tss-centered-10kb-7species_     Mus musculus                TSS+/-10kbp              7
-mm9-tss-centered-5kb-10species_     Mus musculus                TSS+/-5kbp               10
-mm9-tss-centered-5kb-7species_      Mus musculus                TSS+/-5kbp               7
-
-mm10-10kb-up-and-down-tss_          Mus musculus                [TSS+10kb,TSS-10kb]      9
-mm10-500bp-up-100bp-down-tss_       Mus musculus                [TSS+500bp,TSS-100bp]    9
-dm6-5kb-upstream-full-tx_           Drosophila melanogaster     [TSS+5kb,full Tx]        11
-=================================  ==========================  ======================= ============================
-
-.. _hg19-500bp-upstream-10species: https://resources.aertslab.org/cistarget/databases/gene_based/hg19-500bp-upstream-10species.mc9nr.feather
-.. _hg19-500bp-upstream-7species: https://resources.aertslab.org/cistarget/databases/gene_based/hg19-500bp-upstream-7species.mc9nr.feather
-.. _hg19-tss-centered-10kb-10species: https://resources.aertslab.org/cistarget/databases/gene_based/hg19-tss-centered-10kb-10species.mc9nr.feather
-.. _hg19-tss-centered-10kb-7species: https://resources.aertslab.org/cistarget/databases/gene_based/hg19-tss-centered-10kb-7species.mc9nr.feather
-.. _hg19-tss-centered-5kb-10species: https://resources.aertslab.org/cistarget/databases/gene_based/hg19-tss-centered-5kb-10species.mc9nr.feather
-.. _hg19-tss-centered-5kb-7species: https://resources.aertslab.org/cistarget/databases/gene_based/hg19-tss-centered-5kb-7species.mc9nr.feather
-
-.. _hg38-10kb-up-and-down-tss: https://resources.aertslab.org/cistarget/databases/gene_based/hg38__refseq-r80__10kb_up_and_down_tss.mc9nr.feather
-.. _hg38-500bp-up-100bp-down-tss: https://resources.aertslab.org/cistarget/databases/gene_based/hg38__refseq-r80__500bp_up_and_100bp_down_tss.mc9nr.feather
-
-.. _mm9-500bp-upstream-10species: https://resources.aertslab.org/cistarget/databases/gene_based/mm9-500bp-upstream-10species.mc9nr.feather
-.. _mm9-500bp-upstream-7species: https://resources.aertslab.org/cistarget/databases/gene_based/mm9-500bp-upstream-7species.mc9nr.feather
-.. _mm9-tss-centered-10kb-10species: https://resources.aertslab.org/cistarget/databases/gene_based/mm9-tss-centered-10kb-10species.mc9nr.feather
-.. _mm9-tss-centered-10kb-7species: https://resources.aertslab.org/cistarget/databases/gene_based/mm9-tss-centered-10kb-7species.mc9nr.feather
-.. _mm9-tss-centered-5kb-10species: https://resources.aertslab.org/cistarget/databases/gene_based/mm9-tss-centered-5kb-10species.mc9nr.feather
-.. _mm9-tss-centered-5kb-7species: https://resources.aertslab.org/cistarget/databases/gene_based/mm9-tss-centered-5kb-7species.mc9nr.feather
-
-.. _mm10-10kb-up-and-down-tss: https://resources.aertslab.org/cistarget/databases/gene_based/databases/mm10__refseq-r80__10kb_up_and_down_tss.mc9nr.feather
-.. _mm10-500bp-up-100bp-down-tss: https://resources.aertslab.org/cistarget/databases/gene_based/mm10__refseq-r80__500bp_up_and_100bp_down_tss.mc9nr.feather
-
-.. _dm6-5kb-upstream-full-tx: https://resources.aertslab.org/cistarget/databases/gene_based/dm6-5kb-upstream-full-tx-11species.mc8nr.feather
-
+1. *Databases ranking the whole genome* of your species of interest based on regulatory features (i.e. transcription factors). Ranking databases are typically stored in the feather_ format and can be downloaded from cisTargetDBs_.
 2. *Motif annotation* database providing the missing link between an enriched motif and the transcription factor that binds this motif. This pipeline needs a TSV text file where every line represents a particular annotation.
 
 =======================  ==========================
@@ -369,6 +321,7 @@ References
 .. _SCENIC: http://scenic.aertslab.org
 .. _PyPI: https://pypi.python.org/pypi/pyscenic
 .. _Jupyter: http://jupyter.org
+.. _cisTargetDBs: https://resources.aertslab.org/cistarget/
 
 .. |buildstatus| image:: https://travis-ci.org/aertslab/pySCENIC.svg?branch=master
 .. _buildstatus: https://travis-ci.org/aertslab/pySCENIC
