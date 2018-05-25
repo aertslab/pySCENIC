@@ -68,9 +68,9 @@ To successfully use this pipeline you also need **auxilliary datasets**:
 `Flybase annotations`_    Drosophila melanogaster
 =======================  ==========================
 
-.. _`HGNC annotations`: http://pyscenic.aertslab.org/resources/motifs-v9-nr.hgnc-m0.001-o0.0.tbl
-.. _`MGI annotations`: http://pyscenic.aertslab.org/resources/motifs-v9-nr.mgi-m0.001-o0.0.tbl
-.. _`Flybase annotations`: http://pyscenic.aertslab.org/resources/motifs-v8-nr.flybase-m0.001-o0.0.tbl
+.. _`HGNC annotations`: https://resources.aertslab.org/cistarget/motif2tf/motifs-v9-nr.hgnc-m0.001-o0.0.tbl
+.. _`MGI annotations`: https://resources.aertslab.org/cistarget/motif2tf/motifs-v9-nr.mgi-m0.001-o0.0.tbl
+.. _`Flybase annotations`: https://resources.aertslab.org/cistarget/motif2tf/motifs-v8-nr.flybase-m0.001-o0.0.tbl
 
 .. caution::
     These ranking databases are 1.1 Gb each so downloading them might take a while. An annotations file is typically 100Mb in size.
