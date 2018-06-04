@@ -5,17 +5,22 @@ import json
 import numpy as np
 import pandas as pd
 import loompy as lp
-from umap import UMAP
+from sklearn.manifold.t_sne import TSNE
 from .aucell import aucell
 from .genesig import Regulon
-from typing import List, Mapping
+from typing import List, Mapping, Sequence, Optional
 from operator import attrgetter
 from multiprocessing import cpu_count
 from .binarization import binarize
+from itertools import chain, repeat, islice
 
 
 def export2loom(ex_mtx: pd.DataFrame, regulons: List[Regulon], cell_annotations: Mapping[str,str],
-                out_fname: str, num_workers=cpu_count()):
+                out_fname: str,
+                tree_structure: Sequence[str] = (),
+                title: Optional[str] = None,
+                nomenclature: str = "Unknown",
+                num_workers=cpu_count()):
     """
     Create a loom file for a single cell experiment to be used in SCope.
 
@@ -23,6 +28,9 @@ def export2loom(ex_mtx: pd.DataFrame, regulons: List[Regulon], cell_annotations:
     :param regulons: A list of Regulons.
     :param cell_annotations: A dictionary that maps a cell ID to its corresponding cell type annotation.
     :param out_fname: The name of the file to create.
+    :param tree_structure: A sequence of strings that defines the category tree structure.
+    :param title: The title for this loom file. If None than the basename of the filename is used as the title.
+    :param nomenclature: The name of the genome.
     :param num_workers: The number of cores to use for AUCell regulon enrichment.
     """
     # Information on the general loom file format: http://linnarssonlab.org/loompy/format/index.html
@@ -33,9 +41,10 @@ def export2loom(ex_mtx: pd.DataFrame, regulons: List[Regulon], cell_annotations:
     # Binarize matrix for AUC thresholds.
     _, auc_thresholds = binarize(auc_mtx)
 
-    # Create an embedding based on UMAP (similar to tSNE but faster).
-    umap_embedding_mtx = pd.DataFrame(data=UMAP().fit_transform(auc_mtx),
-                                      index=ex_mtx.index, columns=['UMAP1', 'UMAP2']) # (n_cells, 2)
+    # Create an embedding based on tSNE.
+    # Name of columns should be "_X" and "_Y".
+    tsne_embedding_mtx = pd.DataFrame(data=TSNE().fit_transform(auc_mtx),
+                                      index=ex_mtx.index, columns=['_X', '_Y']) # (n_cells, 2)
 
     # Calculate the number of genes per cell.
     binary_mtx = ex_mtx.copy()
@@ -54,10 +63,11 @@ def export2loom(ex_mtx: pd.DataFrame, regulons: List[Regulon], cell_annotations:
                                       columns=list(map(attrgetter('name'), regulons)))
 
     # Encode cell type clusters.
+    # The name of the column should match the identifier of the clustering.
     name2idx = dict(map(reversed, enumerate(sorted(set(cell_annotations.values())))))
     clusterings = pd.DataFrame(data=ex_mtx.index,
                                index=ex_mtx.index,
-                               columns=['Cell Type']).replace(cell_annotations).replace(name2idx)
+                               columns=['0']).replace(cell_annotations).replace(name2idx)
 
     # Create meta-data structure.
     def create_structure_array(df):
@@ -65,16 +75,10 @@ def export2loom(ex_mtx: pd.DataFrame, regulons: List[Regulon], cell_annotations:
         return np.array([tuple(row) for row in df.as_matrix()],
                         dtype=np.dtype(list(zip(df.columns, df.dtypes))))
 
-
-    nomenclatures = set(map(attrgetter('nomenclature'), regulons))
-    assert len(nomenclatures) == 1
-
-    title = os.path.splitext(os.path.basename(out_fname))[0]
-
     column_attrs = {
         "CellID": ex_mtx.index.values.astype('str'),
         "nGene": ngenes.values,
-        "Embedding": create_structure_array(umap_embedding_mtx),
+        "Embedding": create_structure_array(tsne_embedding_mtx),
         "RegulonsAUC": create_structure_array(auc_mtx),
         "Clusterings": create_structure_array(clusterings),
         "ClusterID": clusterings.values
@@ -85,17 +89,17 @@ def export2loom(ex_mtx: pd.DataFrame, regulons: List[Regulon], cell_annotations:
         }
 
     regulon_thresholds = [{"regulon": name,
-                            "defaultThresholdValue": threshold,
+                            "defaultThresholdValue": threshold[0],
                             "defaultThresholdName": "guassian_mixture_split",
-                            "allThresholds": {"guassian_mixture_split": threshold},
+                            "allThresholds": {"guassian_mixture_split": threshold[0]},
                             "motifData": ""} for name, threshold in auc_thresholds.iteritems()]
 
     general_attrs = {
-        "title": title,
+        "title": os.path.splitext(os.path.basename(out_fname))[0] if title is None else title,
         "MetaData": json.dumps({
             "embeddings": [{
                 "id": 0,
-                "name": "UMAP (default)",
+                "name": "tSNE (default)",
             }],
             "annotations": [{
                 "name": "",
@@ -109,7 +113,13 @@ def export2loom(ex_mtx: pd.DataFrame, regulons: List[Regulon], cell_annotations:
             }],
             "regulonThresholds": regulon_thresholds
         }),
-        "Genome": next(iter(nomenclatures))}
+        "Genome": nomenclature}
+
+    # Add tree structure.
+    # All three levels need to be supplied
+    assert len(tree_structure) <= 3, ""
+    general_attrs.update(("SCopeTreeL{}".format(idx+1), category)
+                         for idx, category in enumerate(list(islice(chain(tree_structure, repeat("")), 3))))
 
     # Create loom file for use with the SCope tool.
     # The loom file format opted for rows as genes to facilitate growth along the column axis (i.e add more cells)
