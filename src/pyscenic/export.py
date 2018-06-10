@@ -13,6 +13,7 @@ from operator import attrgetter
 from multiprocessing import cpu_count
 from .binarization import binarize
 from itertools import chain, repeat, islice
+import networkx as nx
 
 
 def export2loom(ex_mtx: pd.DataFrame, regulons: List[Regulon], cell_annotations: Mapping[str,str],
@@ -132,3 +133,23 @@ def export2loom(ex_mtx: pd.DataFrame, regulons: List[Regulon], cell_annotations:
               col_attrs=column_attrs,
               file_attrs=general_attrs)
     fh.close()
+
+
+def export_regulons(regulons: Sequence[Regulon], fname: str) -> None:
+    """
+
+    Export regulons as GraphML.
+
+    :param regulons: The sequence of regulons to export.
+    :param fname: The name of the file to create.
+    """
+    graph = nx.DiGraph()
+    for regulon in regulons:
+        src_name = regulon.transcription_factor
+        graph.add_node(src_name, group='transcription_factor')
+        edge_type = 'activating' if 'activating' in regulon.context else 'inhibiting'
+        node_type = 'activated_target' if 'activating' in regulon.context else 'inhibited_target'
+        for dst_name, edge_strength in regulon.gene2weight.items():
+            graph.add_node(dst_name, group=node_type, **regulon.context)
+            graph.add_edge(src_name, dst_name, weight=edge_strength, interaction=edge_type, **regulon.context)
+    nx.readwrite.write_graphml(graph, fname)
