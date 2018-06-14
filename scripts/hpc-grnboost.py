@@ -4,8 +4,8 @@ import pandas as pd
 import os, sys, glob
 import datetime
 from configparser import ConfigParser
-from arboretum.algo import grnboost2
-from arboretum.utils import load_tf_names
+from arboreto.algo import grnboost2
+from arboreto.utils import load_tf_names
 from dask.distributed import LocalCluster, Client
 #from cytoolz import mapcat
 import logging

@@ -14,12 +14,12 @@ in no time. The latter is achieved via the dask_ framework for distributed compu
 
 The pipeline has three steps:
 
-1. First transcription factors (TFs) and their target genes, together defining a regulon, are derived using gene inference methods which solely rely on correlations between expression of genes across cells. The arboretum_ package is used for this step.
+1. First transcription factors (TFs) and their target genes, together defining a regulon, are derived using gene inference methods which solely rely on correlations between expression of genes across cells. The arboreto_ package is used for this step.
 2. These regulons are refined by pruning targets that do not have an enrichment for a corresponding motif of the TF effectively separating direct from indirect targets based on the presence of cis-regulatory footprints.
 3. Finally, the original cells are differentiated and clustered on the activity of these discovered regulons.
 
 .. note::
-    The most impactfull speed improvement is introduced by the arboretum_ package in step 1. This package provides an alternative to GENIE3 [3]_ called GRNBoost2. This package can be controlled from within pySCENIC.
+    The most impactfull speed improvement is introduced by the arboreto_ package in step 1. This package provides an alternative to GENIE3 [3]_ called GRNBoost2. This package can be controlled from within pySCENIC.
 
 .. sidebar:: **Quick Start**
 
@@ -97,8 +97,8 @@ First we import the necessary modules and declare some constants:
 
     from dask.diagnostics import ProgressBar
 
-    from arboretum.utils import load_tf_names
-    from arboretum.algo import grnboost2
+    from arboreto.utils import load_tf_names
+    from arboreto.algo import grnboost2
 
     from pyscenic.rnkdb import FeatherRankingDatabase as RankingDatabase
     from pyscenic.utils import modules_from_adjacencies, load_motifs
@@ -166,10 +166,10 @@ Phase I: Inference of co-expression modules
 In the initial phase of the pySCENIC pipeline the single cell expression profiles are used to infer
 co-expression modules from.
 
-Run GENIE3 or GRNBoost from arboretum_ to infer co-expression modules
+Run GENIE3 or GRNBoost from arboreto_ to infer co-expression modules
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-The arboretum package is used for this phase of the pipeline. For this notebook only a sample of 1,000 cells is used
+The arboreto package is used for this phase of the pipeline. For this notebook only a sample of 1,000 cells is used
 for the co-expression module inference is used.
 
 .. code-block:: python
@@ -315,7 +315,7 @@ References
 .. _distributed: https://distributed.readthedocs.io/en/latest/
 .. _LCB: https://aertslab.org
 .. _feather: https://github.com/wesm/feather
-.. _arboretum: https://arboretum.readthedocs.io
+.. _arboreto: https://arboreto.readthedocs.io
 .. _notebooks: https://github.com/aertslab/pySCENIC/tree/master/notebooks
 .. _issue: https://github.com/aertslab/pySCENIC/issues/new
 .. _SCENIC: http://scenic.aertslab.org

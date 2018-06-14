@@ -248,6 +248,7 @@ def _distributed_calc(rnkdbs: Sequence[Type[RankingDatabase]], modules: Sequence
             #def memoize(db: Type[RankingDatabase]) -> Type[RankingDatabase]:
             #    return MemoryDecorator(db)
             #delayed_or_future_dbs = list(map(wrap, map(memoize, rnkdbs)))
+            # Check also latest Stackoverflow message: https://stackoverflow.com/questions/50795901/dask-scatter-broadcast-a-list
             delayed_or_future_dbs = list(map(wrap, rnkdbs))
             # 3. The gene signatures: these signatures become large when chunking them, therefore chunking is overruled
             # when using dask.distributed.

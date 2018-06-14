@@ -1,5 +1,5 @@
 cytoolz
-arboretum
+arboreto
 multiprocessing_on_dill
 numba==0.37.0
 llvmlite==0.22.0

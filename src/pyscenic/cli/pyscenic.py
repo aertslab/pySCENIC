@@ -5,8 +5,8 @@ import os
 import logging
 from dask.diagnostics import ProgressBar
 from multiprocessing import cpu_count
-from arboretum.algo import grnboost2
-from arboretum.utils import load_tf_names
+from arboreto.algo import grnboost2
+from arboreto.utils import load_tf_names
 
 from pyscenic.utils import load_from_yaml, modules_from_adjacencies
 from pyscenic.rnkdb import opendb, RankingDatabase
