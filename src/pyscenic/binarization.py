@@ -44,7 +44,7 @@ def binarize(auc_mtx: pd.DataFrame, threshold_overides:Optional[Mapping[str,floa
         thresholds[list(threshold_overides.keys())] = list(threshold_overides.values())
     return (auc_mtx > thresholds).astype(int), thresholds
 
-def plot_binarization(auc_mtx: pd.DataFrame, regulon_name: str, bins: int=200, threshold=None) -> None:
+def plot_binarization(auc_mtx: pd.DataFrame, regulon_name: str, bins: int=200, threshold=None, ax=None) -> None:
     """
     Plot the "binarization" process for the given regulon.
 
@@ -53,12 +53,15 @@ def plot_binarization(auc_mtx: pd.DataFrame, regulon_name: str, bins: int=200, t
     :param bins: The number of bins to use in the AUC histogram.
     :param threshold: The threshold to use for binarization. If None then this will be derived automatically.
     """
-    auc_mtx[regulon_name].hist(bins=bins)
+    if ax is None:
+        ax=plt.gca()
+    auc_mtx[regulon_name].hist(bins=bins,ax=ax)
     if threshold is None:
         threshold = _derive_threshold(auc_mtx, regulon_name)
-    ylim = plt.ylim()
-    plt.plot([threshold]*2, ylim, 'r:')
-    plt.ylim(ylim)
-    plt.xlabel('AUC')
-    plt.ylabel('#')
-    plt.title(regulon_name)
+
+    ylim = ax.get_ylim()
+    ax.plot([threshold]*2, ylim, 'r:')
+    ax.set_ylim(ylim)
+    ax.set_xlabel('AUC')
+    ax.set_ylabel('#')
+    ax.set_title(regulon_name)
