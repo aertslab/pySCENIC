@@ -397,7 +397,7 @@ def prune2df(rnkdbs: Sequence[Type[RankingDatabase]], modules: Sequence[Regulon]
 
 def find_features(rnkdbs: Sequence[Type[RankingDatabase]], signatures: Sequence[Type[GeneSignature]],
                   motif_annotations_fname: str,
-                  motif_base_url: str = "http://motifcollections.aertslab.org/v9/", **kwargs) -> pd.DataFrame:
+                  motif_base_url: str = "http://motifcollections.aertslab.org/v9/logos/", **kwargs) -> pd.DataFrame:
     """
     Find enriched features for gene signatures.
 
