@@ -262,11 +262,21 @@ def _regulon4group(tf_name, context, df_group) -> Optional[Regulon]:
                         context=context,
                         transcription_factor=tf_name,
                         gene2weight=row[COLUMN_NAME_TARGET_GENES])
+
+    # Find most enriched directly annotated motif and add this to the context.
+
+
+    df_selected = df_group[((df_group[COLUMN_NAME_ANNOTATION] == 'gene is directly annotated')
+                            | (df_group[COLUMN_NAME_ANNOTATION].str.startswith('gene is orthologous to')
+                               & df_group[COLUMN_NAME_ANNOTATION].str.endswith('which is directly annotated for motif')))]
+    df_selected = df_selected.sort_values(by=COLUMN_NAME_NES, ascending=False)
+    motif_logo = '{}.png'.format(df_selected.head(1).reset_index()[COLUMN_NAME_MOTIF_ID].values[0]) if len(df_selected) > 0 else ""
+
     # First we create a regulon for each enriched and annotated feature and then we aggregate these regulons into a
     # single one using the union operator. This operator combined all target genes into a single set of genes keeping
     # the maximum weight associated with a gene. In addition, the maximum combined score is kept as the score of the
     # entire regulon.
-    return reduce(Regulon.union, (row2regulon(row) for _, row in df_group.iterrows()))
+    return reduce(Regulon.union, (row2regulon(row) for _, row in df_group.iterrows())).copy(context=frozenset(set(context).union({motif_logo})))
 
 
 def df2regulons(df) -> Sequence[Regulon]:
