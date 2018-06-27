@@ -89,11 +89,17 @@ def export2loom(ex_mtx: pd.DataFrame, regulons: List[Regulon], cell_annotations:
         "Regulons": create_structure_array(regulon_assignment),
         }
 
+    def fetch_logo(context):
+        for elem in context:
+            if elem.endswith('.png'):
+                return elem
+        return ""
+    name2logo = {reg.name: fetch_logo(reg.context) for reg in regulons}
     regulon_thresholds = [{"regulon": name,
                             "defaultThresholdValue": threshold[0],
                             "defaultThresholdName": "guassian_mixture_split",
                             "allThresholds": {"guassian_mixture_split": threshold[0]},
-                            "motifData": ""} for name, threshold in auc_thresholds.iteritems()]
+                            "motifData": name2logo.get(name, "")} for name, threshold in auc_thresholds.iteritems()]
 
     general_attrs = {
         "title": os.path.splitext(os.path.basename(out_fname))[0] if title is None else title,
