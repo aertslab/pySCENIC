@@ -21,7 +21,8 @@ def export2loom(ex_mtx: pd.DataFrame, regulons: List[Regulon], cell_annotations:
                 tree_structure: Sequence[str] = (),
                 title: Optional[str] = None,
                 nomenclature: str = "Unknown",
-                num_workers=cpu_count()):
+                num_workers=cpu_count(),
+                tsne_embedding_mtx=None, auc_mtx=None, auc_thresholds=None):
     """
     Create a loom file for a single cell experiment to be used in SCope.
 
@@ -38,13 +39,16 @@ def export2loom(ex_mtx: pd.DataFrame, regulons: List[Regulon], cell_annotations:
     # Information on the SCope specific alterations: https://github.com/aertslab/SCope/wiki/Data-Format
 
     # Calculate regulon enrichment per cell using AUCell.
-    auc_mtx = aucell(ex_mtx, regulons, num_workers=num_workers) # (n_cells x n_regulons)
+    if auc_mtx is None:
+        auc_mtx = aucell(ex_mtx, regulons, num_workers=num_workers) # (n_cells x n_regulons)
     # Binarize matrix for AUC thresholds.
-    _, auc_thresholds = binarize(auc_mtx)
+    if auc_thresholds is None:
+        _, auc_thresholds = binarize(auc_mtx)
 
     # Create an embedding based on tSNE.
     # Name of columns should be "_X" and "_Y".
-    tsne_embedding_mtx = pd.DataFrame(data=TSNE().fit_transform(auc_mtx),
+    if tsne_embedding_mtx is None:
+        tsne_embedding_mtx = pd.DataFrame(data=TSNE().fit_transform(auc_mtx),
                                       index=ex_mtx.index, columns=['_X', '_Y']) # (n_cells, 2)
 
     # Calculate the number of genes per cell.
@@ -96,9 +100,9 @@ def export2loom(ex_mtx: pd.DataFrame, regulons: List[Regulon], cell_annotations:
         return ""
     name2logo = {reg.name: fetch_logo(reg.context) for reg in regulons}
     regulon_thresholds = [{"regulon": name,
-                            "defaultThresholdValue": threshold[0],
+                            "defaultThresholdValue":(threshold if isinstance(threshold, float) else threshold[0]),
                             "defaultThresholdName": "guassian_mixture_split",
-                            "allThresholds": {"guassian_mixture_split": threshold[0]},
+                            "allThresholds": {"guassian_mixture_split": (threshold if isinstance(threshold, float) else threshold[0])},
                             "motifData": name2logo.get(name, "")} for name, threshold in auc_thresholds.iteritems()]
 
     general_attrs = {
