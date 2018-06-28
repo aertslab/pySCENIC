@@ -206,6 +206,7 @@ def modules_from_adjacencies(adjacencies: pd.DataFrame,
                         min_genes=20,
                         absolute_thresholds=False,
                         rho_dichotomize=True,
+                        keep_only_activating=True,
                         rho_threshold=RHO_THRESHOLD,
                         rho_mask_dropouts=True) -> Sequence[Regulon]:
     """
@@ -221,6 +222,7 @@ def modules_from_adjacencies(adjacencies: pd.DataFrame,
     :param absolute_thresholds: Use absolute thresholds or percentiles to define modules based on best targets of a TF.
     :param rho_dichotomize: Differentiate between activating and repressing modules based on the correlation patterns of
         the expression of the TF and its target genes.
+    :param keep_only_activating: Keep only modules in which a TF activates its target genes.
     :param rho_threshold: The threshold on the correlation to decide if a target gene is activated
         (rho > `rho_threshold`) or repressed (rho < -`rho_threshold`).
     :param rho_mask_dropouts: Do not use cells in which either the expression of the TF or the target gene is 0 when
@@ -261,8 +263,11 @@ def modules_from_adjacencies(adjacencies: pd.DataFrame,
         adjacencies = add_correlation(adjacencies, ex_mtx,
                                   rho_threshold=rho_threshold, mask_dropouts=rho_mask_dropouts)
         activating_modules = adjacencies[adjacencies[COLUMN_NAME_REGULATION] > 0.0]
-        repressing_modules = adjacencies[adjacencies[COLUMN_NAME_REGULATION] < 0.0]
-        modules_iter = chain(iter_modules(activating_modules, frozenset([ACTIVATING_MODULE])),
+        if keep_only_activating:
+            modules_iter = iter_modules(activating_modules, frozenset([ACTIVATING_MODULE]))
+        else:
+            repressing_modules = adjacencies[adjacencies[COLUMN_NAME_REGULATION] < 0.0]
+            modules_iter = chain(iter_modules(activating_modules, frozenset([ACTIVATING_MODULE])),
                              iter_modules(repressing_modules, frozenset([REPRESSING_MODULE])))
 
     # Derive modules for these adjacencies.
