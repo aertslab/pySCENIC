@@ -111,7 +111,7 @@ def aucell4r(df_rnk: pd.DataFrame, signatures: Sequence[Type[GeneSignature]],
         shared_ro_memory_array = RawArray(DTYPE_C, mul(*df_rnk.shape))
         array = np.frombuffer(shared_ro_memory_array, dtype=DTYPE)
         # Copy the contents of df_rank into this shared memory block using row-major ordering.
-        array[:] = df_rnk.as_matrix().flatten(order='C')
+        array[:] = df_rnk.values.flatten(order='C')
 
         # The resulting AUCs are returned via a synchronize array.
         auc_mtx = Array('d', len(cells) * len(signatures))  # Double precision floats.

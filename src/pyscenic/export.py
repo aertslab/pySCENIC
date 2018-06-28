@@ -77,7 +77,7 @@ def export2loom(ex_mtx: pd.DataFrame, regulons: List[Regulon], cell_annotations:
     # Create meta-data structure.
     def create_structure_array(df):
         # Create a numpy structured array
-        return np.array([tuple(row) for row in df.as_matrix()],
+        return np.array([tuple(row) for row in df.values],
                         dtype=np.dtype(list(zip(df.columns, df.dtypes))))
 
     column_attrs = {
