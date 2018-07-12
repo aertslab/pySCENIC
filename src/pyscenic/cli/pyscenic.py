@@ -157,8 +157,8 @@ def prune_targets_command(args):
         out.to_csv(args.output)
     else:
         name2targets = {r.name: list(r.gene2weight.keys()) for r in df2regulons(out)}
-        with open(args.output, "w") as f:
-            f.write(json.dumps(name2targets))
+        args.output.write(json.dumps(name2targets))
+        args.output.close()
 
 
 def aucell_command(args):
