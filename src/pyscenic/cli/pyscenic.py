@@ -14,8 +14,10 @@ from pyscenic.prune import prune2df, find_features, _prepare_client
 from pyscenic.aucell import aucell
 from pyscenic.genesig import GeneSignature
 from pyscenic.log import create_logging_handler
+from pyscenic.transform import df2regulons
 import pandas as pd
 import sys
+import json
 import pickle
 from typing import Type, Sequence
 from pyscenic.transform import df2regulons as df2regs
@@ -151,7 +153,12 @@ def prune_targets_command(args):
                            num_workers=args.num_workers)
 
     LOGGER.info("Writing results to file.")
-    out.to_csv(args.output)
+    if args.output_type == 'csv':
+        out.to_csv(args.output)
+    else:
+        name2targets = {r.name: list(r.gene2weight.keys()) for r in df2regulons(out)}
+        with open(args.output, "w") as f:
+            f.write(json.dumps(name2targets))
 
 
 def aucell_command(args):
@@ -279,6 +286,9 @@ def create_argument_parser():
     parser_ctx.add_argument('-o', '--output',
                             type=argparse.FileType('w'), default=sys.stdout,
                             help='Output file/stream, i.e. a table of enriched motifs and target genes (CSV).')
+    parser_ctx.add_argument('-t', '--output_type',
+                            choices=['json', 'csv'], default='csv',
+                            help='Type of output file/stream to generate (csv or json). Output as CSV gives the list of enriched motifs while the JSON option provides the regulon names with their associated target genes.')
     parser_ctx.add_argument('-n', '--no_pruning', action='store_const', const = 'yes',
                               help='Do not perform pruning, i.e. find enriched motifs.')
     parser_ctx.add_argument('--chunk_size',
