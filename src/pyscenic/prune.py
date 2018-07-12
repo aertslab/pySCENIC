@@ -19,7 +19,6 @@ from multiprocessing_on_dill.context import Process
 
 from boltons.iterutils import chunked_iter
 
-from dask.multiprocessing import get
 from dask import delayed
 from dask.dataframe import from_delayed
 
@@ -298,7 +297,7 @@ def _distributed_calc(rnkdbs: Sequence[Type[RankingDatabase]], modules: Sequence
         # Compute dask graph ...
         if client_or_address == "dask_multiprocessing":
             # ... via multiprocessing.
-            return create_graph().compute(get=get, num_workers=num_workers if num_workers else cpu_count())
+            return create_graph().compute(scheduler='processes', num_workers=num_workers if num_workers else cpu_count())
         else:
             # ... via dask.distributed framework.
             client, shutdown_callback = _prepare_client(client_or_address, num_workers=num_workers if num_workers else cpu_count())
