@@ -61,10 +61,21 @@ FILE_EXTENSION2SEPARATOR = {
 }
 
 
+def _load_expression_matrix(args):
+    ext = os.path.splitext(args.expression_mtx_fname.name)[1]
+    if ext not in FILE_EXTENSION2SEPARATOR:
+        LOGGER.error("Unknown file format \"{}\"".format(args.expression_mtx_fname.name))
+        sys.exit(1)
+    ex_mtx = pd.read_csv(args.expression_mtx_fname, sep=FILE_EXTENSION2SEPARATOR[ext], header=0, index_col=0)
+    if args.transpose == 'yes':
+        ex_mtx = ex_mtx.T
+    return ex_mtx
+
+
 def _df2modules(args):
     ext = os.path.splitext(args.module_fname.name)[1]
     adjacencies = pd.read_csv(args.module_fname.name, sep=FILE_EXTENSION2SEPARATOR[ext])
-    ex_mtx = pd.read_csv(args.expression_mtx_fname, sep='\t', header=0, index_col=0)
+    ex_mtx = _load_expression_matrix(args)
     return modules_from_adjacencies(adjacencies, ex_mtx,
                                     thresholds=args.thresholds,
                                     top_n_targets=args.top_n_targets,
@@ -79,17 +90,6 @@ def _df2regulons(fname):
     df[('Enrichment', 'Context')] = df[('Enrichment', 'Context')].apply(lambda s: eval(s))
     df[('Enrichment', 'TargetGenes')] = df[('Enrichment', 'TargetGenes')].apply(lambda s: eval(s))
     return df2regs(df)
-
-
-def _load_expression_matrix(args):
-    ext = os.path.splitext(args.expression_mtx_fname.name)[1]
-    if ext not in FILE_EXTENSION2SEPARATOR:
-        LOGGER.error("Unknown file format \"{}\"".format(args.expression_mtx_fname.name))
-        sys.exit(1)
-    ex_mtx = pd.read_csv(args.expression_mtx_fname, sep=FILE_EXTENSION2SEPARATOR[ext], header=0, index_col=0)
-    if args.transpose == 'yes':
-        ex_mtx = ex_mtx.T
-    return ex_mtx
 
 
 def find_adjacencies_command(args):
@@ -287,7 +287,7 @@ def create_argument_parser():
     parser_ctx.add_argument('-o', '--output',
                             type=argparse.FileType('w'), default=sys.stdout,
                             help='Output file/stream, i.e. a table of enriched motifs and target genes (CSV).')
-    parser_ctx.add_argument('-t', '--output_type',
+    parser_ctx.add_argument('--output_type',
                             choices=['json', 'csv'], default='csv',
                             help='Type of output file/stream to generate (csv or json). Output as CSV gives the list of enriched motifs while the JSON option provides the regulon names with their associated target genes.')
     parser_ctx.add_argument('-n', '--no_pruning', action='store_const', const = 'yes',
@@ -301,6 +301,8 @@ def create_argument_parser():
                        help='The mode to be used for computing (default: dask_multiprocessing).')
     parser_ctx.add_argument('-a', '--all_modules', action='store_const', const = 'no',
                             help='Included positive and negative regulons in the analysis (default: no, i.e. only positive).')
+    parser_ctx.add_argument('-t', '--transpose', action='store_const', const = 'yes',
+                            help='Transpose the expression matrix (rows=genes x columns=cells).')
     add_recovery_parameters(parser_ctx)
     add_annotation_parameters(parser_ctx)
     add_computation_parameters(parser_ctx)
