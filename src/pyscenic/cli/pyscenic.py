@@ -81,7 +81,7 @@ def _df2modules(args):
                                     top_n_targets=args.top_n_targets,
                                     top_n_regulators=args.top_n_regulators,
                                     min_genes=args.min_genes,
-                                    keep_only_activating=(args.all_modules == "no"))
+                                    keep_only_activating=(args.all_modules != "yes"))
 
 
 def _df2regulons(fname):
@@ -299,7 +299,7 @@ def create_argument_parser():
                        choices=['custom_multiprocessing', 'dask_multiprocessing', 'dask_cluster'],
                        default='dask_multiprocessing',
                        help='The mode to be used for computing (default: dask_multiprocessing).')
-    parser_ctx.add_argument('-a', '--all_modules', action='store_const', const = 'no',
+    parser_ctx.add_argument('-a', '--all_modules', action='store_const', const = 'yes', default='no',
                             help='Included positive and negative regulons in the analysis (default: no, i.e. only positive).')
     parser_ctx.add_argument('-t', '--transpose', action='store_const', const = 'yes',
                             help='Transpose the expression matrix (rows=genes x columns=cells).')
