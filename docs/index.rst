@@ -26,6 +26,7 @@ The pipeline has three steps:
     * `Installation`_
     * `Tutorial`_
     * `Command Line Interface`_
+    * `Frequently Asked Questions`_
     * See notebooks_
     * Report an issue_
     * Releases at PyPI_
@@ -287,6 +288,30 @@ A command line version of the tool is included. This tool is available after pro
       -h, --help            show this help message and exit
 
     Arguments can be read from file using a @args.txt construct.
+
+Frequently Asked Questions
+--------------------------
+
+Can I create my own ranking databases?
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Yes you can. The code snippet below shows you how to create your own databases:
+
+.. code-block:: python
+
+    from pyscenic.rnkdb import DataFrameRankingDatabase as RankingDatabase
+    import numpy as np
+    import pandas as pd
+
+    # Every model in a database is represented by a whole genome ranking. The rankings of the genes must be 0-based.
+    df = pd.DataFrame(
+            data=[[0, 1],
+                  [1, 0]],
+            index=['Model1', 'Model2'],
+            columns=['Symbol1', 'Symbol2'],
+            dtype=np.int32)
+    RankingDatabase(df, 'custom').save('custom.db')
+
 
 Website
 -------
