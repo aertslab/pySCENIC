@@ -55,8 +55,8 @@ def _prepare_client(client_or_address, num_workers):
     :return: a tuple: (Client instance, shutdown callback function).
     :raises: ValueError if no valid client input was provided.
     """
-    # Credits to Thomas Moerman (arboretum package):
-    # https://github.com/tmoerman/arboretum/blob/b065c6eade325ace104b2bb772ad15c78d573b1b/arboretum/algo.py#L139-L185
+    # Credits to Thomas Moerman (arboreto package):
+    # https://github.com/tmoerman/arboreto/blob/482ce8598da5385eb0e01a50362cb2b1e6f66a41/arboreto/algo.py#L145-L191
 
     if client_or_address is None or str(client_or_address).lower() == 'local':
         local_cluster = LocalCluster(n_workers=num_workers,
