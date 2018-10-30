@@ -7,8 +7,7 @@ attrs
 frozendict
 numpy
 pandas>=0.20.1
-pyarrow==0.8.0
-feather-format
+pyarrow
 dask>=0.17.2
 graphviz
 bokeh

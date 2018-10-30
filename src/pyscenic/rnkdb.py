@@ -9,7 +9,7 @@ import sqlite3
 from operator import itemgetter
 from .genesig import GeneSignature
 from cytoolz import memoize
-from feather.api import write_dataframe, FeatherReader
+from pyarrow.feather import write_feather, FeatherReader,
 from tqdm import tqdm
 
 
@@ -316,7 +316,7 @@ class DataFrameRankingDatabase(RankingDatabase):
         df = self._df.copy()
         df.index.name = INDEX_NAME
         df.reset_index(inplace=True) # Index is not stored in feather format. https://github.com/wesm/feather/issues/200
-        write_dataframe(df, fname)
+        write_feather(df, fname)
 
 
 IDENTIFIERS_FNAME_EXTENSION = "identifiers.txt"
@@ -359,7 +359,7 @@ class InvertedRankingDatabase(RankingDatabase):
 
         df.index.name = INDEX_NAME
         df.reset_index(inplace=True) # Index is not stored in feather format. https://github.com/wesm/feather/issues/200
-        write_dataframe(df, fname)
+        write_feather(df, fname)
 
     @classmethod
     def revert(cls, db: 'InvertedRankingDatabase', fname: str) -> None:
@@ -455,7 +455,7 @@ def convert2feather(fname: str, out_folder: str, name: str, extension: str="feat
     df = db.load_full()
     df.index.name = INDEX_NAME
     df.reset_index(inplace=True) # Index is not stored in feather format. https://github.com/wesm/feather/issues/200
-    write_dataframe(df, feather_fname)
+    write_feather(df, feather_fname)
     return feather_fname
 
 

@@ -10,7 +10,6 @@ cloudpickle
 dask>=0.18.1
 distributed>=1.21.6
 pyarrow
-feather-format
 arboreto
 boltons
 setuptools

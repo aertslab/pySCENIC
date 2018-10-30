@@ -62,7 +62,6 @@ dependencies:
   - attrs==17.4.0
   - boltons==18.0.0
   - dill==0.2.7.1
-  - feather-format==0.4.0
   - frozendict==1.2
   - h5py==2.7.1
   - interlap==0.2.6
