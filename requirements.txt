@@ -9,7 +9,7 @@ pandas>=0.20.1
 cloudpickle
 dask>=0.18.1
 distributed>=1.21.6
-pyarrow==0.8.0
+pyarrow
 feather-format
 arboreto
 boltons
