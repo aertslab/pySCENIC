@@ -9,7 +9,7 @@ import sqlite3
 from operator import itemgetter
 from .genesig import GeneSignature
 from cytoolz import memoize
-from pyarrow.feather import write_feather, FeatherReader,
+from pyarrow.feather import write_feather, FeatherReader
 from tqdm import tqdm
 
 
