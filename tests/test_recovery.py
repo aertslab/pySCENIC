@@ -25,8 +25,8 @@ def gs():
                                   gene_separator="\t", field_separator="\t", )[0]
 
 
-def test_enrichment():
-    df = enrichment(db(), gs())
+def test_enrichment(db, gs):
+    df = enrichment(db, gs)
 
 
 def test_auc1d_1():

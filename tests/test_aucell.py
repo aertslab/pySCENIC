@@ -26,31 +26,27 @@ def gs():
                                   gene_separator="\t", field_separator="\t", )
 
 
-def test_create_rankings():
-    ex_mtx = exp_matrix()
-    df_rnk = create_rankings(ex_mtx)
-    n_genes = ex_mtx.shape[1]
+def test_create_rankings(exp_matrix):
+    df_rnk = create_rankings(exp_matrix)
+    n_genes = exp_matrix.shape[1]
     assert len(df_rnk.sum(axis=1).unique()) == 1
     assert (df_rnk + 1).sum(axis=1).unique()[0] == (n_genes * (n_genes+1))/2.0
 
 
-def test_aucell_w1():
-    ex_mtx = exp_matrix()
-    percentiles = derive_auc_threshold(ex_mtx)
-    aucs_mtx = aucell(ex_mtx, gs(), auc_threshold=percentiles[0.01], num_workers=1)
+def test_aucell_w1(exp_matrix, gs):
+    percentiles = derive_auc_threshold(exp_matrix)
+    aucs_mtx = aucell(exp_matrix, gs, auc_threshold=percentiles[0.01], num_workers=1)
 
 
-def test_aucell_w2():
-    ex_mtx = exp_matrix()
-    percentiles = derive_auc_threshold(ex_mtx)
-    aucs_mtx = aucell(ex_mtx, gs(), auc_threshold=percentiles[0.01], num_workers=4)
+def test_aucell_w2(exp_matrix, gs):
+    percentiles = derive_auc_threshold(exp_matrix)
+    aucs_mtx = aucell(exp_matrix, gs, auc_threshold=percentiles[0.01], num_workers=4)
 
 
-def test_aucell_mismatch():
-    ex_mtx = exp_matrix()
-    percentiles = derive_auc_threshold(ex_mtx)
-    gss = [GeneSignature(name="test", gene2weight=list(map("FAKE{}".format, range(100))))] + gs()
-    aucs_mtx = aucell(ex_mtx, gss, auc_threshold=percentiles[0.01], num_workers=1)
+def test_aucell_mismatch(exp_matrix, gs):
+    percentiles = derive_auc_threshold(exp_matrix)
+    gss = [GeneSignature(name="test", gene2weight=list(map("FAKE{}".format, range(100))))] + gs
+    aucs_mtx = aucell(exp_matrix, gss, auc_threshold=percentiles[0.01], num_workers=1)
     print(aucs_mtx.head())
 
 

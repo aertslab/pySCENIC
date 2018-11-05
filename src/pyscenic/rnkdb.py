@@ -253,10 +253,10 @@ class FeatherRankingDatabase(RankingDatabase):
         return tuple(reader.get_column_name(idx) for idx in range(self.total_genes) if reader.get_column_name(idx) != INDEX_NAME)
 
     def load_full(self) -> pd.DataFrame:
-        return FeatherReader(self._fname).read().set_index(INDEX_NAME)
+        return FeatherReader(self._fname).read_pandas().set_index(INDEX_NAME)
 
     def load(self, gs: Type[GeneSignature]) -> pd.DataFrame:
-        return FeatherReader(self._fname).read(columns=(INDEX_NAME,) + gs.genes).set_index(INDEX_NAME)
+        return FeatherReader(self._fname).read_pandas(columns=(INDEX_NAME,) + gs.genes).set_index(INDEX_NAME)
 
 
 class MemoryDecorator(RankingDatabase):
