@@ -1,7 +1,14 @@
 # -*- coding: utf-8 -*-
 
-import argparse
 import os
+
+# Set number of threads to use for OpenBLAS.
+os.environ["OPENBLAS_NUM_THREADS"] = 1
+
+# Set number of threads to use for MKL.
+os.environ["MKL_NUM_THREADS"] = 1
+
+import argparse
 import logging
 from dask.diagnostics import ProgressBar
 from multiprocessing import cpu_count
