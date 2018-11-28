@@ -138,7 +138,7 @@ def export2loom(ex_mtx: pd.DataFrame, regulons: List[Regulon], cell_annotations:
     # information from disk can only be achieved via column selection. For the ranking databases this is of utmost
     # importance.
     fh = lp.create(filename=out_fname,
-              matrix=ex_mtx.T.values,
+              layers=ex_mtx.T.values,
               row_attrs=row_attrs,
               col_attrs=column_attrs,
               file_attrs=general_attrs)
