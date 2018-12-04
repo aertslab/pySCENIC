@@ -49,7 +49,7 @@ The lastest stable release of the **package** itself can be installed via :code:
 
 
 .. caution::
-    pySCENIC needs a python 3.5 or greater interpreter.
+    pySCENIC needs a python 3.6 or greater interpreter.
 
 
 You can also install the bleeding edge (i.e. less stable) version of the package directly from the source:
