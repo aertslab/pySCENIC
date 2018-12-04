@@ -1,7 +1,6 @@
 # coding=utf-8
 
 import os
-import json
 import numpy as np
 import pandas as pd
 import loompy as lp
@@ -14,6 +13,18 @@ from multiprocessing import cpu_count
 from .binarization import binarize
 from itertools import chain, repeat, islice
 import networkx as nx
+import zlib
+import base64
+import json
+
+
+def compress_encode(value):
+    '''
+    Compress using ZLIB algorithm and encode the given value in base64.
+
+    Taken from: https://github.com/aertslab/SCopeLoomPy/blob/5438da52c4bcf48f483a1cf378b1eaa788adefcb/src/scopeloompy/utils/__init__.py#L7
+    '''
+    return base64.b64encode(zlib.compress(value.encode('ascii'))).decode('ascii')
 
 
 def export2loom(ex_mtx: pd.DataFrame, regulons: List[Regulon], cell_annotations: Mapping[str,str],
@@ -22,7 +33,8 @@ def export2loom(ex_mtx: pd.DataFrame, regulons: List[Regulon], cell_annotations:
                 title: Optional[str] = None,
                 nomenclature: str = "Unknown",
                 num_workers=cpu_count(),
-                tsne_embedding_mtx=None, auc_mtx=None, auc_thresholds=None):
+                tsne_embedding_mtx=None, auc_mtx=None, auc_thresholds=None,
+                compress=False):
     """
     Create a loom file for a single cell experiment to be used in SCope.
 
@@ -34,6 +46,7 @@ def export2loom(ex_mtx: pd.DataFrame, regulons: List[Regulon], cell_annotations:
     :param title: The title for this loom file. If None than the basename of the filename is used as the title.
     :param nomenclature: The name of the genome.
     :param num_workers: The number of cores to use for AUCell regulon enrichment.
+    :param compress: compress metadata (only when using SCope).
     """
     # Information on the general loom file format: http://linnarssonlab.org/loompy/format/index.html
     # Information on the SCope specific alterations: https://github.com/aertslab/SCope/wiki/Data-Format
@@ -132,17 +145,20 @@ def export2loom(ex_mtx: pd.DataFrame, regulons: List[Regulon], cell_annotations:
     general_attrs.update(("SCopeTreeL{}".format(idx+1), category)
                          for idx, category in enumerate(list(islice(chain(tree_structure, repeat("")), 3))))
 
+    # Compress MetaData global attribute
+    if compress:
+        general_attrs["MetaData"] = compress_encode(value=general_attrs["MetaData"])
+
     # Create loom file for use with the SCope tool.
     # The loom file format opted for rows as genes to facilitate growth along the column axis (i.e add more cells)
     # PySCENIC chose a different orientation because of limitation set by the feather format: selectively reading
     # information from disk can only be achieved via column selection. For the ranking databases this is of utmost
     # importance.
-    fh = lp.create(filename=out_fname,
+    lp.create(filename=out_fname,
               layers=ex_mtx.T.values,
               row_attrs=row_attrs,
               col_attrs=column_attrs,
               file_attrs=general_attrs)
-    fh.close()
 
 
 def export_regulons(regulons: Sequence[Regulon], fname: str) -> None:
