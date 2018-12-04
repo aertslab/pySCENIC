@@ -109,7 +109,7 @@ First we import the necessary modules and declare some constants:
 
     from pyscenic.rnkdb import FeatherRankingDatabase as RankingDatabase
     from pyscenic.utils import modules_from_adjacencies, load_motifs
-    from pyscenic.prune import prune, prune2df, df2regulons
+    from pyscenic.prune import prune2df, df2regulons
     from pyscenic.aucell import aucell
 
     import seaborn as sns
@@ -230,22 +230,12 @@ Phase II: Prune modules for targets with cis regulatory footprints (aka RcisTarg
     with open(REGULONS_FNAME, "wb") as f:
         pickle.dump(regulons, f)
 
-Directly calculating regulons without the intermediate dataframe of enriched features is also possible:
-
-.. code-block:: python
-
-    regulons = prune(dbs, modules, MOTIF_ANNOTATIONS_FNAME)
-
-
 Clusters can be leveraged in the following way:
 
 .. code-block:: python
 
     # The clusters can be leveraged via the dask framework:
     df = prune2df(dbs, modules, MOTIF_ANNOTATIONS_FNAME, client_or_address=SCHEDULER)
-
-    # or alternatively:
-    regulons = prune(dbs, modules, MOTIF_ANNOTATIONS_FNAME, client_or_address=SCHEDULER)
 
 .. caution::
     The nodes of the clusters need to have access to a shared network drive on which the ranking databases are stored.

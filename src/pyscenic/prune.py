@@ -32,7 +32,7 @@ from .utils import add_motif_url
 from .transform import module2features_auc1st_impl, modules2regulons, modules2df, df2regulons, DF_META_DATA
 
 
-__all__ = ['prune', 'prune2df', 'find_features', 'df2regulons']
+__all__ = ['prune2df', 'find_features', 'df2regulons']
 
 
 # Taken from: https://www.regular-expressions.info/ip.html
@@ -305,49 +305,6 @@ def _distributed_calc(rnkdbs: Sequence[Type[RankingDatabase]], modules: Sequence
                 return client.compute(create_graph(client), sync=True)
             finally:
                 shutdown_callback(False)
-
-
-def prune(rnkdbs: Sequence[Type[RankingDatabase]], modules: Sequence[Regulon],
-                         motif_annotations_fname: str,
-                         rank_threshold: int = 1500, auc_threshold: float = 0.05, nes_threshold=3.0,
-                         motif_similarity_fdr: float = 0.001, orthologuous_identity_threshold: float = 0.0,
-                         weighted_recovery=False, client_or_address='dask_multiprocessing',
-                         num_workers=None, module_chunksize=100) -> Sequence[Regulon]:
-    """
-    Calculate all regulons for a given sequence of ranking databases and a sequence of co-expression modules.
-    The number of regulons derived from the supplied modules is usually much lower. In addition, the targets of the
-    retained modules is reduced to only these ones for which a cis-regulatory footprint is present.
-
-    :param rnkdbs: The sequence of databases.
-    :param modules: The sequence of modules.
-    :param motif_annotations_fname: The name of the file that contains the motif annotations to use.
-    :param rank_threshold: The total number of ranked genes to take into account when creating a recovery curve.
-    :param auc_threshold: The fraction of the ranked genome to take into account for the calculation of the
-        Area Under the recovery Curve.
-    :param nes_threshold: The Normalized Enrichment Score (NES) threshold to select enriched features.
-    :param motif_similarity_fdr: The maximum False Discovery Rate to find factor annotations for enriched motifs.
-    :param orthologuous_identity_threshold: The minimum orthologuous identity to find factor annotations
-        for enriched motifs.
-    :param weighted_recovery: Use weights of a gene signature when calculating recovery curves?
-    :param num_workers: If not using a cluster, the number of workers to use for the calculation.
-        None of all available CPUs need to be used.
-    :param module_chunksize: The size of the chunk to use when using the dask framework.
-    :param client_or_address: The client of IP address of the scheduler when working with dask. For local multi-core
-        systems 'custom_multiprocessing' or 'dask_multiprocessing' can be supplied.
-    :return: A sequence of regulons.
-    """
-    # Always use module2features_auc1st_impl not only because of speed impact but also because of reduced memory footprint.
-    module2features_func = partial(module2features_auc1st_impl,
-                                   rank_threshold=rank_threshold,
-                                   auc_threshold=auc_threshold,
-                                   nes_threshold=nes_threshold,
-                                   filter_for_annotation=True)
-    transformation_func = partial(modules2regulons, module2features_func=module2features_func, weighted_recovery=weighted_recovery)
-    from toolz.curried import reduce
-    aggregation_func = delayed(reduce(concat)) if client_or_address != 'custom_multiprocessing' else reduce(concat)
-    return _distributed_calc(rnkdbs, modules, motif_annotations_fname, transformation_func, aggregation_func,
-                      motif_similarity_fdr, orthologuous_identity_threshold, client_or_address,
-                      num_workers, module_chunksize)
 
 
 def prune2df(rnkdbs: Sequence[Type[RankingDatabase]], modules: Sequence[Regulon],
