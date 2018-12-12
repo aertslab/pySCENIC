@@ -28,6 +28,7 @@ The pipeline has three steps:
     * `Installation`_
     * `Tutorial`_
     * `Command Line Interface`_
+    * `Docker and Singularity Images`_
     * `Frequently Asked Questions`_
     * See notebooks_
     * Report an issue_
@@ -284,6 +285,116 @@ A command line version of the tool is included. This tool is available after pro
       -h, --help            show this help message and exit
 
     Arguments can be read from file using a @args.txt construct.
+
+Docker and Singularity Images
+-----------------------------
+
+pySCENIC is available to use with both Docker and Singularity, and tool usage from a container is similar to that of the command line interface.
+Note that the feather databases, transcription factors, and motif annotation databases need to be accessible to the container.
+In the below examples, separate mounts are created for the input, output, and databases directories.
+
+Docker
+~~~~~~
+
+To build the Docker image:
+
+.. code-block:: bash
+
+    cd pySCENIC/
+    docker build -t pyscenic .
+
+To run pySCENIC in Docker (three steps):
+
+.. code-block:: bash
+
+    docker run \
+        -v /path/to/inputdata:/scenic-input \
+        -v /path/to/resources:/scenic-db \
+        -v /path/to/outputdata:/scenic-output \
+        pyscenic grnboost \
+            --num_workers 6 \
+            -o /scenic-output/expr_mat.adjacencies.tsv \
+            /scenic-input/expr_mat.tsv \
+            /scenic-db/allTFs_hg38.txt
+
+    docker run \
+        -v /path/to/inputdata:/scenic-input \
+        -v /path/to/resources:/scenic-db \
+        -v /path/to/outputdata:/scenic-output \
+        pyscenic ctx \
+            /scenic-output/expr_mat.adjacencies.tsv \
+            /scenic-db/hg19-500bp-upstream-7species.mc9nr.feather \
+            /scenic-db/hg19-tss-centered-5kb-7species.mc9nr.feather \
+            /scenic-db/hg19-tss-centered-10kb-7species.mc9nr.feather \
+            --annotations_fname /scenic-db/motifs-v9-nr.hgnc-m0.001-o0.0.tbl \
+            --expression_mtx_fname /scenic-input/expr_mat.tsv \
+            --mode "dask_multiprocessing" \
+            --output_type csv \
+            --output /scenic-output/regulons.csv \
+            --num_workers 6
+
+    docker run \
+        -v /path/to/inputdata:/scenic-input \
+        -v /path/to/outputdata:/scenic-output \
+        pyscenic aucell \
+            /scenic-input/expr_mat.tsv \
+            /scenic-output/regulons.csv \
+            -o /scenic-output/auc_mtx.csv \
+            --num_workers 6
+
+Singularity
+~~~~~~~~~~~
+
+To build the Singularity image:
+
+.. code-block:: bash
+
+    cd pySCENIC/
+    singularity build pyscenic.sif Singularity
+
+To run pySCENIC in Singularity (three steps):
+
+.. code-block:: bash
+
+    singularity exec \
+        --bind /path/to/inputdata:/scenic-input \
+        --bind /path/to/resources:/scenic-db \
+        --bind /path/to/outputdata:/scenic-output \
+        pyscenic.sif \
+            pyscenic grnboost \
+                --num_workers 6 \
+                -o /scenic-output/expr_mat.adjacencies.tsv \
+                /scenic-input/expr_mat.tsv \
+                /scenic-db/allTFs_hg38.txt
+
+
+    singularity exec \
+        --bind /path/to/inputdata:/scenic-input \
+        --bind /path/to/resources:/scenic-db \
+        --bind /path/to/outputdata:/scenic-output \
+        pyscenic.sif \
+            pyscenic ctx \
+                /scenic-output/expr_mat.adjacencies.tsv \
+                /scenic-db/hg19-500bp-upstream-7species.mc9nr.feather \
+                /scenic-db/hg19-tss-centered-5kb-7species.mc9nr.feather \
+                /scenic-db/hg19-tss-centered-10kb-7species.mc9nr.feather \
+                --annotations_fname /scenic-db/motifs-v9-nr.hgnc-m0.001-o0.0.tbl \
+                --expression_mtx_fname /scenic-input/expr_mat.tsv \
+                --mode "dask_multiprocessing" \
+                --output_type csv \
+                --output /scenic-output/regulons.csv \
+                --num_workers 6
+
+    singularity exec \
+        --bind /path/to/inputdata:/scenic-input \
+        --bind /path/to/outputdata:/scenic-output \
+        pyscenic.sif \
+            pyscenic aucell \
+                /scenic-input/expr_mat.tsv \
+                /scenic-output/regulons.csv \
+                -o /scenic-output/auc_mtx.csv \
+                --num_workers 6
+
 
 Frequently Asked Questions
 --------------------------
