@@ -10,7 +10,8 @@ from pyscenic.genesig import GeneSignature
 from pyscenic.transform import df2regulons
 from pyscenic.utils import load_motifs, load_from_yaml, save_to_yaml
 
-__all__ = ['save_matrix', 'load_exp_matrix', 'load_signatures', 'save_enriched_motifs']
+
+__all__ = ['save_matrix', 'load_exp_matrix', 'load_signatures', 'save_enriched_motifs', 'load_adjacencies', 'load_modules']
 
 
 ATTRIBUTE_NAME_CELL_IDENTIFIER = "CellID"
@@ -168,3 +169,27 @@ def save_enriched_motifs(df, fname:str) -> None:
             save_to_yaml(regulons, fname)
         else:
             raise ValueError("Unknown file format \"{}\".".format(fname))
+
+
+def load_adjacencies(fname: str) -> pd.DataFrame:
+    extension = os.path.splitext(fname)[1].lower().lower()
+    return pd.read_csv(fname, sep=FILE_EXTENSION2SEPARATOR[extension])
+
+
+def load_modules(fname: str) -> Sequence[Type[GeneSignature]]:
+    # Loading from YAML is extremely slow. Therefore this is a potential performance improvement.
+    # Potential improvements are switching to JSON or to use a CLoader:
+    # https://stackoverflow.com/questions/27743711/can-i-speedup-yaml
+    # The alternative for which was opted in the end is binary pickling.
+    if fname.endswith('.yaml') or fname.endswith('.yml'):
+        return load_from_yaml(fname)
+    elif fname.endswith('.dat'):
+        with open(fname, 'rb') as f:
+            return pickle.load(f)
+    elif fname.endswith('.gmt'):
+        sep = guess_separator(fname)
+        return GeneSignature.from_gmt(fname,
+                                      field_separator=sep,
+                                      gene_separator=sep)
+    else:
+        raise ValueError("Unknown file format for \"{}\".".format(fname))

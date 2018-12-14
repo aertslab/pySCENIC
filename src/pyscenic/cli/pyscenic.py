@@ -15,83 +15,17 @@ from multiprocessing import cpu_count
 from arboreto.algo import grnboost2
 from arboreto.utils import load_tf_names
 
-from pyscenic.utils import load_from_yaml, modules_from_adjacencies
+from pyscenic.utils import modules_from_adjacencies
 from pyscenic.rnkdb import opendb, RankingDatabase
 from pyscenic.prune import prune2df, find_features, _prepare_client
 from pyscenic.aucell import aucell
-from pyscenic.genesig import GeneSignature
 from pyscenic.log import create_logging_handler
-from pyscenic.transform import df2regulons
-import pandas as pd
 import sys
-import json
-import pickle
 from typing import Type, Sequence
-from .utils import load_exp_matrix, load_signatures, save_matrix, save_enriched_motifs
+from .utils import load_exp_matrix, load_signatures, save_matrix, save_enriched_motifs, load_adjacencies, load_modules
 
 
 LOGGER = logging.getLogger(__name__)
-
-
-class NoProgressBar:
-    def __enter__(self):
-        return self
-
-    def __exit__(*x):
-        pass
-
-
-def _load_modules(fname: str) -> Sequence[Type[GeneSignature]]:
-    # Loading from YAML is extremely slow. Therefore this is a potential performance improvement.
-    # Potential improvements are switching to JSON or to use a CLoader:
-    # https://stackoverflow.com/questions/27743711/can-i-speedup-yaml
-    # The alternative for which was opted in the end is binary pickling.
-    if fname.endswith('.yaml') or fname.endswith('.yml'):
-        return load_from_yaml(fname)
-    elif fname.endswith('.dat'):
-        with open(fname, 'rb') as f:
-            return pickle.load(f)
-    else:
-        LOGGER.error("Unknown file format for \"{}\".".format(fname))
-        sys.exit(1)
-
-
-
-
-
-FILE_EXTENSION2SEPARATOR = {
-    '.tsv': '\t',
-    '.csv': ',',
-    '.loom': None
-}
-
-
-def _load_expression_matrix(args):
-    """
-
-    :param args:
-    :return:
-    """
-    ext = os.path.splitext(args.expression_mtx_fname.name)[1]
-    if ext not in FILE_EXTENSION2SEPARATOR:
-        LOGGER.error("Unknown file format \"{}\"".format(args.expression_mtx_fname.name))
-        sys.exit(1)
-    ex_mtx = pd.read_csv(args.expression_mtx_fname, sep=FILE_EXTENSION2SEPARATOR[ext], header=0, index_col=0)
-    if args.transpose == 'yes':
-        ex_mtx = ex_mtx.T
-    return ex_mtx
-
-
-def _df2modules(args):
-    ext = os.path.splitext(args.module_fname.name)[1]
-    adjacencies = pd.read_csv(args.module_fname.name, sep=FILE_EXTENSION2SEPARATOR[ext])
-    ex_mtx = _load_expression_matrix(args)
-    return modules_from_adjacencies(adjacencies, ex_mtx,
-                                    thresholds=args.thresholds,
-                                    top_n_targets=args.top_n_targets,
-                                    top_n_regulators=args.top_n_regulators,
-                                    min_genes=args.min_genes,
-                                    keep_only_activating=(args.all_modules != "yes"))
 
 
 def find_adjacencies_command(args):
@@ -128,10 +62,41 @@ def find_adjacencies_command(args):
     network.to_csv(args.output, index=False, sep='\t')
 
 
+def adjacencies2modules(args):
+    try:
+        adjacencies = load_adjacencies(args.module_fname.name)
+    except ValueError as e:
+        LOGGER.error(e)
+        sys.exit(1)
+
+    LOGGER.info("Loading expression matrix.")
+    try:
+        ex_mtx = load_exp_matrix(args.expression_mtx_fname.name, (args.transpose == 'yes'))
+    except ValueError as e:
+        LOGGER.error(e)
+        sys.exit(1)
+
+    return modules_from_adjacencies(adjacencies,
+                                    ex_mtx,
+                                    thresholds=args.thresholds,
+                                    top_n_targets=args.top_n_targets,
+                                    top_n_regulators=args.top_n_regulators,
+                                    min_genes=args.min_genes,
+                                    keep_only_activating=(args.all_modules != "yes"))
+
+
 def _load_dbs(fnames: Sequence[str]) -> Sequence[Type[RankingDatabase]]:
     def get_name(fname):
         return os.path.basename(fname).split(".")[0]
     return [opendb(fname=fname.name, name=get_name(fname.name)) for fname in fnames]
+
+
+class NoProgressBar:
+    def __enter__(self):
+        return self
+
+    def __exit__(*x):
+        pass
 
 
 def prune_targets_command(args):
@@ -142,14 +107,17 @@ def prune_targets_command(args):
     # Potential improvements are switching to JSON or to use a CLoader:
     # https://stackoverflow.com/questions/27743711/can-i-speedup-yaml
     # The alternative for which was opted in the end is binary pickling.
-    #TODO: Support loom!
-    if any(args.module_fname.name.endswith(ext) for ext in FILE_EXTENSION2SEPARATOR.keys()):
+    extension = os.path.splitext(args.module_fname.name)[1].lower()
+    if extension in {'.csv', '.tsv'}:
         LOGGER.info("Creating modules.")
-        modules = _df2modules(args)
+        modules = adjacencies2modules(args.module_fname.name)
     else:
         LOGGER.info("Loading modules.")
-        #TODO: Support GMT
-        modules = _load_modules(args.module_fname.name)
+        try:
+            modules = load_modules(args.module_fname.name)
+        except ValueError as e:
+            LOGGER.error(e)
+            sys.exit(1)
 
     if len(modules) == 0:
         LOGGER.error("Not a single module loaded")
@@ -309,8 +277,8 @@ def create_argument_parser():
                                          help='Find enriched motifs for a gene signature and optionally prune targets from this signature based on cis-regulatory cues.')
     parser_ctx.add_argument('module_fname',
                               type=argparse.FileType('r'),
-                              help='The name of the file that contains the signature or the co-expression modules (YAML or pickled DAT).'
-                                   'A CSV with adjacencies can also be supplied.')
+                              help='The name of the file that contains the signature or the co-expression modules. '
+                                   'The following formats are supported: CSV or TSV (adjacencies), YAML, GMT and DAT (modules)')
     parser_ctx.add_argument('database_fname',
                               type=argparse.FileType('r'), nargs='+',
                               help='The name(s) of the regulatory feature databases. '
