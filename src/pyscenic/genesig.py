@@ -53,7 +53,7 @@ class GeneSignature(yaml.YAMLObject):
                              gene2weight=zip(data['genes'], data['weights']))
 
     @classmethod
-    def from_gmt(cls, fname: str, field_separator: str =',', gene_separator=',') -> List['GeneSignature']:
+    def from_gmt(cls, fname: str, field_separator: str = ',', gene_separator: str = ',') -> List['GeneSignature']:
         """
         Load gene signatures from a GMT file.
 
@@ -75,6 +75,26 @@ class GeneSignature(yaml.YAMLObject):
                     genes = columns[2:] if field_separator == gene_separator else columns[2].split(gene_separator)
                     yield GeneSignature(name=columns[0], gene2weight=genes)
         return list(signatures())
+
+
+    @classmethod
+    def to_gmt(cls, fname: str, signatures: List[Type['GeneSignature']], field_separator: str = ',', gene_separator: str = ',') -> None:
+        """
+        Save list of signatures as GMT file.
+
+        :param fname: Name of the file to generate.
+        :param signatures: The collection of signatures.
+        :param field_separator: The separator that separates fields in a line.
+        :param gene_separator: The separator that separates the genes.
+        """
+        assert not os.path.exists(fname), "{} already exists.".format(fname)
+        with open(fname, "w") as file:
+            for signature in signatures:
+                genes = gene_separator.join(signature.genes)
+                file.write("{}{}{}{}{}\n".format(signature.name, field_separator,
+                                                 signature.metadata(gene_separator), field_separator,
+                                                 genes))
+
 
     @classmethod
     def from_grp(cls, fname, name: str) -> 'GeneSignature':
@@ -144,6 +164,16 @@ class GeneSignature(yaml.YAMLObject):
         Return the weights of the genes in this signature. Genes are sorted in descending order according to weight.
         """
         return tuple(map(second, sorted(self.gene2weight.items(), key=second, reverse=True)))
+
+    def metadata(self, field_separator: str = ",") -> str:
+        """
+        Textual representation of metadata for this signature.
+        Is used as description when storing this signature as part of a GMT file.
+
+        :param field_separator: the separator to use within fields.
+        :return: The string representation of the metadata of this signature.
+        """
+        return ""
 
     def copy(self, **kwargs) -> Type['GeneSignature']:
         # noinspection PyTypeChecker
@@ -304,6 +334,10 @@ class Regulon(GeneSignature, yaml.YAMLObject):
     def non_empty(self, attribute, value):
         if len(value) == 0:
             raise ValueError("A regulon must have a transcription factor.")
+
+    @property
+    def metadata(self, field_separator: str = ',') -> str:
+        return "tf={}{}score={}".format(self.transcription_factor, field_separator, self.score)
 
     def copy(self, **kwargs) -> 'Regulon':
         return Regulon(**merge(vars(self), kwargs))
