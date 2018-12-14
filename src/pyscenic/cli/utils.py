@@ -2,14 +2,15 @@
 
 import os
 import pickle
+import json
 import pandas as pd
 import loompy as lp
-from typing import Type, List, Sequence, Tuple
+from typing import Type, Sequence
 from pyscenic.genesig import GeneSignature
 from pyscenic.transform import df2regulons
-from pyscenic.utils import load_motifs, load_from_yaml
+from pyscenic.utils import load_motifs, load_from_yaml, save_to_yaml
 
-__all__ = ['save_matrix', 'load_exp_matrix', 'load_signatures']
+__all__ = ['save_matrix', 'load_exp_matrix', 'load_signatures', 'save_enriched_motifs']
 
 
 ATTRIBUTE_NAME_CELL_IDENTIFIER = "CellID"
@@ -138,3 +139,32 @@ def load_signatures(fname: str) -> Sequence[Type[GeneSignature]]:
             return pickle.load(f)
     else:
         raise ValueError("Unknown file format \"{}\".".format(fname))
+
+
+def save_enriched_motifs(df, fname:str) -> None:
+    """
+    Save enriched motifs.
+
+    Supported file formats are CSV, TSV, GMT, DAT (pickle), JSON or YAML.
+
+    :param df:
+    :param fname:
+    :return:
+    """
+    extension = os.path.splitext(fname)[1].lower()
+    if extension in FILE_EXTENSION2SEPARATOR.keys():
+        df.to_csv(fname, sep=FILE_EXTENSION2SEPARATOR[extension])
+    else:
+        regulons = df2regulons(df)
+        if extension == '.json':
+            name2targets = {r.name: list(r.gene2weight.keys()) for r in regulons}
+            with open(fname, 'w') as f:
+                f.write(json.dumps(name2targets))
+        elif extension == '.dat':
+            pickle.dump(regulons, fname)
+        elif extension == '.gmt':
+            GeneSignature.to_gmt(fname, regulons)
+        elif extension in {'.yaml', '.yml'}:
+            save_to_yaml(regulons, fname)
+        else:
+            raise ValueError("Unknown file format \"{}\".".format(fname))

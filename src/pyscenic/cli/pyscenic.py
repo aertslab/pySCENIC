@@ -27,7 +27,7 @@ import sys
 import json
 import pickle
 from typing import Type, Sequence
-from .utils import load_exp_matrix, load_signatures, save_matrix
+from .utils import load_exp_matrix, load_signatures, save_matrix, save_enriched_motifs
 
 
 LOGGER = logging.getLogger(__name__)
@@ -142,11 +142,13 @@ def prune_targets_command(args):
     # Potential improvements are switching to JSON or to use a CLoader:
     # https://stackoverflow.com/questions/27743711/can-i-speedup-yaml
     # The alternative for which was opted in the end is binary pickling.
+    #TODO: Support loom!
     if any(args.module_fname.name.endswith(ext) for ext in FILE_EXTENSION2SEPARATOR.keys()):
         LOGGER.info("Creating modules.")
         modules = _df2modules(args)
     else:
         LOGGER.info("Loading modules.")
+        #TODO: Support GMT
         modules = _load_modules(args.module_fname.name)
 
     if len(modules) == 0:
@@ -160,7 +162,7 @@ def prune_targets_command(args):
     motif_annotations_fname = args.annotations_fname.name
     calc_func = find_features if args.no_pruning == "yes" else prune2df
     with ProgressBar() if args.mode == "dask_multiprocessing" else NoProgressBar():
-        out = calc_func(dbs, modules, motif_annotations_fname,
+        df_motifs = calc_func(dbs, modules, motif_annotations_fname,
                            rank_threshold=args.rank_threshold,
                            auc_threshold=args.auc_threshold,
                            nes_threshold=args.nes_threshold,
@@ -169,12 +171,10 @@ def prune_targets_command(args):
                            num_workers=args.num_workers)
 
     LOGGER.info("Writing results to file.")
-    if args.output_type == 'csv':
-        out.to_csv(args.output)
+    if args.output.name == 'stdout':
+        df_motifs.to_csv(args.output)
     else:
-        name2targets = {r.name: list(r.gene2weight.keys()) for r in df2regulons(out)}
-        args.output.write(json.dumps(name2targets))
-        args.output.close()
+        save_enriched_motifs(df_motifs, args.output.name)
 
 
 def aucell_command(args):
@@ -254,7 +254,8 @@ def add_module_parameters(parser):
                        help='The minimum number of genes in a module (default: 20).')
     group.add_argument('--expression_mtx_fname',
                        type=argparse.FileType('r'),
-                       help='The name of the file that contains the expression matrix (CSV).'
+                       help='The name of the file that contains the expression matrix for the single cell experiment.'
+                            ' Two file formats are supported: csv (rows=cells x columns=genes) or loom (rows=genes x columns=cells).'
                             ' (Only required if modules need to be generated)')
     return parser
 
@@ -312,13 +313,12 @@ def create_argument_parser():
                                    'A CSV with adjacencies can also be supplied.')
     parser_ctx.add_argument('database_fname',
                               type=argparse.FileType('r'), nargs='+',
-                              help='The name(s) of the regulatory feature databases (FEATHER of LEGACY).')
+                              help='The name(s) of the regulatory feature databases. '
+                                   'Two file formats are supported: feather or db (legacy).')
     parser_ctx.add_argument('-o', '--output',
                             type=argparse.FileType('w'), default=sys.stdout,
-                            help='Output file/stream, i.e. a table of enriched motifs and target genes (CSV).')
-    parser_ctx.add_argument('--output_type',
-                            choices=['json', 'csv'], default='csv',
-                            help='Type of output file/stream to generate (csv or json). Output as CSV gives the list of enriched motifs while the JSON option provides the regulon names with their associated target genes.')
+                            help='Output file/stream, i.e. a table of enriched motifs and target genes (csv, tsv)'
+                                 ' or collection of regulons (yaml, gmt, dat, json).')
     parser_ctx.add_argument('-n', '--no_pruning', action='store_const', const = 'yes',
                               help='Do not perform pruning, i.e. find enriched motifs.')
     parser_ctx.add_argument('--chunk_size',
