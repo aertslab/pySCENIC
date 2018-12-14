@@ -64,11 +64,17 @@ def _load_dbs(fnames: Sequence[str]) -> Sequence[Type[RankingDatabase]]:
 
 FILE_EXTENSION2SEPARATOR = {
     '.tsv': '\t',
-    '.csv': ','
+    '.csv': ',',
+    '.loom': None
 }
 
 
 def _load_expression_matrix(args):
+    """
+
+    :param args:
+    :return:
+    """
     ext = os.path.splitext(args.expression_mtx_fname.name)[1]
     if ext not in FILE_EXTENSION2SEPARATOR:
         LOGGER.error("Unknown file format \"{}\"".format(args.expression_mtx_fname.name))
@@ -169,30 +175,40 @@ def prune_targets_command(args):
         args.output.close()
 
 
+from .utils import load_exp_matrix, load_signatures, save_matrix
+
+
 def aucell_command(args):
     """
     Calculate regulon enrichment (as AUC values) for cells.
     """
     LOGGER.info("Loading expression matrix.")
-    ex_mtx = _load_expression_matrix(args)
+    try:
+        ex_mtx = load_exp_matrix(args.expression_mtx_fname.name, (args.transpose == 'yes'))
+    except ValueError as e:
+        LOGGER.error(e)
+        sys.exit(1)
 
-    if any(args.regulons_fname.name.endswith(ext) for ext in FILE_EXTENSION2SEPARATOR.keys()):
-        LOGGER.info("Creating regulons.")
-        regulons = _df2regulons(args.regulons_fname.name)
-    elif args.regulons_fname.name.endswith('.gmt'):
-        LOGGER.info("Loading regulons.")
-        regulons = GeneSignature.from_gmt(args.regulons_fname.name,
-                                           field_separator='\t', gene_separator='\t')
-    else:
-        LOGGER.info("Loading regulons.")
-        regulons = _load_modules(args.regulons_fname.name)
+    LOGGER.info("Loading gene signatures.")
+    try:
+        signatures = load_signatures(args.signatures_fname.name)
+    except ValueError as e:
+        LOGGER.error(e)
+        sys.exit(1)
 
-    LOGGER.info("Calculating enrichment.")
-    auc_heatmap = aucell(ex_mtx, regulons, auc_threshold=args.auc_threshold,
-                         noweights=args.weights != 'yes', num_workers=args.num_workers)
+    LOGGER.info("Calculating cellular enrichment.")
+    auc_mtx = aucell(ex_mtx, signatures,
+                         auc_threshold=args.auc_threshold,
+                         noweights=(args.weights != 'yes'),
+                         num_workers=args.num_workers)
 
     LOGGER.info("Writing results to file.")
-    auc_heatmap.to_csv(args.output)
+    if args.output.name == 'stdout':
+        transpose = (args.transpose == 'yes')
+        (auc_mtx.T if transpose else auc_mtx).to_csv(args.output)
+    else:
+        save_matrix(auc_mtx, args.output.name, (args.transpose == 'yes'))
+
 
 
 def add_recovery_parameters(parser):
@@ -260,7 +276,9 @@ def create_argument_parser():
     parser = argparse.ArgumentParser(prog=os.path.basename(__file__).split('.')[0],
                                      description='Single-CEll regulatory Network Inference and Clustering',
                                      fromfile_prefix_chars='@', add_help=True,
-                                     epilog="Arguments can be read from file using a @args.txt construct.")
+                                     epilog="Arguments can be read from file using a @args.txt construct. "
+                                            "For more information on loom file format see http://loompy.org . "
+                                            "For more information on gmt file format see https://software.broadinstitute.org/cancer/software/gsea/wiki/index.php/Data_formats .")
 
     subparsers = parser.add_subparsers(help='sub-command help')
 
@@ -316,22 +334,31 @@ def create_argument_parser():
     add_module_parameters(parser_ctx)
     parser_ctx.set_defaults(func=prune_targets_command)
 
+    #--------------------------------------------
     # create the parser for the "aucell" command
-    parser_aucell = subparsers.add_parser('aucell', help='Find enrichment of regulons across single cells.')
+    # -------------------------------------------
+    parser_aucell = subparsers.add_parser('aucell',
+                                          help='Quantify activity of gene signatures across single cells.')
+
+    # Mandatory arguments
     parser_aucell.add_argument('expression_mtx_fname',
                             type=argparse.FileType('r'),
-                            help='The name of the file that contains the expression matrix (CSV; rows=cells x columns=genes).')
-    parser_aucell.add_argument('regulons_fname',
+                            help='The name of the file that contains the expression matrix for the single cell experiment.'
+                                 ' Two file formats are supported: csv (rows=cells x columns=genes) or loom (rows=genes x columns=cells).')
+    parser_aucell.add_argument('signatures_fname',
                           type=argparse.FileType('r'),
-                               help='The name of the file that contains the co-expression modules (YAML or pickled DAT).'
-                                    'A CSV with adjacencies can also be supplied or a GMT file containing gene signatures.')
+                               help='The name of the file that contains the gene signatures.'
+                                    ' Two file formats are supported: gmt or json.')
+    # Optional arguments
     parser_aucell.add_argument('-o', '--output',
                             type=argparse.FileType('w'), default=sys.stdout,
-                            help='Output file/stream, a matrix of AUC values (CSV; rows=cells x columns=regulons).')
+                            help='Output file/stream, a matrix of AUC values.'
+                                 ' Two file formats are supported: csv or loom.')
     parser_aucell.add_argument('-t', '--transpose', action='store_const', const = 'yes',
-                               help='Transpose the expression matrix (rows=genes x columns=cells).')
+                               help='Transpose the expression matrix if supplied as csv (rows=genes x columns=cells).')
     parser_aucell.add_argument('-w', '--weights', action='store_const', const = 'yes',
-                               help='Use weights associated with genes in recovery analysis.')
+                               help='Use weights associated with genes in recovery analysis.'
+                                    ' Is only relevant when gene signatures are supplied as json format.')
     parser_aucell.add_argument('--num_workers',
                        type=int, default=cpu_count(),
                        help='The number of workers to use (default: {}).'.format(cpu_count()))

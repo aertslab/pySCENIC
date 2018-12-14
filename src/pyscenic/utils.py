@@ -316,15 +316,16 @@ def add_motif_url(df: pd.DataFrame, base_url: str):
     return df
 
 
-def load_motifs(fname: str) -> pd.DataFrame:
+def load_motifs(fname: str, sep: str = ',') -> pd.DataFrame:
     """
 
     :param fname:
+    :param sep:
     :return:
     """
     from .transform import COLUMN_NAME_TARGET_GENES, COLUMN_NAME_CONTEXT
 
-    df = pd.read_csv(fname, index_col=[0,1], header=[0,1], skipinitialspace=True)
+    df = pd.read_csv(fname, sep=sep, index_col=[0,1], header=[0,1], skipinitialspace=True)
     df[('Enrichment', COLUMN_NAME_CONTEXT)] = df[('Enrichment', COLUMN_NAME_CONTEXT)].apply(lambda s: eval(s))
     df[('Enrichment', COLUMN_NAME_TARGET_GENES)] = df[('Enrichment', COLUMN_NAME_TARGET_GENES)].apply(lambda s: eval(s))
     return df
