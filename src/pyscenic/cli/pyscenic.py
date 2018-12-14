@@ -27,7 +27,7 @@ import sys
 import json
 import pickle
 from typing import Type, Sequence
-from pyscenic.transform import df2regulons as df2regs
+from .utils import load_exp_matrix, load_signatures, save_matrix
 
 
 LOGGER = logging.getLogger(__name__)
@@ -56,10 +56,7 @@ def _load_modules(fname: str) -> Sequence[Type[GeneSignature]]:
         sys.exit(1)
 
 
-def _load_dbs(fnames: Sequence[str]) -> Sequence[Type[RankingDatabase]]:
-    def get_name(fname):
-        return os.path.basename(fname).split(".")[0]
-    return [opendb(fname=fname.name, name=get_name(fname.name)) for fname in fnames]
+
 
 
 FILE_EXTENSION2SEPARATOR = {
@@ -97,26 +94,25 @@ def _df2modules(args):
                                     keep_only_activating=(args.all_modules != "yes"))
 
 
-def _df2regulons(fname):
-    ext = os.path.splitext(fname,)[1]
-    df = pd.read_csv(fname, sep=FILE_EXTENSION2SEPARATOR[ext], index_col=[0,1], header=[0,1], skipinitialspace=True)
-    df[('Enrichment', 'Context')] = df[('Enrichment', 'Context')].apply(lambda s: eval(s))
-    df[('Enrichment', 'TargetGenes')] = df[('Enrichment', 'TargetGenes')].apply(lambda s: eval(s))
-    return df2regs(df)
-
-
 def find_adjacencies_command(args):
     """
     Infer co-expression modules.
     """
     LOGGER.info("Loading expression matrix.")
-    ex_mtx = _load_expression_matrix(args)
+    try:
+        ex_mtx = load_exp_matrix(args.expression_mtx_fname.name, (args.transpose == 'yes'))
+    except ValueError as e:
+        LOGGER.error(e)
+        sys.exit(1)
+
     tf_names = load_tf_names(args.tfs_fname.name)
 
     n_total_genes = len(ex_mtx.columns)
     n_matching_genes = len(ex_mtx.columns.isin(tf_names))
     if n_total_genes == 0:
-        LOGGER.error("The expression matrix supplied does not contain any genes. Make sure the extension of the file matches the format (tab separation for TSV and comma sepatration for CSV).")
+        LOGGER.error("The expression matrix supplied does not contain any genes. "
+                     "Make sure the extension of the file matches the format (tab separation for TSV and "
+                     "comma sepatration for CSV).")
         sys.exit(1)
     if float(n_matching_genes)/n_total_genes < 0.80:
         LOGGER.warning("Expression data is available for less than 80% of the supplied transcription factors.")
@@ -130,6 +126,12 @@ def find_adjacencies_command(args):
 
     LOGGER.info("Writing results to file.")
     network.to_csv(args.output, index=False, sep='\t')
+
+
+def _load_dbs(fnames: Sequence[str]) -> Sequence[Type[RankingDatabase]]:
+    def get_name(fname):
+        return os.path.basename(fname).split(".")[0]
+    return [opendb(fname=fname.name, name=get_name(fname.name)) for fname in fnames]
 
 
 def prune_targets_command(args):
@@ -173,9 +175,6 @@ def prune_targets_command(args):
         name2targets = {r.name: list(r.gene2weight.keys()) for r in df2regulons(out)}
         args.output.write(json.dumps(name2targets))
         args.output.close()
-
-
-from .utils import load_exp_matrix, load_signatures, save_matrix
 
 
 def aucell_command(args):
@@ -282,12 +281,15 @@ def create_argument_parser():
 
     subparsers = parser.add_subparsers(help='sub-command help')
 
+    # --------------------------------------------
     # create the parser for the "grnboost" command
+    # --------------------------------------------
     parser_grn = subparsers.add_parser('grnboost',
                                          help='Derive co-expression modules from expression matrix.')
     parser_grn.add_argument('expression_mtx_fname',
                                type=argparse.FileType('r'),
-                               help='The name of the file that contains the expression matrix (CSV; rows=cells x columns=genes).')
+                            help='The name of the file that contains the expression matrix for the single cell experiment.'
+                                 ' Two file formats are supported: csv (rows=cells x columns=genes) or loom (rows=genes x columns=cells).')
     parser_grn.add_argument('tfs_fname',
                                type=argparse.FileType('r'),
                                help='The name of the file that contains the list of transcription factors (TXT; one TF per line).')
@@ -299,7 +301,9 @@ def create_argument_parser():
     add_computation_parameters(parser_grn)
     parser_grn.set_defaults(func=find_adjacencies_command)
 
+    #-----------------------------------------
     # create the parser for the "ctx" command
+    #-----------------------------------------
     parser_ctx = subparsers.add_parser('ctx',
                                          help='Find enriched motifs for a gene signature and optionally prune targets from this signature based on cis-regulatory cues.')
     parser_ctx.add_argument('module_fname',
