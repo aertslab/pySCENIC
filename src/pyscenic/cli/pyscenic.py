@@ -22,7 +22,7 @@ from pyscenic.aucell import aucell
 from pyscenic.log import create_logging_handler
 import sys
 from typing import Type, Sequence
-from .utils import load_exp_matrix, load_signatures, save_matrix, save_enriched_motifs, load_adjacencies, load_modules
+from .utils import load_exp_matrix, load_signatures, save_matrix, save_enriched_motifs, load_adjacencies, load_modules, append_auc_mtx
 
 
 LOGGER = logging.getLogger(__name__)
@@ -170,7 +170,13 @@ def aucell_command(args):
                          num_workers=args.num_workers)
 
     LOGGER.info("Writing results to file.")
-    if args.output.name == 'stdout':
+    if arg.append == 'yes':
+        try:
+            append_auc_mtx(args.output.name, auc_mtx, signatures)
+        except OSError as e:
+            LOGGER.error("Expression matrix should be provided in the loom file format.")
+            sys.exit(1)
+    elif args.output.name == 'stdout':
         transpose = (args.transpose == 'yes')
         (auc_mtx.T if transpose else auc_mtx).to_csv(args.output)
     else:
@@ -320,12 +326,16 @@ def create_argument_parser():
     parser_aucell.add_argument('signatures_fname',
                           type=argparse.FileType('r'),
                                help='The name of the file that contains the gene signatures.'
-                                    ' Two file formats are supported: gmt or json.')
+                                    ' Three file formats are supported: gmt, yaml or dat (pickle).')
     # Optional arguments
     parser_aucell.add_argument('-o', '--output',
                             type=argparse.FileType('w'), default=sys.stdout,
                             help='Output file/stream, a matrix of AUC values.'
                                  ' Two file formats are supported: csv or loom.')
+    parser_aucell.add_argument('-a', '--append', action='store_const', const = 'yes',
+                               help='Append the AUC values to the loom file that contains the expression matrix. '
+                                    'The expression matrix needs to be supplies as loom file and the signatures need '
+                                    'to be provided as yaml or dat.')
     parser_aucell.add_argument('-t', '--transpose', action='store_const', const = 'yes',
                                help='Transpose the expression matrix if supplied as csv (rows=genes x columns=cells).')
     parser_aucell.add_argument('-w', '--weights', action='store_const', const = 'yes',

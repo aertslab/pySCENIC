@@ -3,19 +3,28 @@
 import os
 import pickle
 import json
+import zlib
+import base64
+import numpy as np
 import pandas as pd
 import loompy as lp
+from operator import attrgetter
 from typing import Type, Sequence
 from pyscenic.genesig import GeneSignature
 from pyscenic.transform import df2regulons
 from pyscenic.utils import load_motifs, load_from_yaml, save_to_yaml
+from pyscenic.binarization import binarize
 
 
-__all__ = ['save_matrix', 'load_exp_matrix', 'load_signatures', 'save_enriched_motifs', 'load_adjacencies', 'load_modules']
+__all__ = ['save_matrix', 'load_exp_matrix', 'load_signatures', 'save_enriched_motifs', 'load_adjacencies',
+           'load_modules', 'append_auc_mtx']
 
 
 ATTRIBUTE_NAME_CELL_IDENTIFIER = "CellID"
 ATTRIBUTE_NAME_GENE = "Gene"
+ATTRIBUTE_NAME_REGULONS_AUC = "RegulonsAUC"
+ATTRIBUTE_NAME_REGULONS = "Regulons"
+ATTRIBUTE_NAME_METADATA = "MetaData"
 
 
 def save_df_as_loom(df: pd.DataFrame, fname: str) -> None:
@@ -193,3 +202,77 @@ def load_modules(fname: str) -> Sequence[Type[GeneSignature]]:
                                       gene_separator=sep)
     else:
         raise ValueError("Unknown file format for \"{}\".".format(fname))
+
+
+def decompress_meta(meta):
+    try:
+        meta = meta.decode('ascii')
+        return json.loads(zlib.decompress(base64.b64decode(meta)))
+    except AttributeError:
+        return json.loads(zlib.decompress(base64.b64decode(meta.encode('ascii'))).decode('ascii'))
+
+
+def compress_meta(meta):
+    return base64.b64encode(zlib.compress(json.dumps(meta).encode('ascii'))).decode('ascii')
+
+
+def append_auc_mtx(fname: str, auc_mtx: pd.DataFrame, regulons: Sequence[Type[GeneSignature]]) -> None:
+    """
+
+    Append AUC matrix to loom file.
+
+    :param fname: The name of loom file to be append to.
+    :param auc_mtx: The matrix that contains the AUC values.
+    :param regulons: Collection of regulons that were used for calculation of the AUC values.
+    """
+    # Fetch sequence logo from regulon's context.
+    def fetch_logo(context):
+        for elem in context:
+            if elem.endswith('.png'):
+                return elem
+        return ""
+    name2logo = {reg.name: fetch_logo(reg.context) for reg in regulons}
+
+    # Binarize matrix for AUC thresholds.
+    _, auc_thresholds = binarize(auc_mtx)
+    regulon_thresholds = [{"regulon": name,
+                           "defaultThresholdValue":(threshold if isinstance(threshold, float) else threshold[0]),
+                           "defaultThresholdName": "guassian_mixture_split",
+                           "allThresholds": {"guassian_mixture_split": (threshold if isinstance(threshold, float) else threshold[0])},
+                           "motifData": name2logo.get(name, "")} for name, threshold in auc_thresholds.iteritems()]
+
+    # Calculate the number of genes per cell.
+    ex_mtx = load_exp_matrix(fname)
+    binary_mtx = ex_mtx.copy()
+    binary_mtx[binary_mtx != 0] = 1.0
+    ngenes = binary_mtx.sum(axis=1).astype(int)
+
+    # Encode genes in regulons as "binary" membership matrix.
+    genes = np.array(ex_mtx.columns)
+    n_genes = len(genes)
+    n_regulons = len(regulons)
+    data = np.zeros(shape=(n_genes, n_regulons), dtype=int)
+    for idx, regulon in enumerate(regulons):
+        data[:, idx] = np.isin(genes, regulon.genes).astype(int)
+    regulon_assignment = pd.DataFrame(data=data,
+                                      index=ex_mtx.columns,
+                                      columns=list(map(attrgetter('name'), regulons)))
+
+    # Create meta-data structure.
+    def create_structure_array(df):
+        # Create a numpy structured array
+        return np.array([tuple(row) for row in df.values],
+                        dtype=np.dtype(list(zip(df.columns, df.dtypes))))
+
+    with lp.connect(fname) as ds:
+        # The orientation of the loom file is always:
+        #   - Columns represent cells or aggregates of cells
+        # 	- Rows represent genes
+        ds.ca[ATTRIBUTE_NAME_REGULONS_AUC] = create_structure_array(auc_mtx)
+        ds.ra[ATTRIBUTE_NAME_REGULONS]: create_structure_array(regulon_assignment)
+        try:
+            meta_data = json.loads(ds.attrs[ATTRIBUTE_NAME_METADATA])
+        except json.decoder.JSONDecodeError:
+            meta_data = decompress_meta(ds.attrs[ATTRIBUTE_NAME_METADATA])
+        meta_data["regulonThresholds"] = regulon_thresholds
+        ds.attrs[ATTRIBUTE_NAME_METADATA] = compress_meta(meta_data)
