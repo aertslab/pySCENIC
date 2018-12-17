@@ -27,6 +27,7 @@ def _derive_threshold(auc_mtx: pd.DataFrame, regulon_name: str) -> float:
 
     return max(lower_bound, threshold)
 
+
 def binarize(auc_mtx: pd.DataFrame, threshold_overides:Optional[Mapping[str,float]]=None) -> (pd.DataFrame, pd.Series):
     """
     "Binarize" the supplied AUC matrix, i.e. decide if for each cells in the matrix a regulon is active or not based

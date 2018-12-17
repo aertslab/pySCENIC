@@ -19,3 +19,4 @@ interlap
 umap-learn
 loompy==2.0.2
 networkx
+matplotlib
