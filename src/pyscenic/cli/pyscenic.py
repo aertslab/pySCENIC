@@ -22,7 +22,7 @@ from pyscenic.aucell import aucell
 from pyscenic.log import create_logging_handler
 import sys
 from typing import Type, Sequence
-from .utils import load_exp_matrix, load_signatures, save_matrix, save_enriched_motifs, load_adjacencies, load_modules, append_auc_mtx
+from .utils import load_exp_matrix, load_signatures, save_matrix, save_enriched_motifs, load_adjacencies, load_modules, append_auc_mtx, ATTRIBUTE_NAME_CELL_IDENTIFIER, ATTRIBUTE_NAME_GENE
 
 
 LOGGER = logging.getLogger(__name__)
@@ -34,7 +34,10 @@ def find_adjacencies_command(args):
     """
     LOGGER.info("Loading expression matrix.")
     try:
-        ex_mtx = load_exp_matrix(args.expression_mtx_fname.name, (args.transpose == 'yes'))
+        ex_mtx = load_exp_matrix(args.expression_mtx_fname.name,
+                                 (args.transpose == 'yes'),
+                                 args.cell_id_attribute,
+                                 args.gene_attribute)
     except ValueError as e:
         LOGGER.error(e)
         sys.exit(1)
@@ -71,7 +74,10 @@ def adjacencies2modules(args):
 
     LOGGER.info("Loading expression matrix.")
     try:
-        ex_mtx = load_exp_matrix(args.expression_mtx_fname.name, (args.transpose == 'yes'))
+        ex_mtx = load_exp_matrix(args.expression_mtx_fname.name,
+                                 (args.transpose == 'yes'),
+                                 args.cell_id_attribute,
+                                 args.gene_attribute)
     except ValueError as e:
         LOGGER.error(e)
         sys.exit(1)
@@ -151,7 +157,10 @@ def aucell_command(args):
     """
     LOGGER.info("Loading expression matrix.")
     try:
-        ex_mtx = load_exp_matrix(args.expression_mtx_fname.name, (args.transpose == 'yes'))
+        ex_mtx = load_exp_matrix(args.expression_mtx_fname.name,
+                                 (args.transpose == 'yes'),
+                                 args.cell_id_attribute,
+                                 args.gene_attribute)
     except ValueError as e:
         LOGGER.error(e)
         sys.exit(1)
@@ -170,7 +179,7 @@ def aucell_command(args):
                          num_workers=args.num_workers)
 
     LOGGER.info("Writing results to file.")
-    if arg.append == 'yes':
+    if args.append == 'yes':
         try:
             append_auc_mtx(args.output.name, auc_mtx, signatures)
         except OSError as e:
@@ -246,6 +255,18 @@ def add_computation_parameters(parser):
     return parser
 
 
+def add_loom_parameters(parser):
+    group = parser.add_argument_group('loom file arguments')
+    group.add_argument('--cell_id_attribute',
+                       type=str, default=ATTRIBUTE_NAME_CELL_IDENTIFIER,
+                       help='The name of the column attribute that specifies the identifiers of the cells in the loom file.')
+    group.add_argument('--gene_attribute',
+                       type=str, default=ATTRIBUTE_NAME_GENE,
+                       help='The name of the row attribute that specifies the gene symbols in the loom file.')
+    return parser
+
+
+
 def create_argument_parser():
     parser = argparse.ArgumentParser(prog=os.path.basename(__file__).split('.')[0],
                                      description='Single-CEll regulatory Network Inference and Clustering',
@@ -274,6 +295,7 @@ def create_argument_parser():
     parser_grn.add_argument('-t', '--transpose', action='store_const', const = 'yes',
                                help='Transpose the expression matrix (rows=genes x columns=cells).')
     add_computation_parameters(parser_grn)
+    add_loom_parameters(parser_grn)
     parser_grn.set_defaults(func=find_adjacencies_command)
 
     #-----------------------------------------
@@ -310,6 +332,7 @@ def create_argument_parser():
     add_annotation_parameters(parser_ctx)
     add_computation_parameters(parser_ctx)
     add_module_parameters(parser_ctx)
+    add_loom_parameters(parser_ctx)
     parser_ctx.set_defaults(func=prune_targets_command)
 
     #--------------------------------------------
@@ -345,6 +368,7 @@ def create_argument_parser():
                        type=int, default=cpu_count(),
                        help='The number of workers to use (default: {}).'.format(cpu_count()))
     add_recovery_parameters(parser_aucell)
+    add_loom_parameters(parser_aucell)
     parser_aucell.set_defaults(func=aucell_command)
 
     return parser

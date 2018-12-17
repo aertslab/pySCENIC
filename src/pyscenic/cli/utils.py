@@ -47,7 +47,9 @@ def save_df_as_loom(df: pd.DataFrame, fname: str) -> None:
               col_attrs=column_attrs)
 
 
-def load_exp_matrix_as_loom(fname) -> pd.DataFrame:
+def load_exp_matrix_as_loom(fname,
+                            attribute_name_cell_id: str = ATTRIBUTE_NAME_CELL_IDENTIFIER,
+                            attribute_name_gene: str = ATTRIBUTE_NAME_GENE) -> pd.DataFrame:
     """
     Load expression matrix from loom file.
 
@@ -59,8 +61,8 @@ def load_exp_matrix_as_loom(fname) -> pd.DataFrame:
         #   - Columns represent cells or aggregates of cells
         # 	- Rows represent genes
         return pd.DataFrame(data=ds[:, :],
-                            index=ds.ra[ATTRIBUTE_NAME_GENE],
-                            columns=ds.ca[ATTRIBUTE_NAME_CELL_IDENTIFIER]).T
+                            index=ds.ra[attribute_name_gene],
+                            columns=ds.ca[attribute_name_cell_id]).T
 
 
 FILE_EXTENSION2SEPARATOR = {
@@ -69,7 +71,9 @@ FILE_EXTENSION2SEPARATOR = {
 }
 
 
-def load_exp_matrix(fname: str, transpose: bool = False) -> pd.DataFrame:
+def load_exp_matrix(fname: str, transpose: bool = False,
+                    attribute_name_cell_id: str = ATTRIBUTE_NAME_CELL_IDENTIFIER,
+                    attribute_name_gene: str = ATTRIBUTE_NAME_GENE) -> pd.DataFrame:
     """
     Load expression matrix from disk.
 
@@ -84,7 +88,7 @@ def load_exp_matrix(fname: str, transpose: bool = False) -> pd.DataFrame:
         df = pd.read_csv(fname, sep=FILE_EXTENSION2SEPARATOR[extension], header=0, index_col=0)
         return df.T if transpose else df
     elif extension == '.loom':
-        return load_exp_matrix_as_loom(fname)
+        return load_exp_matrix_as_loom(fname, attribute_name_cell_id, attribute_name_gene)
     else:
         raise ValueError("Unknown file format \"{}\".".format(fname))
 

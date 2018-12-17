@@ -420,6 +420,35 @@ Yes you can. The code snippet below shows you how to create your own databases:
     RankingDatabase(df, 'custom').save('custom.db')
 
 
+Can I draw the distribution of AUC values for a regulon across cells?
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+.. code-block:: python
+
+    import pandas as pd
+    import matplotlib.pyplot as plt
+
+
+    def plot_binarization(auc_mtx: pd.DataFrame, regulon_name: str, threshold: float, bins: int=200, ax=None) -> None:
+        """
+        Plot the "binarization" process for the given regulon.
+
+        :param auc_mtx: The dataframe with the AUC values for all cells and regulons (n_cells x n_regulons).
+        :param regulon_name: The name of the regulon.
+        :param bins: The number of bins to use in the AUC histogram.
+        :param threshold: The threshold to use for binarization.
+        """
+        if ax is None:
+            ax=plt.gca()
+        auc_mtx[regulon_name].hist(bins=bins,ax=ax)
+
+        ylim = ax.get_ylim()
+        ax.plot([threshold]*2, ylim, 'r:')
+        ax.set_ylim(ylim)
+        ax.set_xlabel('AUC')
+        ax.set_ylabel('#')
+        ax.set_title(regulon_name)
+
 Website
 -------
 
