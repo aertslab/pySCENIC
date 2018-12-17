@@ -24,6 +24,11 @@ import sys
 from typing import Type, Sequence
 from .utils import load_exp_matrix, load_signatures, save_matrix, save_enriched_motifs, load_adjacencies, load_modules, append_auc_mtx, ATTRIBUTE_NAME_CELL_IDENTIFIER, ATTRIBUTE_NAME_GENE
 
+try:
+    from pyscenic._version import get_versions
+    VERSION = get_versions()['version']
+except:
+    VERSION = "?.?.?"
 
 LOGGER = logging.getLogger(__name__)
 
@@ -269,7 +274,7 @@ def add_loom_parameters(parser):
 
 def create_argument_parser():
     parser = argparse.ArgumentParser(prog=os.path.basename(__file__).split('.')[0],
-                                     description='Single-CEll regulatory Network Inference and Clustering',
+                                     description='Single-CEll regulatory Network Inference and Clustering ({})'.format(VERSION),
                                      fromfile_prefix_chars='@', add_help=True,
                                      epilog="Arguments can be read from file using a @args.txt construct. "
                                             "For more information on loom file format see http://loompy.org . "
