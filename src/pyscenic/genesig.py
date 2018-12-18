@@ -58,7 +58,6 @@ class GeneSignature(yaml.YAMLObject):
         Load gene signatures from a GMT file.
 
         :param fname: The filename.
-        :param nomenclature: The nomenclature of the genes.
         :param field_separator: The separator that separates fields in a line.
         :param gene_separator: The separator that separates the genes.
         :return: A list of signatures.
@@ -177,7 +176,13 @@ class GeneSignature(yaml.YAMLObject):
 
     def copy(self, **kwargs) -> Type['GeneSignature']:
         # noinspection PyTypeChecker
-        return GeneSignature(**merge(vars(self), kwargs))
+        try:
+            return GeneSignature(**merge(vars(self), kwargs))
+        except TypeError:
+            # Pickled gene signatures might still have nomenclature property.
+            args = merge(vars(self), kwargs)
+            del args['nomenclature']
+            return GeneSignature(**args)
 
     def rename(self, name: str) -> Type['GeneSignature']:
         """
@@ -340,7 +345,13 @@ class Regulon(GeneSignature, yaml.YAMLObject):
         return "tf={}{}score={}".format(self.transcription_factor, field_separator, self.score)
 
     def copy(self, **kwargs) -> 'Regulon':
-        return Regulon(**merge(vars(self), kwargs))
+        try:
+            return Regulon(**merge(vars(self), kwargs))
+        except TypeError:
+            # Pickled regulons might still have nomenclature property.
+            args = merge(vars(self), kwargs)
+            del args['nomenclature']
+            return Regulon(**args)
 
     def union(self, other: Type['GeneSignature']) -> 'Regulon':
         assert self.transcription_factor == getattr(other, 'transcription_factor', self.transcription_factor), \
