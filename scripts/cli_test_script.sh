@@ -1,5 +1,10 @@
 #!/usr/bin/env bash
 
+# Author: Bram Van de Sande
+# Latest update: 18 DEC 2018
+# Outline: This script tests the command line interface of pyscenic.
+# Prerequiste: The python package needs to be installed in the currently active python environment.
+
 DATA_FOLDER="./cli_test_data/"
 CORES=6
 DB_FOLDER="/Users/bramvandesande/Projects/lcb/databases/"
@@ -10,6 +15,7 @@ RESOURCES_FOLDER="/Users/bramvandesande/Projects/lcb/resources"
 #################
 
 pyscenic grnboost --num_workers ${CORES} "${DATA_FOLDER}/GSE60361.em.mgi.sample.cxg.csv" "${DATA_FOLDER}/mm_tfs.txt"
+pyscenic grnboost --num_workers ${CORES} "${DATA_FOLDER}/GSE60361.em.mgi.sample.loom" "${DATA_FOLDER}/mm_tfs.txt"
 
 ##############
 # TEST PRUNE #
@@ -41,3 +47,9 @@ pyscenic aucell --num_workers=1 "${DATA_FOLDER}/GSE103322.em.hgnc.sample.cxg.csv
 pyscenic aucell --transpose --num_workers=${CORES} "${DATA_FOLDER}/GSE103322.em.hgnc.sample.gxc.csv" "${DATA_FOLDER}/signatures.hgnc.gmt"
 pyscenic aucell --transpose --num_workers=${CORES} "${DATA_FOLDER}/GSE103322.em.hgnc.sample.gxc.tsv" "${DATA_FOLDER}/signatures.hgnc.gmt"
 pyscenic aucell --transpose --num_workers=${CORES} "${DATA_FOLDER}/GSE103322.em.hgnc.sample.gxc.tsv" "${DATA_FOLDER}/GSE103322.modules.sample.dat"
+pyscenic aucell --num_workers=${CORES} "${DATA_FOLDER}/GSE103322.em.hgnc.sample.loom" "${DATA_FOLDER}/signatures.hgnc.gmt"
+pyscenic aucell --num_workers=${CORES} "${DATA_FOLDER}/GSE103322.em.hgnc.sample.loom" "${DATA_FOLDER}/signatures.hgnc.gmt" -o "${DATA_FOLDER}/out.loom"
+pyscenic aucell --num_workers=${CORES} "${DATA_FOLDER}/GSE103322.em.hgnc.sample.loom" "${DATA_FOLDER}/signatures.hgnc.gmt" -o "${DATA_FOLDER}/out.csv"
+cp "${DATA_FOLDER}/GSE103322.em.hgnc.sample.loom" "${DATA_FOLDER}/in.loom"
+pyscenic aucell  --append --num_workers=${CORES} "${DATA_FOLDER}/in.loom" "${DATA_FOLDER}/signatures.hgnc.gmt"
+
