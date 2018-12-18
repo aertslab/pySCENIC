@@ -81,6 +81,7 @@ setuptools.setup(
     entry_points = {
         'console_scripts': ['pyscenic = pyscenic.cli.pyscenic:main',
                             'db2feather = pyscenic.cli.db2feather:main',
+                            'csv2loom = pyscenic.cli.csv2loom:main',
                             'invertdb = pyscenic.cli.invertdb:main',
                             'gmt2regions = pyscenic.cli.gmt2regions:main'],
     }
