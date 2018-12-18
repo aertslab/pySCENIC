@@ -1,6 +1,5 @@
 # https://pypi.python.org/pypi/check-manifest
 include requirements.txt
-include scripts/*.ini
 include versioneer.py
 include src/pyscenic/_version.py
 include src/resources/tests/*.feather
