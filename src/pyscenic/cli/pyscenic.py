@@ -150,7 +150,7 @@ def prune_targets_command(args):
                            num_workers=args.num_workers)
 
     LOGGER.info("Writing results to file.")
-    if args.output.name == 'stdout':
+    if args.output.name == '<stdout>':
         df_motifs.to_csv(args.output)
     else:
         save_enriched_motifs(df_motifs, args.output.name)
@@ -186,11 +186,11 @@ def aucell_command(args):
     LOGGER.info("Writing results to file.")
     if args.append == 'yes':
         try:
-            append_auc_mtx(args.output.name, auc_mtx, signatures)
+            append_auc_mtx(args.expression_mtx_fname.name, auc_mtx, signatures)
         except OSError as e:
             LOGGER.error("Expression matrix should be provided in the loom file format.")
             sys.exit(1)
-    elif args.output.name == 'stdout':
+    elif args.output.name == '<stdout>':
         transpose = (args.transpose == 'yes')
         (auc_mtx.T if transpose else auc_mtx).to_csv(args.output)
     else:

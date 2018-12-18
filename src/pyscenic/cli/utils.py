@@ -112,12 +112,9 @@ def save_matrix(df: pd.DataFrame, fname: str, transpose: bool = False) -> None:
         raise ValueError("Unknown file format \"{}\".".format(fname))
 
 
-LINE_LIMIT = 100
-
-
 def guess_separator(fname: str) -> str:
     with open(fname, 'r') as f:
-        lines = f.readline(LINE_LIMIT)
+        lines = f.readlines()
 
     def count_columns(sep):
         return [len(line.split(sep)) for line in lines if not line.strip().startswith('#') and line.strip()]
@@ -126,7 +123,7 @@ def guess_separator(fname: str) -> str:
     for sep in ('\t', ';', ','):
         if min(count_columns(sep)) >= 3:
             return sep
-    return ValueError("Unknown file format \"{}\".".format(fname))
+    raise ValueError("Unknown file format \"{}\".".format(fname))
 
 
 def load_signatures(fname: str) -> Sequence[Type[GeneSignature]]:
@@ -143,7 +140,7 @@ def load_signatures(fname: str) -> Sequence[Type[GeneSignature]]:
         return df2regulons(load_motifs(fname, sep=FILE_EXTENSION2SEPARATOR[extension]))
     elif extension in {'.yaml', '.yml'}:
         return load_from_yaml(fname)
-    elif extension == '.gmt':
+    elif extension.endswith('.gmt'):
         sep = guess_separator(fname)
         return GeneSignature.from_gmt(fname,
                                   field_separator=sep,
@@ -235,7 +232,10 @@ def append_auc_mtx(fname: str, auc_mtx: pd.DataFrame, regulons: Sequence[Type[Ge
             if elem.endswith('.png'):
                 return elem
         return ""
-    name2logo = {reg.name: fetch_logo(reg.context) for reg in regulons}
+    try:
+        name2logo = {reg.name: fetch_logo(reg.context) for reg in regulons}
+    except AttributeError:
+        name2logo = {}
 
     # Binarize matrix for AUC thresholds.
     _, auc_thresholds = binarize(auc_mtx)
@@ -274,9 +274,12 @@ def append_auc_mtx(fname: str, auc_mtx: pd.DataFrame, regulons: Sequence[Type[Ge
         # 	- Rows represent genes
         ds.ca[ATTRIBUTE_NAME_REGULONS_AUC] = create_structure_array(auc_mtx)
         ds.ra[ATTRIBUTE_NAME_REGULONS]: create_structure_array(regulon_assignment)
-        try:
-            meta_data = json.loads(ds.attrs[ATTRIBUTE_NAME_METADATA])
-        except json.decoder.JSONDecodeError:
-            meta_data = decompress_meta(ds.attrs[ATTRIBUTE_NAME_METADATA])
+        if ATTRIBUTE_NAME_METADATA in ds.attrs:
+            try:
+                meta_data = json.loads(ds.attrs[ATTRIBUTE_NAME_METADATA])
+            except json.decoder.JSONDecodeError:
+                meta_data = decompress_meta(ds.attrs[ATTRIBUTE_NAME_METADATA])
+        else:
+            meta_data = {}
         meta_data["regulonThresholds"] = regulon_thresholds
         ds.attrs[ATTRIBUTE_NAME_METADATA] = compress_meta(meta_data)
