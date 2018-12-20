@@ -120,6 +120,9 @@ def prune_targets_command(args):
     # The alternative for which was opted in the end is binary pickling.
     extension = os.path.splitext(args.module_fname.name)[1].lower()
     if extension in {'.csv', '.tsv'}:
+        if args.expression_mtx_fname is None:
+            LOGGER.error("No expression matrix is supplied.")
+            sys.exit(0)
         LOGGER.info("Creating modules.")
         modules = adjacencies2modules(args)
     else:
