@@ -121,7 +121,7 @@ def prune_targets_command(args):
     extension = os.path.splitext(args.module_fname.name)[1].lower()
     if extension in {'.csv', '.tsv'}:
         LOGGER.info("Creating modules.")
-        modules = adjacencies2modules(args.module_fname.name)
+        modules = adjacencies2modules(args)
     else:
         LOGGER.info("Loading modules.")
         try:
