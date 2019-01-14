@@ -28,7 +28,7 @@ def compress_encode(value):
 
 
 def export2loom(ex_mtx: pd.DataFrame, regulons: List[Regulon], out_fname: str,
-                cell_annotations: Mapping[str,str]=None,
+                cell_annotations: Optional[Mapping[str,str]]=None,
                 tree_structure: Sequence[str] = (),
                 title: Optional[str] = None,
                 nomenclature: str = "Unknown",
@@ -56,7 +56,7 @@ def export2loom(ex_mtx: pd.DataFrame, regulons: List[Regulon], out_fname: str,
         cell_annotations=dict(zip(ex_matrix.index, ['-']*ex_matrix.shape[0]))
 
     if(regulons[0].name.find(' ')==-1):
-        print("Regulon name does not seem to be compatible with SCOPE. It should include an space to allow selection of the TF.",
+        print("Regulon name does not seem to be compatible with SCOPE. It should include a space to allow selection of the TF.",
           "\nPlease run: \n regulons = [r.rename(r.name.replace('(+)',' ('+str(len(r))+'g)')) for r in regulons]",
           "\nor:\n regulons = [r.rename(r.name.replace('(',' (')) for r in regulons]")
 
