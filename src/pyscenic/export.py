@@ -27,13 +27,14 @@ def compress_encode(value):
     return base64.b64encode(zlib.compress(value.encode('ascii'))).decode('ascii')
 
 
-def export2loom(ex_mtx: pd.DataFrame, regulons: List[Regulon], cell_annotations: Mapping[str,str],
-                out_fname: str,
+def export2loom(ex_mtx: pd.DataFrame, regulons: List[Regulon], out_fname: str,
+                cell_annotations: Mapping[str,str]=None,
                 tree_structure: Sequence[str] = (),
                 title: Optional[str] = None,
                 nomenclature: str = "Unknown",
                 num_workers=cpu_count(),
-                tsne_embedding_mtx=None, auc_mtx=None, auc_thresholds=None,
+                default_embedding=None,
+                auc_mtx=None, auc_thresholds=None,
                 compress=False):
     """
     Create a loom file for a single cell experiment to be used in SCope.
@@ -51,18 +52,32 @@ def export2loom(ex_mtx: pd.DataFrame, regulons: List[Regulon], cell_annotations:
     # Information on the general loom file format: http://linnarssonlab.org/loompy/format/index.html
     # Information on the SCope specific alterations: https://github.com/aertslab/SCope/wiki/Data-Format
 
+    if cell_annotations is None:
+        cell_annotations=dict(zip(ex_matrix.index, ['-']*ex_matrix.shape[0]))
+
+    if(regulons[0].name.find(' ')==-1):
+        print("Regulon name does not seem to be compatible with SCOPE. It should include an space to allow selection of the TF.",
+          "\nPlease run: \n regulons = [r.rename(r.name.replace('(+)',' ('+str(len(r))+'g)')) for r in regulons]",
+          "\nor:\n regulons = [r.rename(r.name.replace('(',' (')) for r in regulons]")
+
     # Calculate regulon enrichment per cell using AUCell.
     if auc_mtx is None:
         auc_mtx = aucell(ex_mtx, regulons, num_workers=num_workers) # (n_cells x n_regulons)
+        auc_mtx = auc_mtx.loc[ex_mtx.index]
+
     # Binarize matrix for AUC thresholds.
     if auc_thresholds is None:
         _, auc_thresholds = binarize(auc_mtx)
 
     # Create an embedding based on tSNE.
     # Name of columns should be "_X" and "_Y".
-    if tsne_embedding_mtx is None:
-        tsne_embedding_mtx = pd.DataFrame(data=TSNE().fit_transform(auc_mtx),
+    if default_embedding is None:
+        default_embedding = pd.DataFrame(data=TSNE().fit_transform(auc_mtx),
                                       index=ex_mtx.index, columns=['_X', '_Y']) # (n_cells, 2)
+    else:
+        if(len(default_embedding.columns)!=2):
+            raise Exception('The embedding should have two columns.')
+        default_embedding.columns=['_X', '_Y']
 
     # Calculate the number of genes per cell.
     binary_mtx = ex_mtx.copy()
@@ -96,7 +111,7 @@ def export2loom(ex_mtx: pd.DataFrame, regulons: List[Regulon], cell_annotations:
     column_attrs = {
         "CellID": ex_mtx.index.values.astype('str'),
         "nGene": ngenes.values,
-        "Embedding": create_structure_array(tsne_embedding_mtx),
+        "Embedding": create_structure_array(default_embedding),
         "RegulonsAUC": create_structure_array(auc_mtx),
         "Clusterings": create_structure_array(clusterings),
         "ClusterID": clusterings.values
