@@ -10,6 +10,7 @@ os.environ["MKL_NUM_THREADS"] = "1"
 
 import argparse
 import logging
+from shutil import copyfile
 from dask.diagnostics import ProgressBar
 from multiprocessing import cpu_count
 from arboreto.algo import grnboost2, genie3
@@ -188,9 +189,11 @@ def aucell_command(args):
                          num_workers=args.num_workers)
 
     LOGGER.info("Writing results to file.")
-    if args.append == 'yes':
+    extension = os.path.splitext(args.output.name)[1].lower()
+    if extension == '.loom':
         try:
-            append_auc_mtx(args.expression_mtx_fname.name, auc_mtx, signatures)
+            copyfile(args.expression_mtx_fname.name, args.output.name)
+            append_auc_mtx(args.output.name, auc_mtx, signatures)
         except OSError as e:
             LOGGER.error("Expression matrix should be provided in the loom file format.")
             sys.exit(1)
@@ -287,7 +290,7 @@ def create_argument_parser():
     subparsers = parser.add_subparsers(help='sub-command help')
 
     # --------------------------------------------
-    # create the parser for the "grnboost" command
+    # create the parser for the "grn" command
     # --------------------------------------------
     parser_grn = subparsers.add_parser('grn',
                                          help='Derive co-expression modules from expression matrix.')
@@ -366,11 +369,9 @@ def create_argument_parser():
     parser_aucell.add_argument('-o', '--output',
                             type=argparse.FileType('w'), default=sys.stdout,
                             help='Output file/stream, a matrix of AUC values.'
-                                 ' Two file formats are supported: csv or loom.')
-    parser_aucell.add_argument('-a', '--append', action='store_const', const = 'yes',
-                               help='Append the AUC values to the loom file that contains the expression matrix. '
-                                    'The expression matrix needs to be supplies as loom file and the signatures need '
-                                    'to be provided as yaml or dat.')
+                                 ' Two file formats are supported: csv or loom.'
+                                 ' If loom file is specified the loom file while contain the original expression matrix and the'
+                                 ' calculated AUC values as extra column attributes.')
     parser_aucell.add_argument('-t', '--transpose', action='store_const', const = 'yes',
                                help='Transpose the expression matrix if supplied as csv (rows=genes x columns=cells).')
     parser_aucell.add_argument('-w', '--weights', action='store_const', const = 'yes',

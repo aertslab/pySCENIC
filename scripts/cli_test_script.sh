@@ -60,6 +60,5 @@ pyscenic aucell --transpose --num_workers=${CORES} "${DATA_FOLDER}/GSE103322.em.
 pyscenic aucell --num_workers=${CORES} "${DATA_FOLDER}/GSE103322.em.hgnc.sample.loom" "${DATA_FOLDER}/signatures.hgnc.gmt"
 pyscenic aucell --num_workers=${CORES} "${DATA_FOLDER}/GSE103322.em.hgnc.sample.loom" "${DATA_FOLDER}/signatures.hgnc.gmt" -o "${DATA_FOLDER}/out.loom"
 pyscenic aucell --num_workers=${CORES} "${DATA_FOLDER}/GSE103322.em.hgnc.sample.loom" "${DATA_FOLDER}/signatures.hgnc.gmt" -o "${DATA_FOLDER}/out.csv"
-cp "${DATA_FOLDER}/GSE103322.em.hgnc.sample.loom" "${DATA_FOLDER}/in.loom"
-pyscenic aucell  --append --num_workers=${CORES} "${DATA_FOLDER}/in.loom" "${DATA_FOLDER}/signatures.hgnc.gmt"
+pyscenic aucell  --num_workers=${CORES} "${DATA_FOLDER}/in.loom" "${DATA_FOLDER}/signatures.hgnc.gmt" -o "${DATA_FOLDER}/out.loom"
 
