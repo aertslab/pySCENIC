@@ -12,7 +12,7 @@ import argparse
 import logging
 from dask.diagnostics import ProgressBar
 from multiprocessing import cpu_count
-from arboreto.algo import grnboost2
+from arboreto.algo import grnboost2, genie3
 from arboreto.utils import load_tf_names
 
 from pyscenic.utils import modules_from_adjacencies
@@ -61,8 +61,9 @@ def find_adjacencies_command(args):
 
     LOGGER.info("Inferring regulatory networks.")
     client, shutdown_callback = _prepare_client(args.client_or_address, num_workers=args.num_workers)
+    method = grnboost2 if args.method == 'grnboost2' else genie3
     try:
-        network = grnboost2(expression_data=ex_mtx, tf_names=tf_names, verbose=True, client_or_address=client)
+        network = method(expression_data=ex_mtx, tf_names=tf_names, verbose=True, client_or_address=client)
     finally:
         shutdown_callback(False)
 
@@ -288,7 +289,7 @@ def create_argument_parser():
     # --------------------------------------------
     # create the parser for the "grnboost" command
     # --------------------------------------------
-    parser_grn = subparsers.add_parser('grnboost',
+    parser_grn = subparsers.add_parser('grn',
                                          help='Derive co-expression modules from expression matrix.')
     parser_grn.add_argument('expression_mtx_fname',
                                type=argparse.FileType('r'),
@@ -302,6 +303,9 @@ def create_argument_parser():
                             help='Output file/stream, i.e. a table of TF-target genes (CSV).')
     parser_grn.add_argument('-t', '--transpose', action='store_const', const = 'yes',
                                help='Transpose the expression matrix (rows=genes x columns=cells).')
+    parser_grn.add_argument('-m', '--method', choices=['genie3', 'grnboost2'],
+                            default='grnboost2',
+                            help='The algorithm for gene regulatory network reconstruction (default: grnboost2).')
     add_computation_parameters(parser_grn)
     add_loom_parameters(parser_grn)
     parser_grn.set_defaults(func=find_adjacencies_command)
