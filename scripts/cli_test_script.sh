@@ -14,8 +14,8 @@ RESOURCES_FOLDER="/Users/bramvandesande/Projects/lcb/resources"
 # TEST GRNBOOST #
 #################
 
-pyscenic grnboost --num_workers ${CORES} "${DATA_FOLDER}/GSE60361.em.mgi.sample.cxg.csv" "${DATA_FOLDER}/mm_tfs.txt"
-pyscenic grnboost --num_workers ${CORES} "${DATA_FOLDER}/GSE60361.em.mgi.sample.loom" "${DATA_FOLDER}/mm_tfs.txt"
+pyscenic grn --num_workers ${CORES} "${DATA_FOLDER}/GSE60361.em.mgi.sample.cxg.csv" "${DATA_FOLDER}/mm_tfs.txt"
+pyscenic grn --num_workers ${CORES} "${DATA_FOLDER}/GSE60361.em.mgi.sample.loom" "${DATA_FOLDER}/mm_tfs.txt"
 
 ##############
 # TEST PRUNE #
