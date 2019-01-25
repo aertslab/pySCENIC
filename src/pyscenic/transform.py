@@ -251,7 +251,7 @@ def _regulon4group(tf_name, context, df_group) -> Optional[Regulon]:
         return score if math.isnan(orthologuous_identity) else score * orthologuous_identity
 
     def derive_interaction_type(ctx):
-        return "(-)" if REPRESSING_MODULE in ctx else "(+)"
+        return " (-)" if REPRESSING_MODULE in ctx else " (+)"
 
     def row2regulon(row):
         # The target genes as well as their weights/importances are directly taken from the dataframe.
