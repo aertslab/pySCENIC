@@ -4,61 +4,141 @@ import os
 import numpy as np
 import pandas as pd
 import loompy as lp
-from sklearn.manifold.t_sne import TSNE
-from .aucell import aucell
-from .genesig import Regulon
+#from sklearn.manifold.t_sne import TSNE
+import umap
 from typing import List, Mapping, Sequence, Optional
 from operator import attrgetter
 from multiprocessing import cpu_count
-from .binarization import binarize
 from itertools import chain, repeat, islice
 import networkx as nx
 import zlib
 import base64
 import json
-
+import warnings
+from .aucell import aucell
+from .genesig import Regulon
+from .binarization import binarize
 
 def compress_encode(value):
-    '''
-    Compress using ZLIB algorithm and encode the given value in base64.
+    return base64.b64encode(zlib.compress(json.dumps(value).encode('ascii'))).decode('ascii')
 
-    Taken from: https://github.com/aertslab/SCopeLoomPy/blob/5438da52c4bcf48f483a1cf378b1eaa788adefcb/src/scopeloompy/utils/__init__.py#L7
-    '''
-    return base64.b64encode(zlib.compress(value.encode('ascii'))).decode('ascii')
+def decompress_meta(meta):
+    try:
+        meta = meta.decode('ascii')
+        return json.loads(zlib.decompress(base64.b64decode(meta)))
+    except AttributeError:
+        return json.loads(zlib.decompress(base64.b64decode(meta.encode('ascii'))).decode('ascii'))
 
-
-def export2loom(ex_mtx: pd.DataFrame, regulons: List[Regulon], out_fname: str,
+def export2loom(ex_mtx: pd.DataFrame,
+                regulons: List[Regulon],
+                out_fname: str,
+                cell_clusters: Optional[Mapping[str,str]]=None,
                 cell_annotations: Optional[Mapping[str,str]]=None,
                 tree_structure: Sequence[str] = (),
                 title: Optional[str] = None,
                 nomenclature: str = "Unknown",
-                num_workers=cpu_count(),
-                default_embedding=None,
-                auc_mtx=None, auc_thresholds=None,
-                compress=False):
+                embeddings = None,
+                auc_mtx = None,
+                auc_thresholds = None,
+                num_workers = cpu_count(),
+                compress = True,
+                replaceSpacesInRegulons=True):
     """
     Create a loom file for a single cell experiment to be used in SCope.
 
     :param ex_mtx: The expression matrix (n_cells x n_genes).
     :param regulons: A list of Regulons.
-    :param cell_annotations: A dictionary that maps a cell ID to its corresponding cell type annotation.
-    :param out_fname: The name of the file to create.
+    :param out_fname: The name of the loom file to create.
+    :param cell_clusters: A dataframe with cell cluster/type annotation (in SCOPE it can be searched in the 'gene' tab). Rows: cells; columns: each clustering or annotation (e.g. different resolutions...)).
+    :param cell_annotations: A dataframe with cell annotations (in SCOPE it can be used in the 'compare' tab; they should be categorical). Rows: cells; columns: each cannotation (e.g. phenotype/condition, run date, ...)).
     :param tree_structure: A sequence of strings that defines the category tree structure.
-    :param title: The title for this loom file. If None than the basename of the filename is used as the title.
+    :param title: The title for this loom file. If None, the basename of the filename is used as the title.
     :param nomenclature: The name of the genome.
+    :param embeddings: A dataframe with different embeddings: cells (rows) x coordinates for each embedding (columns). Each embedding (e.g. tSNE, UMAP, PCA, difussion map, ...) should consist of two columns with sufix '_X' and '_Y'. The prefix will be used as name for the embedding (e.g.: tsne_X, tsne_Y, umap_X, umap_Y). If 'None' an UMAP will be calculated with the default settings.
+    :param auc_mtx: AUCell regulon activity matrix. If 'None' it will be calculated with the default settings.
+    :param auc_thresholds: Binarized AUC thresholds for each regulon. If 'None' it will be calculated with the default settings.
     :param num_workers: The number of cores to use for AUCell regulon enrichment.
-    :param compress: compress metadata (only when using SCope).
+    :param compress: compress metadata (required for SCope).
+    :param replaceSpacesInRegulons: Whether to rename regulons to remove spaces (required for current version of SCOPE).
     """
     # Information on the general loom file format: http://linnarssonlab.org/loompy/format/index.html
     # Information on the SCope specific alterations: https://github.com/aertslab/SCope/wiki/Data-Format
 
-    if cell_annotations is None:
-        cell_annotations=dict(zip(ex_matrix.index, ['-']*ex_matrix.shape[0]))
+    ################################################
+    ##### Check matching cell IDs
+    cellIds_expMx = ex_mtx.index.values
 
-    if(regulons[0].name.find(' ')==-1):
-        print("Regulon name does not seem to be compatible with SCOPE. It should include a space to allow selection of the TF.",
-          "\nPlease run: \n regulons = [r.rename(r.name.replace('(+)',' ('+str(len(r))+'g)')) for r in regulons]",
-          "\nor:\n regulons = [r.rename(r.name.replace('(',' (')) for r in regulons]")
+    if not cell_clusters is None:
+        if( not all(cellIds_expMx == cell_clusters.index.values) ):
+             raise Exception('Cell IDs in the expression and the cell_clusters dataframe do not match.')
+
+    if not cell_annotations is None:
+        if( not all(cellIds_expMx == cell_annotations.index.values) ):
+             raise Exception('Cell IDs in the expression and the cell_annotations dataframe do not match.')
+
+    if not auc_mtx is None:
+        if( not all(cellIds_expMx == auc_mtx.index.values) ):
+             raise Exception('Cell IDs in the expression and the AUC matrices do not match.')
+
+    if not embeddings is None:
+        if( not all(cellIds_expMx == embeddings.index.values) ):
+             raise Exception('Cell IDs in the expression matrix and the embeddings do not match.')
+
+
+
+    ################################################
+    #### Clusters / Cell type annotation
+    if cell_clusters is None:
+        cell_clusters = pd.DataFrame(data=['-']*ex_mtx.shape[0],
+                               index=ex_mtx.index,
+                               columns=['All cells'])
+
+    # Encode cell type clusters
+    clusterings=cell_clusters
+    clusteringIds_dict=[]
+    for i in range(0,clusterings.shape[1]):
+        colName=clusterings.columns.values[i]
+        name2idx = dict(map(reversed, enumerate(sorted(set(clusterings.to_dict()[colName].values())))))
+        clusterings[colName] = clusterings[colName].replace(clusterings).replace(name2idx)
+        clusteringIds_dict=clusteringIds_dict+[{
+                     "id": i,
+                     "group": colName,
+                     "name": colName,
+                     "clusters": [{"id": idx, "description": name} for name, idx in name2idx.items()]
+                 }]
+    clusterings.columns=[str(i) for i in range(0, clusterings.shape[1], 1)]
+
+    # Encode annotations
+    annots_dict=[{"name": "", "values": []}]
+
+    if not cell_annotations is None:
+        annots_dict=[]
+        for i in range(0, cell_annotations.shape[1]):
+            colName=cell_annotations.columns.values[i]
+            annots_dict=annots_dict+[{
+                         "name": colName,
+                         "values": list(set(cell_annotations.to_dict()[colName].values()))
+                     }]
+
+    ################################################
+    #### Regulons and AUC (calculate AUC if needed)
+    # Check if regulon name is compatible with SCOPE
+    regulonNames_regulons = [r.name for r in regulons]
+    regulonNames_AucMx = [r for r in auc_mtx.columns.values]
+    if( not set(regulonNames_regulons) == set(regulonNames_AucMx) ):
+        raise Exception('Regulon names in the regulons and the AUC matrix do not match.')
+
+    if(any([' ' in r for r in regulonNames_regulons]) & replaceSpacesInRegulons):
+        regulons = [r.rename(r.name.replace(' ','_')) for r in regulons]
+        auc_mtx=auc_mtx.rename(dict(zip(auc_mtx.columns.values, [r.replace(' ','_') for r in  auc_mtx.columns.values])), axis='columns')
+        warnings.warn('Regulon names contain spaces, they have been replaced by "_".')
+    del(regulonNames_regulons)
+    del(regulonNames_AucMx)
+
+    # Temporary until it is solved in SCOPE:
+    if( not all(['_(' in r.name for r in regulons]) ):
+        warnings.warn('Regulon names do not seem to be compatible with SCOPE. They should include "_(" to allow selection of the TF motif.')
+
 
     # Calculate regulon enrichment per cell using AUCell.
     if auc_mtx is None:
@@ -68,16 +148,6 @@ def export2loom(ex_mtx: pd.DataFrame, regulons: List[Regulon], out_fname: str,
     # Binarize matrix for AUC thresholds.
     if auc_thresholds is None:
         _, auc_thresholds = binarize(auc_mtx)
-
-    # Create an embedding based on tSNE.
-    # Name of columns should be "_X" and "_Y".
-    if default_embedding is None:
-        default_embedding = pd.DataFrame(data=TSNE().fit_transform(auc_mtx),
-                                      index=ex_mtx.index, columns=['_X', '_Y']) # (n_cells, 2)
-    else:
-        if(len(default_embedding.columns)!=2):
-            raise Exception('The embedding should have two columns.')
-        default_embedding.columns=['_X', '_Y']
 
     # Calculate the number of genes per cell.
     binary_mtx = ex_mtx.copy()
@@ -95,16 +165,63 @@ def export2loom(ex_mtx: pd.DataFrame, regulons: List[Regulon], out_fname: str,
                                       index=ex_mtx.columns,
                                       columns=list(map(attrgetter('name'), regulons)))
 
-    # Encode cell type clusters.
-    # The name of the column should match the identifier of the clustering.
-    name2idx = dict(map(reversed, enumerate(sorted(set(cell_annotations.values())))))
-    clusterings = pd.DataFrame(data=ex_mtx.index,
-                               index=ex_mtx.index,
-                               columns=['0']).replace(cell_annotations).replace(name2idx)
+    # Encode motif logo
+    def fetch_logo(context):
+        for elem in context:
+            if elem.endswith('.png'):
+                return elem
+        return ""
 
-    # Create meta-data structure.
+    name2logo = {reg.name: fetch_logo(reg.context) for reg in regulons}
+    regulon_thresholds = [{"motifData": name2logo.get(name, ""),
+                            "regulon": name,
+                            "defaultThresholdValue":(threshold if isinstance(threshold, float) else threshold[0]),
+                            "defaultThresholdName": "guassian_mixture_split",
+                            "allThresholds": {"guassian_mixture_split": (threshold if isinstance(threshold, float) else threshold[0])}
+                            } for name, threshold in auc_thresholds.iteritems()]
+
+    ################################################
+    ######## EMBEDDINGS
+    if embeddings is None:
+        # embeddings = pd.DataFrame(data=TSNE().fit_transform(auc_mtx),
+        #                               index=ex_mtx.index, columns=['tSNE_X', 'tSNE_Y'])
+        runUmap = umap.UMAP(n_neighbors=5, min_dist=0.5, metric='correlation').fit_transform
+        embeddings = pd.DataFrame(data=runUmap(auc_mtx), index=auc_mtx.index, columns=['UMAP_X', 'UMAP_Y'])
+
+    else:
+        if(len(embeddings.columns)<2):
+             raise Exception('The embedding should have at least two columns.')
+
+    # Get default embedding (columns 0 and 1):
+    if( (not '_X' in embeddings.columns[0]) | (not '_Y' in embeddings.columns[1]) ):
+        raise Exception('The embedding columns should have the sufix _X and _Y.')
+    default_embedding=embeddings.iloc[:,0:2]
+    default_embedding_name=set([default_embedding.columns[0].replace('_X', ''), default_embedding.columns[0].replace('_X', '')])
+    if(len(default_embedding_name)>1):
+        raise Exception('The embedding columns should have the same prefix (e.g. tSNE_X , tSNE_Y.')
+    default_embedding_name=default_embedding_name.pop()
+    default_embedding.columns=['_X', '_Y']
+    embeddings_names_dict=[{"id": -1, "name": default_embedding_name}]
+
+    # Store remaining embeddings:
+    embeddings=embeddings.iloc[:,2:]
+    embeddingsX=None
+    if(embeddings.shape[1]>0):
+        embeddingsX = embeddings.iloc[:,embeddings.columns.str.contains('_X')]
+        embeddingsY = embeddings.iloc[:,embeddings.columns.str.contains('_Y')]
+        embeddings_names = embeddingsX.columns.str.replace('_X','')
+        if(not (embeddings_names ==embeddingsY.columns.str.replace('_Y','')).all()):
+            raise Exception('Embeddings prefixes for _X and _Y do not match')
+        embeddings_names=embeddings_names.tolist()
+        embeddingsX.columns = [str(i) for i in range(0, embeddingsX.shape[1], 1)]
+        embeddingsY.columns = embeddingsX.columns
+        embeddings_names_all=embeddings_names.insert(0, default_embedding_name)
+        embeddings_names_dict=pd.DataFrame({'id':[i for i in range(-1, embeddingsX.shape[1], 1)], 'name':embeddings_names}).to_dict('records')
+
+    ################################################
+    ######## Save into loom file
+    # Convert to numpy structured array
     def create_structure_array(df):
-        # Create a numpy structured array
         return np.array([tuple(row) for row in df.values],
                         dtype=np.dtype(list(zip(df.columns, df.dtypes))))
 
@@ -116,43 +233,29 @@ def export2loom(ex_mtx: pd.DataFrame, regulons: List[Regulon], out_fname: str,
         "Clusterings": create_structure_array(clusterings),
         "ClusterID": clusterings.values
         }
+
+    if not embeddingsX is None:
+        column_attrs['Embeddings_X'] = create_structure_array(embeddingsX)
+        column_attrs['Embeddings_Y'] = create_structure_array(embeddingsY)
+
+    if not cell_annotations is None:
+        for i in range(0,cell_annotations.shape[1]):
+            column_attrs[cell_annotations.columns[i]] = column_attrs[cell_annotations.columns[i]] = np.array(cell_annotations.iloc[:,i])
+
     row_attrs = {
         "Gene": ex_mtx.columns.values.astype('str'),
         "Regulons": create_structure_array(regulon_assignment),
         }
 
-    def fetch_logo(context):
-        for elem in context:
-            if elem.endswith('.png'):
-                return elem
-        return ""
-    name2logo = {reg.name: fetch_logo(reg.context) for reg in regulons}
-    regulon_thresholds = [{"regulon": name,
-                            "defaultThresholdValue":(threshold if isinstance(threshold, float) else threshold[0]),
-                            "defaultThresholdName": "guassian_mixture_split",
-                            "allThresholds": {"guassian_mixture_split": (threshold if isinstance(threshold, float) else threshold[0])},
-                            "motifData": name2logo.get(name, "")} for name, threshold in auc_thresholds.iteritems()]
-
     general_attrs = {
-        "title": os.path.splitext(os.path.basename(out_fname))[0] if title is None else title,
-        "MetaData": json.dumps({
-            "embeddings": [{
-                "id": 0,
-                "name": "tSNE (default)",
-            }],
-            "annotations": [{
-                "name": "",
-                "values": []
-            }],
-            "clusterings": [{
-                "id": 0,
-                "group": "celltype",
-                "name": "Cell Type",
-                "clusters": [{"id": idx, "description": name} for name, idx in name2idx.items()]
-            }],
-            "regulonThresholds": regulon_thresholds
-        }),
-        "Genome": nomenclature}
+            "title": os.path.splitext(os.path.basename(out_fname))[0] if title is None else title,
+            "MetaData": {
+                    "embeddings": embeddings_names_dict,
+                    "annotations": annots_dict,
+                    "clusterings": clusteringIds_dict,
+                    "regulonThresholds": regulon_thresholds
+                },
+            "Genome": nomenclature}
 
     # Add tree structure.
     # All three levels need to be supplied
@@ -160,7 +263,7 @@ def export2loom(ex_mtx: pd.DataFrame, regulons: List[Regulon], out_fname: str,
     general_attrs.update(("SCopeTreeL{}".format(idx+1), category)
                          for idx, category in enumerate(list(islice(chain(tree_structure, repeat("")), 3))))
 
-    # Compress MetaData global attribute
+    # Compress MetaData global attribute (required for SCOPE)
     if compress:
         general_attrs["MetaData"] = compress_encode(value=general_attrs["MetaData"])
 
@@ -175,6 +278,34 @@ def export2loom(ex_mtx: pd.DataFrame, regulons: List[Regulon], out_fname: str,
               col_attrs=column_attrs,
               file_attrs=general_attrs)
 
+def export_asGmt(geneSet, fileName):
+    """
+
+    Export the regulons or co-expression modules. Format compatible to import from SCENIC in R.
+
+    :param geneSet: Co-expression modules or regulons.
+    :param fileName: The name of the file to create.
+    """
+
+    fileName=os.path.splitext(fileName)[0]+'.gmt'
+    with open(fileName, 'w') as f:
+        for reg in geneSet:
+            f.write(reg.name + "\t.\t" + '\t'.join(list(reg.gene2weight.keys())) + '\n')
+
+def export_motifs2txt(motifEnr, fileName):
+    """
+
+    Export the results from motif enrichment as text. Format compatible to import from SCENIC in R.
+
+    :param motifEnr: Results from the motif enrichment
+    :param fileName: The name of the file to create.
+    """
+    met=motifEnr['Enrichment']
+    met.Context = [list(dbn)[2] for dbn in met.Context]
+    met.TargetGenes=["; ".join(sorted([gs[0] for gs in row])) for row in met.TargetGenes]
+    met=met.drop(columns='Annotation')
+    met.columns.values[met.columns.values=='Context']='DB'
+    met.to_csv(fileName, sep='\t')
 
 def export_regulons(regulons: Sequence[Regulon], fname: str) -> None:
     """
