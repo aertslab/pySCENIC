@@ -273,7 +273,7 @@ def append_auc_mtx(fname: str, auc_mtx: pd.DataFrame, regulons: Sequence[Type[Ge
         #   - Columns represent cells or aggregates of cells
         # 	- Rows represent genes
         ds.ca[ATTRIBUTE_NAME_REGULONS_AUC] = create_structure_array(auc_mtx)
-        ds.ra[ATTRIBUTE_NAME_REGULONS]: create_structure_array(regulon_assignment)
+        ds.ra[ATTRIBUTE_NAME_REGULONS] = create_structure_array(regulon_assignment)
         if ATTRIBUTE_NAME_METADATA in ds.attrs:
             try:
                 meta_data = json.loads(ds.attrs[ATTRIBUTE_NAME_METADATA])
