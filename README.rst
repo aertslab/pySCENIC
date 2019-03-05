@@ -305,7 +305,7 @@ A mount point (or more than one) needs to be specified, which contains the input
 
     docker run \
         -v /path/to/data:/scenicdata \
-        aertslab/pyscenic grn \
+        aertslab/pyscenic pyscenic grn \
             --num_workers 6 \
             -o /scenicdata/expr_mat.adjacencies.tsv \
             /scenicdata/expr_mat.tsv \
@@ -313,7 +313,7 @@ A mount point (or more than one) needs to be specified, which contains the input
 
     docker run \
         -v /path/to/data:/scenicdata \
-        aertslab/pyscenic ctx \
+        aertslab/pyscenic pyscenic ctx \
             /scenicdata/expr_mat.adjacencies.tsv \
             /scenicdata/hg19-500bp-upstream-7species.mc9nr.feather \
             /scenicdata/hg19-tss-centered-5kb-7species.mc9nr.feather \
@@ -327,7 +327,7 @@ A mount point (or more than one) needs to be specified, which contains the input
 
     docker run \
         -v /path/to/data:/scenic-input \
-        aertslab/pyscenic aucell \
+        aertslab/pyscenic pyscenic aucell \
             /scenicdata/expr_mat.tsv \
             /scenicdata/regulons.csv \
             -o /scenicdata/auc_mtx.csv \
