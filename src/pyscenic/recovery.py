@@ -108,7 +108,7 @@ def enrichment4cells(rnk_mtx: pd.DataFrame, regulon: Type[GeneSignature], auc_th
                                       names=["Cell", "Regulon"])
 
     rnk = rnk_mtx.iloc[:,rnk_mtx.columns.isin(regulon.genes)]
-    if rnk.empty or float(len(rnk))/len(regulon) < 0.80:
+    if rnk.empty or float(len(rnk.columns))/len(regulon) < 0.80:
         LOGGER.warning("Less than 80% of the genes in {} are present in the expression matrix.".format(regulon.name))
         return pd.DataFrame(index=index, data={"AUC": np.zeros(shape=(rnk_mtx.shape[0]), dtype=np.float64)})
     else:
