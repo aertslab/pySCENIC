@@ -183,7 +183,7 @@ def save_enriched_motifs(df, fname:str) -> None:
 
 def load_adjacencies(fname: str) -> pd.DataFrame:
     extension = os.path.splitext(fname)[1].lower().lower()
-    return pd.read_csv(fname, sep=FILE_EXTENSION2SEPARATOR[extension])
+    return pd.read_csv(fname, sep=FILE_EXTENSION2SEPARATOR[extension], dtype={0:str,1:str,2:np.float64}, keep_default_na=False )
 
 
 def load_modules(fname: str) -> Sequence[Type[GeneSignature]]:
