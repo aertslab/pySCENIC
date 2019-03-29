@@ -61,6 +61,8 @@ You can also install the bleeding edge (i.e. less stable) version of the package
     cd pySCENIC/
     pip install .
 
+**pySCENIC containers** are also available for download and immediate use. In this case, no compiling or installation is required, provided either Docker or Singularity software is installed on the user's system.  Images are available from both `Docker Hub`_ and `Singularity Hub`_. Usage of the containers is shown below (`Docker and Singularity Images`_).
+
 To successfully use this pipeline you also need **auxilliary datasets**:
 
 1. *Databases ranking the whole genome* of your species of interest based on regulatory features (i.e. transcription factors). Ranking databases are typically stored in the feather_ format and can be downloaded from cisTargetDBs_.
@@ -290,22 +292,22 @@ Docker and Singularity Images
 -----------------------------
 
 pySCENIC is available to use with both Docker and Singularity, and tool usage from a container is similar to that of the command line interface.
-Note that the feather databases, transcription factors, and motif annotation databases need to be accessible to the container.
-In the below examples, separate mounts are created for the input, output, and databases directories.
+Note that the feather databases, transcription factors, and motif annotation databases need to be accessible to the container via a mounted volume.
+In the below examples, a single volume mount is used for simplicity, which will contains the input, output, and databases files.
 
 Docker
 ~~~~~~
 
-Docker images are available from `Docker Hub`_.
+Docker images are available from `Docker Hub`_, and can be obtained by running :code:`docker pull aertslab/pyscenic:[version]`, with the version tag as the latest release.
 
-To run pySCENIC in Docker, use the following three steps.
+To run pySCENIC using Docker, use the following three steps.
 A mount point (or more than one) needs to be specified, which contains the input data and necessary resources).
 
 .. code-block:: bash
 
     docker run \
         -v /path/to/data:/scenicdata \
-        aertslab/pyscenic pyscenic grn \
+        aertslab/pyscenic:[version] pyscenic grn \
             --num_workers 6 \
             -o /scenicdata/expr_mat.adjacencies.tsv \
             /scenicdata/expr_mat.tsv \
@@ -313,7 +315,7 @@ A mount point (or more than one) needs to be specified, which contains the input
 
     docker run \
         -v /path/to/data:/scenicdata \
-        aertslab/pyscenic pyscenic ctx \
+        aertslab/pyscenic:[version] pyscenic ctx \
             /scenicdata/expr_mat.adjacencies.tsv \
             /scenicdata/hg19-500bp-upstream-7species.mc9nr.feather \
             /scenicdata/hg19-tss-centered-5kb-7species.mc9nr.feather \
@@ -321,13 +323,12 @@ A mount point (or more than one) needs to be specified, which contains the input
             --annotations_fname /scenicdata/motifs-v9-nr.hgnc-m0.001-o0.0.tbl \
             --expression_mtx_fname /scenicdata/expr_mat.tsv \
             --mode "dask_multiprocessing" \
-            --output_type csv \
             --output /scenicdata/regulons.csv \
             --num_workers 6
 
     docker run \
-        -v /path/to/data:/scenic-input \
-        aertslab/pyscenic pyscenic aucell \
+        -v /path/to/data:/scenicdata \
+        aertslab/pyscenic:[version] pyscenic aucell \
             /scenicdata/expr_mat.tsv \
             /scenicdata/regulons.csv \
             -o /scenicdata/auc_mtx.csv \
@@ -336,39 +337,39 @@ A mount point (or more than one) needs to be specified, which contains the input
 Singularity
 ~~~~~~~~~~~
 
-Singularity images are available from `Singularity Hub`_.
+Singularity images are available from `Singularity Hub`_ and can be obtained by running :code:`singularity pull shub://aertslab/pySCENIC:0.9.7` with the proper version tag.
 
-To run pySCENIC in Singularity, use the following three steps.
-Note that in Singularity 3.0+, the mount points are automatically overlaid.
+To run pySCENIC with Singularity, the usage is very similar to that of Docker.
+Note that in Singularity 3.0+, the mount points are automatically overlaid, but bind points can be specified similarly to Docker with :code:`--bind`/:code:`-B`.
+The first step (GRN inference) is shown as an example:
 
 .. code-block:: bash
 
-    singularity exec pySCENIC_latest.sif \
+    singularity exec pySCENIC_0.9.7.sif \
         pyscenic grn \
             --num_workers 6 \
-            -o /scenic-output/expr_mat.adjacencies.tsv \
-            /scenic-input/expr_mat.tsv \
-            /scenic-db/allTFs_hg38.txt
-
-    singularity exec pySCENIC_latest.sif \
-        pyscenic ctx \
-            expr_mat.adjacencies.tsv \
-            hg19-500bp-upstream-7species.mc9nr.feather \
-            hg19-tss-centered-5kb-7species.mc9nr.feather \
-            hg19-tss-centered-10kb-7species.mc9nr.feather \
-            --annotations_fname motifs-v9-nr.hgnc-m0.001-o0.0.tbl \
-            --expression_mtx_fname expr_mat.tsv \
-            --mode "dask_multiprocessing" \
-            --output_type csv \
-            --output regulons.csv \
-            --num_workers 6
-
-    singularity exec pySCENIC_latest.sif \
-        pyscenic aucell \
+            -o expr_mat.adjacencies.tsv \
             expr_mat.tsv \
-            regulons.csv \
-            -o auc_mtx.csv \
-            --num_workers 6
+            allTFs_hg38.txt
+
+
+Using the Docker or Singularity images with Jupyter notebook
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+As of version 0.9.7, the pySCENIC containers have the ipykernel package installed, and can also be used interactively in a notebook.
+This can be achieved using a kernel command similar to the following (for singularity).
+Note that in this case, a bind needs to be specified.
+
+.. code-block:: bash
+
+    singularity exec -B /data:/data pySCENIC_0.9.7.sif ipython kernel -f {connection_file}
+
+
+Running pySCENIC with Nextflow
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+The CLI to pySCENIC has also been streamlined into a pipeline that can be run with a single command, using the Nextflow workflow manager.
+For details on this usage, see the `scenic-nf`_ repository.
 
 
 Frequently Asked Questions
@@ -472,4 +473,5 @@ References
 .. _bioconda: https://anaconda.org/bioconda/pyscenic
 .. _`Singularity Hub`: https://www.singularity-hub.org/collections/2033
 .. _`Docker Hub`: https://cloud.docker.com/u/aertslab/repository/docker/aertslab/pyscenic
+.. _`scenic-nf`: https://github.com/aertslab/scenic-nf
 
