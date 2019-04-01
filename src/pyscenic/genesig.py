@@ -378,3 +378,29 @@ class Regulon(GeneSignature, yaml.YAMLObject):
                         score=max(self.score, getattr(other, 'score', 0.0)))
 
 
+# Some utility functions:
+def regulonSizes(regulons):
+    """
+    Returns a dictionary with the regulon names and the number of genes they contain.
+
+    :param regulons: The regulons object
+    """
+
+    return dict(zip([r.name for r in regulons], [len(r) for r in regulons]))
+
+def regulonNames(regulons):
+    """
+    Returns a dictionary with the regulon names and their index for subsetting.
+
+    :param regulons: The regulons object
+    """
+    return dict(zip([r.name for r in regulons],range(len(regulons))))
+
+def regulonGenes(regulons, regulonName):
+    """
+    Returns a list with the genes in the regulon.
+
+    :param regulons: The regulons object
+    :param regulons: A regulon name.
+    """
+    return list(regulons[regulonNames(regulons)[regulonName]].gene2weight.keys())

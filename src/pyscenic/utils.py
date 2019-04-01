@@ -211,7 +211,7 @@ def modules_from_adjacencies(adjacencies: pd.DataFrame,
                         rho_mask_dropouts=True) -> Sequence[Regulon]:
     """
     Create modules from a dataframe containing weighted adjacencies between a TF and its target genes.
-    
+
     :param adjacencies: The dataframe with the TF-target links. This dataframe should have the following columns:
         :py:const:`pyscenic.utils.COLUMN_NAME_TF`, :py:const:`pyscenic.utils.COLUMN_NAME_TARGET` and :py:const:`pyscenic.utils.COLUMN_NAME_WEIGHT` .
     :param ex_mtx: The expression matrix (n_cells x n_genes).
@@ -312,7 +312,7 @@ def add_motif_url(df: pd.DataFrame, base_url: str):
     :param base_url:
     :return:
     """
-    df[("Enrichment", COLUMN_NAME_MOTIF_URL)] = list(map(partial(urljoin, base=base_url), df.index.get_level_values(COLUMN_NAME_MOTIF_ID)))
+    df[("Enrichment", COLUMN_NAME_MOTIF_URL)] = list(map(partial(urljoin, base_url), df.index.get_level_values(COLUMN_NAME_MOTIF_ID)))
     return df
 
 
@@ -329,7 +329,3 @@ def load_motifs(fname: str, sep: str = ',') -> pd.DataFrame:
     df[('Enrichment', COLUMN_NAME_CONTEXT)] = df[('Enrichment', COLUMN_NAME_CONTEXT)].apply(lambda s: eval(s))
     df[('Enrichment', COLUMN_NAME_TARGET_GENES)] = df[('Enrichment', COLUMN_NAME_TARGET_GENES)].apply(lambda s: eval(s))
     return df
-
-
-
-
