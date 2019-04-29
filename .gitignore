@@ -16,3 +16,5 @@ docs/_build/
 **/dask-worker-space/
 scripts/cli_test_data/
 .python-version
+.vscode/
+.mypy_cache/

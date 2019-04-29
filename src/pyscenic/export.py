@@ -7,7 +7,7 @@ import loompy as lp
 from sklearn.manifold.t_sne import TSNE
 from .aucell import aucell
 from .genesig import Regulon
-from typing import List, Mapping, Sequence, Optional
+from typing import List, Mapping, Union, Sequence, Optional
 from operator import attrgetter
 from multiprocessing import cpu_count
 from .binarization import binarize
@@ -53,7 +53,7 @@ def export2loom(ex_mtx: pd.DataFrame, regulons: List[Regulon], out_fname: str,
     # Information on the SCope specific alterations: https://github.com/aertslab/SCope/wiki/Data-Format
 
     if cell_annotations is None:
-        cell_annotations=dict(zip(ex_matrix.index, ['-']*ex_matrix.shape[0]))
+        cell_annotations=dict(zip(ex_mtx.index, ['-']*ex_mtx.shape[0]))
 
     if(regulons[0].name.find(' ')==-1):
         print("Regulon name does not seem to be compatible with SCOPE. It should include a space to allow selection of the TF.",
@@ -174,6 +174,68 @@ def export2loom(ex_mtx: pd.DataFrame, regulons: List[Regulon], out_fname: str,
               row_attrs=row_attrs,
               col_attrs=column_attrs,
               file_attrs=general_attrs)
+
+
+def add_scenic_metadata(adata: 'sc.AnnData',
+                        auc_mtx: pd.DataFrame,
+                        regulons: Union[None, Sequence[Regulon]] = None,
+                        bin_rep: bool = False,
+                        copy: bool = False) -> 'sc.AnnData':
+    """
+    Add AUCell values and regulon metadata to AnnData object.
+
+    :param adata: The AnnData object.
+    :param auc_mtx: The dataframe containing the AUCell values (#observations x #regulons).
+    :param bin_rep: Also add binarized version of AUCell values as separate representation. This representation
+    is stored as `adata.obsm['X_aucell_bin']`.
+    :param copy: Return a copy instead of writing to adata.
+    :
+    """
+    # To avoid dependency with scanpy package the type hinting intentionally uses string literals.
+    # In addition, the assert statement to assess runtime type is also commented out.
+    #assert isinstance(adata, sc.AnnData)
+    assert isinstance(auc_mtx, pd.DataFrame)
+    assert len(auc_mtx) == adata.n_obs
+
+    REGULON_SUFFIX_PATTERN = 'Regulon({})'
+
+    result = adata.copy() if copy else adata
+
+    # Add AUCell values as new representation (similar to a PCA). This facilitates the usage of
+    # AUCell as initial dimensional reduction.
+    result.obsm['X_aucell'] = auc_mtx.values.copy()
+    if bin_rep:
+        bin_mtx, _ = binarize(auc_mtx)
+        result.obsm['X_aucell_bin'] = bin_mtx.values
+
+    # Encode genes in regulons as "binary" membership matrix.
+    if regulons is not None:
+        genes = np.array(adata.var_names)
+        data = np.zeros(shape=(adata.n_vars, len(regulons)), dtype=bool)
+        for idx, regulon in enumerate(regulons):
+            data[:, idx] = np.isin(genes, regulon.genes).astype(bool)
+        regulon_assignment = pd.DataFrame(data=data, index=genes,
+                                          columns=list(map(lambda r: REGULON_SUFFIX_PATTERN.format(r.name), regulons)))
+        result.var = pd.merge(result.var, regulon_assignment, left_index=True, right_index=True, how='left')
+
+    # Add additional meta-data/information on the regulons.
+    def fetch_logo(context):
+        for elem in context:
+            if elem.endswith('.png'):
+                return elem
+        return ""
+    result.uns['aucell'] = {
+        'regulon_names': auc_mtx.columns.map(lambda s: REGULON_SUFFIX_PATTERN.format(s)).values,
+        'regulon_motifs': np.array([fetch_logo(reg.context) for reg in regulons] if regulons is not None else [])
+    }
+
+    # Add the AUCell values also as annotations of observations. This way regulon activity can be
+    # depicted on cellular scatterplots.
+    mtx = auc_mtx.copy()
+    mtx.columns = result.uns['aucell']['regulon_names']
+    result.obs = pd.merge(result.obs, mtx, left_index=True, right_index=True, how='left')
+
+    return result
 
 
 def export_regulons(regulons: Sequence[Regulon], fname: str) -> None:
