@@ -99,7 +99,7 @@ def export2loom(ex_mtx: pd.DataFrame, regulons: List[Regulon], out_fname: str,
     # Encode cell type clusters.
     # The name of the column should match the identifier of the clustering.
     name2idx = dict(map(reversed, enumerate(sorted(set(cell_annotations.values())))))
-    clusterings = pd.DataFrame(data=ex_mtx.index,
+    clusterings = pd.DataFrame(data=ex_mtx.index.values,
                                index=ex_mtx.index,
                                columns=['0']).replace(cell_annotations).replace(name2idx)
 
