@@ -72,12 +72,13 @@ def export2loom(ex_mtx: pd.DataFrame, regulons: List[Regulon], out_fname: str,
     # Create an embedding based on tSNE.
     # Name of columns should be "_X" and "_Y".
     if default_embedding is None:
-        default_embedding = pd.DataFrame(data=TSNE().fit_transform(auc_mtx),
+        embedding = pd.DataFrame(data=TSNE().fit_transform(auc_mtx),
                                       index=ex_mtx.index, columns=['_X', '_Y']) # (n_cells, 2)
     else:
         if(len(default_embedding.columns)!=2):
             raise Exception('The embedding should have two columns.')
-        default_embedding.columns=['_X', '_Y']
+        embedding = default_embedding.copy()
+        embedding.columns=['_X', '_Y']
 
     # Calculate the number of genes per cell.
     binary_mtx = ex_mtx.copy()
@@ -111,7 +112,7 @@ def export2loom(ex_mtx: pd.DataFrame, regulons: List[Regulon], out_fname: str,
     column_attrs = {
         "CellID": ex_mtx.index.values.astype('str'),
         "nGene": ngenes.values,
-        "Embedding": create_structure_array(default_embedding),
+        "Embedding": create_structure_array(embedding),
         "RegulonsAUC": create_structure_array(auc_mtx),
         "Clusterings": create_structure_array(clusterings),
         "ClusterID": clusterings.values
