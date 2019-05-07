@@ -17,11 +17,13 @@ import zlib
 import base64
 import json
 
+from typing import Mapping
+from collections import OrderedDict
+
 
 def compress_encode(value):
     '''
     Compress using ZLIB algorithm and encode the given value in base64.
-
     Taken from: https://github.com/aertslab/SCopeLoomPy/blob/5438da52c4bcf48f483a1cf378b1eaa788adefcb/src/scopeloompy/utils/__init__.py#L7
     '''
     return base64.b64encode(zlib.compress(value.encode('ascii'))).decode('ascii')
@@ -32,13 +34,13 @@ def export2loom(ex_mtx: pd.DataFrame, regulons: List[Regulon], out_fname: str,
                 tree_structure: Sequence[str] = (),
                 title: Optional[str] = None,
                 nomenclature: str = "Unknown",
-                num_workers=cpu_count(),
-                default_embedding=None,
-                auc_mtx=None, auc_thresholds=None,
-                compress=False):
+                num_workers: int =cpu_count(),
+                embeddings: Mapping[str, pd.DataFrame] = {},
+                auc_mtx=None, 
+                auc_thresholds=None,
+                compress: bool=False):
     """
     Create a loom file for a single cell experiment to be used in SCope.
-
     :param ex_mtx: The expression matrix (n_cells x n_genes).
     :param regulons: A list of Regulons.
     :param cell_annotations: A dictionary that maps a cell ID to its corresponding cell type annotation.
@@ -71,14 +73,24 @@ def export2loom(ex_mtx: pd.DataFrame, regulons: List[Regulon], out_fname: str,
 
     # Create an embedding based on tSNE.
     # Name of columns should be "_X" and "_Y".
-    if default_embedding is None:
-        embedding = pd.DataFrame(data=TSNE().fit_transform(auc_mtx),
-                                      index=ex_mtx.index, columns=['_X', '_Y']) # (n_cells, 2)
-    else:
-        if(len(default_embedding.columns)!=2):
+    if len(embeddings) == 0:
+        embeddings = { "tSNE (default)" : pd.DataFrame(data=TSNE().fit_transform(auc_mtx),
+                                      index=ex_mtx.index, columns=['_X', '_Y']) } # (n_cells, 2)
+    
+    id2name = OrderedDict()
+    embeddings_X = pd.DataFrame(index=ex_mtx.index)
+    embeddings_Y = pd.DataFrame(index=ex_mtx.index)
+    for idx, (name, df_embedding) in enumerate(embeddings.items()):
+        if(len(df_embedding.columns)!=2):
             raise Exception('The embedding should have two columns.')
-        embedding = default_embedding.copy()
+        
+        embedding_id = idx - 1 # Default embedding must have id == -1 for SCope.
+        id2name[embedding_id] = name
+        
+        embedding = df_embedding.copy()
         embedding.columns=['_X', '_Y']
+        embeddings_X = pd.merge(embeddings_X, embedding['_X'].to_frame().rename(columns={'_X': str(embedding_id)}), left_index=True, right_index=True)
+        embeddings_Y = pd.merge(embeddings_Y, embedding['_Y'].to_frame().rename(columns={'_Y': str(embedding_id)}), left_index=True, right_index=True)
 
     # Calculate the number of genes per cell.
     binary_mtx = ex_mtx.copy()
@@ -108,14 +120,18 @@ def export2loom(ex_mtx: pd.DataFrame, regulons: List[Regulon], out_fname: str,
         # Create a numpy structured array
         return np.array([tuple(row) for row in df.values],
                         dtype=np.dtype(list(zip(df.columns, df.dtypes))))
-
+    
+    default_embedding = next(iter(embeddings.values())).copy()
+    default_embedding.columns=['_X', '_Y']
     column_attrs = {
         "CellID": ex_mtx.index.values.astype('str'),
         "nGene": ngenes.values,
-        "Embedding": create_structure_array(embedding),
+        "Embedding": create_structure_array(default_embedding),
         "RegulonsAUC": create_structure_array(auc_mtx),
         "Clusterings": create_structure_array(clusterings),
-        "ClusterID": clusterings.values
+        "ClusterID": clusterings.values,
+        'Embeddings_X': create_structure_array(embeddings_X),
+        'Embeddings_Y': create_structure_array(embeddings_Y),
         }
     row_attrs = {
         "Gene": ex_mtx.columns.values.astype('str'),
@@ -137,10 +153,7 @@ def export2loom(ex_mtx: pd.DataFrame, regulons: List[Regulon], out_fname: str,
     general_attrs = {
         "title": os.path.splitext(os.path.basename(out_fname))[0] if title is None else title,
         "MetaData": json.dumps({
-            "embeddings": [{
-                "id": 0,
-                "name": "tSNE (default)",
-            }],
+            "embeddings": [{'id': identifier, 'name': name} for identifier, name in id2name.items()],
             "annotations": [{
                 "name": "",
                 "values": []
