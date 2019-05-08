@@ -191,7 +191,7 @@ def export2loom(ex_mtx: pd.DataFrame, regulons: List[Regulon], out_fname: str,
               col_attrs=column_attrs,
               file_attrs=general_attrs)
 
-
+#TODO: remove duplication with export2loom function!
 def add_scenic_metadata(adata: 'sc.AnnData',
                         auc_mtx: pd.DataFrame,
                         regulons: Union[None, Sequence[Regulon]] = None,
