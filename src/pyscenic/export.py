@@ -45,10 +45,12 @@ def export2loom(ex_mtx: pd.DataFrame, regulons: List[Regulon], out_fname: str,
     :param regulons: A list of Regulons.
     :param cell_annotations: A dictionary that maps a cell ID to its corresponding cell type annotation.
     :param out_fname: The name of the file to create.
-    :param tree_structure: A sequence of strings that defines the category tree structure.
+    :param tree_structure: A sequence of strings that defines the category tree structure. Needs to be a sequence of strings with three elements.
     :param title: The title for this loom file. If None than the basename of the filename is used as the title.
     :param nomenclature: The name of the genome.
     :param num_workers: The number of cores to use for AUCell regulon enrichment.
+    :param embeddings: A dictionary that maps the name of an embedding to its representation as a pandas DataFrame with two columns: the first
+    column is the first component of the projection for each cell followed by the second. The first mapping is the default embedding (use `collections.OrderedDict` to enforce this).
     :param compress: compress metadata (only when using SCope).
     """
     # Information on the general loom file format: http://linnarssonlab.org/loompy/format/index.html
