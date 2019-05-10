@@ -268,7 +268,7 @@ def append_auc_mtx(fname: str, auc_mtx: pd.DataFrame, regulons: Sequence[Type[Ge
         return np.array([tuple(row) for row in df.values],
                         dtype=np.dtype(list(zip(df.columns, df.dtypes))))
 
-    with lp.connect(fname) as ds:
+    with lp.connect(fname, validate=False) as ds:
         # The orientation of the loom file is always:
         #   - Columns represent cells or aggregates of cells
         # 	- Rows represent genes

@@ -17,5 +17,5 @@ pyyaml
 tqdm
 interlap
 umap-learn
-loompy==2.0.2
+loompy
 networkx
