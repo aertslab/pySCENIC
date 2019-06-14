@@ -1,7 +1,7 @@
 pySCENIC
 ========
 
-|buildstatus|_ |pypipackage|_
+|buildstatus|_ |pypipackage|_ |docstatus|_
 
 pySCENIC is a lightning-fast python implementation of the SCENIC_ pipeline (Single-Cell rEgulatory Network Inference and
 Clustering) which enables biologists to infer transcription factors, gene regulatory networks and cell types from
@@ -18,14 +18,17 @@ The pipeline has three steps:
 2. These regulons are refined by pruning targets that do not have an enrichment for a corresponding motif of the TF effectively separating direct from indirect targets based on the presence of cis-regulatory footprints.
 3. Finally, the original cells are differentiated and clustered on the activity of these discovered regulons.
 
+
 .. note::
     The most impactfull speed improvement is introduced by the arboreto_ package in step 1. This package provides an alternative to GENIE3 [3]_ called GRNBoost2. This package can be controlled from within pySCENIC.
+
 
 .. sidebar:: **Quick Start**
 
     * `Installation`_
     * `Tutorial`_
     * `Command Line Interface`_
+    * `Docker and Singularity Images`_
     * `Frequently Asked Questions`_
     * See notebooks_
     * Report an issue_
@@ -45,8 +48,10 @@ Installation
 
 The lastest stable release of the **package** itself can be installed via :code:`pip install pyscenic`.
 
+
 .. caution::
     pySCENIC needs a python 3.6 or greater interpreter.
+
 
 You can also install the bleeding edge (i.e. less stable) version of the package directly from the source:
 
@@ -55,6 +60,8 @@ You can also install the bleeding edge (i.e. less stable) version of the package
     git clone https://github.com/aertslab/pySCENIC.git
     cd pySCENIC/
     pip install .
+
+**pySCENIC containers** are also available for download and immediate use. In this case, no compiling or installation is required, provided either Docker or Singularity software is installed on the user's system.  Images are available from both `Docker Hub`_ and `Singularity Hub`_. Usage of the containers is shown below (`Docker and Singularity Images`_).
 
 To successfully use this pipeline you also need **auxilliary datasets**:
 
@@ -73,8 +80,11 @@ To successfully use this pipeline you also need **auxilliary datasets**:
 .. _`MGI annotations`: https://resources.aertslab.org/cistarget/motif2tf/motifs-v9-nr.mgi-m0.001-o0.0.tbl
 .. _`Flybase annotations`: https://resources.aertslab.org/cistarget/motif2tf/motifs-v8-nr.flybase-m0.001-o0.0.tbl
 
+
 .. caution::
     These ranking databases are 1.1 Gb each so downloading them might take a while. An annotations file is typically 100Mb in size.
+
+A list of transcription factors is required for the network inference step (GENIE3/GRNBoost2). These lists can be downloaded from `https://github.com/aertslab/pySCENIC/tree/master/resources`.
 
 Tutorial
 --------
@@ -85,6 +95,7 @@ hippocampal regions) are used as an example [4]_. The analysis is done in a Jupy
 .. caution::
     If you run this from a python script instead of a Jupyter_ notebook, please enclose the code in
     a :code:`if __name__ == '__main__':` construct.
+
 
 First we import the necessary modules and declare some constants:
 
@@ -261,14 +272,14 @@ A command line version of the tool is included. This tool is available after pro
 .. code-block:: bash
 
     { ~ }  » pyscenic                                            ~
-    usage: pySCENIC [-h] {grnboost,ctx,aucell} ...
+    usage: pySCENIC [-h] {grn,ctx,aucell} ...
 
     Single-CEll regulatory Network Inference and Clustering
 
     positional arguments:
       {grnboost,ctx,aucell}
                             sub-command help
-        grnboost            Derive co-expression modules from expression matrix.
+        grn                 Derive co-expression modules from expression matrix.
         ctx                 Find enriched motifs for a gene signature and
                             optionally prune targets from this signature based on
                             cis-regulatory cues.
@@ -278,6 +289,90 @@ A command line version of the tool is included. This tool is available after pro
       -h, --help            show this help message and exit
 
     Arguments can be read from file using a @args.txt construct.
+
+Docker and Singularity Images
+-----------------------------
+
+pySCENIC is available to use with both Docker and Singularity, and tool usage from a container is similar to that of the command line interface.
+Note that the feather databases, transcription factors, and motif annotation databases need to be accessible to the container via a mounted volume.
+In the below examples, a single volume mount is used for simplicity, which will contains the input, output, and databases files.
+
+Docker
+~~~~~~
+
+Docker images are available from `Docker Hub`_, and can be obtained by running :code:`docker pull aertslab/pyscenic:[version]`, with the version tag as the latest release.
+
+To run pySCENIC using Docker, use the following three steps.
+A mount point (or more than one) needs to be specified, which contains the input data and necessary resources).
+
+.. code-block:: bash
+
+    docker run \
+        -v /path/to/data:/scenicdata \
+        aertslab/pyscenic:[version] pyscenic grn \
+            --num_workers 6 \
+            -o /scenicdata/expr_mat.adjacencies.tsv \
+            /scenicdata/expr_mat.tsv \
+            /scenicdata/allTFs_hg38.txt
+
+    docker run \
+        -v /path/to/data:/scenicdata \
+        aertslab/pyscenic:[version] pyscenic ctx \
+            /scenicdata/expr_mat.adjacencies.tsv \
+            /scenicdata/hg19-500bp-upstream-7species.mc9nr.feather \
+            /scenicdata/hg19-tss-centered-5kb-7species.mc9nr.feather \
+            /scenicdata/hg19-tss-centered-10kb-7species.mc9nr.feather \
+            --annotations_fname /scenicdata/motifs-v9-nr.hgnc-m0.001-o0.0.tbl \
+            --expression_mtx_fname /scenicdata/expr_mat.tsv \
+            --mode "dask_multiprocessing" \
+            --output /scenicdata/regulons.csv \
+            --num_workers 6
+
+    docker run \
+        -v /path/to/data:/scenicdata \
+        aertslab/pyscenic:[version] pyscenic aucell \
+            /scenicdata/expr_mat.tsv \
+            /scenicdata/regulons.csv \
+            -o /scenicdata/auc_mtx.csv \
+            --num_workers 6
+
+Singularity
+~~~~~~~~~~~
+
+Singularity images are available from `Singularity Hub`_ and can be obtained by running :code:`singularity pull shub://aertslab/pySCENIC:0.9.7` with the proper version tag.
+
+To run pySCENIC with Singularity, the usage is very similar to that of Docker.
+Note that in Singularity 3.0+, the mount points are automatically overlaid, but bind points can be specified similarly to Docker with :code:`--bind`/:code:`-B`.
+The first step (GRN inference) is shown as an example:
+
+.. code-block:: bash
+
+    singularity exec pySCENIC_0.9.7.sif \
+        pyscenic grn \
+            --num_workers 6 \
+            -o expr_mat.adjacencies.tsv \
+            expr_mat.tsv \
+            allTFs_hg38.txt
+
+
+Using the Docker or Singularity images with Jupyter notebook
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+As of version 0.9.7, the pySCENIC containers have the ipykernel package installed, and can also be used interactively in a notebook.
+This can be achieved using a kernel command similar to the following (for singularity).
+Note that in this case, a bind needs to be specified.
+
+.. code-block:: bash
+
+    singularity exec -B /data:/data pySCENIC_0.9.7.sif ipython kernel -f {connection_file}
+
+
+Running pySCENIC with Nextflow
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+The CLI to pySCENIC has also been streamlined into a pipeline that can be run with a single command, using the Nextflow workflow manager.
+For details on this usage, see the `scenic-nf`_ repository.
+
 
 Frequently Asked Questions
 --------------------------
@@ -332,7 +427,6 @@ Can I draw the distribution of AUC values for a regulon across cells?
         ax.set_ylabel('#')
         ax.set_title(regulon_name)
 
-
 Website
 -------
 
@@ -379,4 +473,7 @@ References
 
 .. |bioconda| image:: https://img.shields.io/badge/install%20with-bioconda-brightgreen.svg?style=flat-square
 .. _bioconda: https://anaconda.org/bioconda/pyscenic
+.. _`Singularity Hub`: https://www.singularity-hub.org/collections/2033
+.. _`Docker Hub`: https://cloud.docker.com/u/aertslab/repository/docker/aertslab/pyscenic
+.. _`scenic-nf`: https://github.com/aertslab/scenic-nf
 

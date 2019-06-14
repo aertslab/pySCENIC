@@ -84,6 +84,8 @@ To successfully use this pipeline you also need **auxilliary datasets**:
 .. caution::
     These ranking databases are 1.1 Gb each so downloading them might take a while. An annotations file is typically 100Mb in size.
 
+A list of transcription factors is required for the network inference step (GENIE3/GRNBoost2). These lists can be downloaded from `https://github.com/aertslab/pySCENIC/tree/master/resources`.
+
 Tutorial
 --------
 
