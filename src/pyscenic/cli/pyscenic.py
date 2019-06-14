@@ -69,7 +69,10 @@ def find_adjacencies_command(args):
         shutdown_callback(False)
 
     LOGGER.info("Writing results to file.")
-    network.to_csv(args.output, index=False, sep='\t')
+
+    extension = os.path.splitext(args.output.name)[1].lower()
+    separator = '\t' if extension == 'tsv' else ','
+    network.to_csv(args.output, index=False, sep=separator)
 
 
 def adjacencies2modules(args):
