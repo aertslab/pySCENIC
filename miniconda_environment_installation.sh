@@ -10,6 +10,7 @@
 conda create -n scenic_protocol python=3.6
 conda activate scenic_protocol
 conda install numpy pandas matplotlib seaborn
+conda install -c anaconda xlrd
 conda install -c anaconda cytoolz	
 # Install scanpy (https://scanpy.readthedocs.io/en/latest/installation.html)
 conda install seaborn scikit-learn statsmodels numba pytables
