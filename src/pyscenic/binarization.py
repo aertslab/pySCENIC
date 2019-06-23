@@ -1,31 +1,62 @@
 # coding=utf-8
 
-import pandas as pd
-from sklearn import mixture
-import numpy as np
 from typing import Optional, Mapping
 
+import numpy as np
+import pandas as pd
 
-__alls__ = ['binarize']
+from tqdm import tqdm
+
+from scipy import stats
+from scipy.optimize import minimize_scalar
+from sklearn import mixture
+
+from pyscenic.diptest import diptst
 
 
-def _derive_threshold(auc_mtx: pd.DataFrame, regulon_name: str) -> float:
+def derive_threshold(auc_mtx: pd.DataFrame, regulon_name: str, method: str = 'hdt') -> float:
+    '''
+    Derive threshold on the AUC values of the given regulon to binarize the cells in two clusters: "on" versus "off"
+    state of the regulator.
+
+    :param auc_mtx: The dataframe with the AUC values for all cells and regulons (n_cells x n_regulons).
+    :param regulon_name: the name of the regulon for which to predict the threshold.
+    :param method: The method to use to decide if the distribution of AUC values for the given regulon is not unimodel.
+        Can be either Hartigan's Dip Test (HDT) or Bayesian Information Content (BIC). The former method performs better
+        but takes considerable more time to execute (40min for 350 regulons). The BIC compares the BIC for two Gaussian
+        Mixture Models: single versus two components.
+    :return: The threshold on the AUC values.
+    '''
     assert auc_mtx is not None and not auc_mtx.empty
     assert regulon_name in auc_mtx.columns
-    # Fit a two component Gaussian Mixture model on the AUC distribution using an Expectation-Maximization algorithm.
-    data = auc_mtx[regulon_name].values.reshape(-1, 1)
-    gmm = mixture.GaussianMixture(n_components=2, covariance_type='full').fit(data)
-    avgs = gmm.means_
-    stds = np.sqrt(gmm.covariances_.reshape(-1, 1))
+    assert method in {'hdt', 'bic'}
 
-    # The threshold is based on the distribution with the highest mean and is defined as (mu - 2 x std)
-    idx = np.argmax(avgs)
-    threshold = max(avgs[idx] - 2 * stds[idx], 0)
-    # This threshold cannot be lower than (mu + 2 x std) based on the distribution with the lowest mean.
-    idx = np.argmin(avgs)
-    lower_bound = avgs[idx] + 2 * stds[idx]
+    data = auc_mtx[regulon_name].values
 
-    return max(lower_bound, threshold)
+    def isbimodal(data, method):
+        if method == 'hdt':
+            # Use Hartigan's dip statistic to decide if distribution deviates from unimodality.
+            _, pval, _ = diptst(np.msort(data))
+            return pval <= 0.05
+        else:
+            # Compare Bayesian Information Content of two Gaussian Mixture Models.
+            X = data.reshape(-1, 1)
+            gmm2 = mixture.GaussianMixture(n_components=2, covariance_type='full').fit(X)
+            gmm1 = mixture.GaussianMixture(n_components=1, covariance_type='full').fit(X)
+            return gmm2.bic(X) <= gmm1.bic(X)
+
+    if not isbimodal(data, method):
+        # For a unimodal distribution the threshold is set as mean plus two standard deviations.
+        return data.mean() + 2.0*data.std()
+    else:
+        # Fit a two component Gaussian Mixture model on the AUC distribution using an Expectation-Maximization algorithm
+        # to identify the peaks in the distribution.
+        gmm2 = mixture.GaussianMixture(n_components=2, covariance_type='full').fit(data.reshape(-1, 1))
+        # For a bimodal distribution the threshold is defined as the "trough" in between the two peaks.
+        # This is solved as a minimization problem on the kernel smoothed density.
+        return minimize_scalar(fun=stats.gaussian_kde(data),
+                               bounds=sorted(gmm2.means_),
+                               method='bounded').x[0]
 
 
 def binarize(auc_mtx: pd.DataFrame, threshold_overides:Optional[Mapping[str,float]]=None) -> (pd.DataFrame, pd.Series):
@@ -38,7 +69,7 @@ def binarize(auc_mtx: pd.DataFrame, threshold_overides:Optional[Mapping[str,floa
     :return: A "binarized" dataframe and a series containing the AUC threshold used for each regulon.
     """
     def derive_thresholds(auc_mtx):
-        return pd.Series(index=auc_mtx.columns, data=[_derive_threshold(auc_mtx, name) for name in auc_mtx.columns])
+        return pd.Series(index=auc_mtx.columns, data=[derive_threshold(auc_mtx, name) for name in tqdm(auc_mtx.columns)])
     thresholds = derive_thresholds(auc_mtx)
     if threshold_overides is not None:
         thresholds[list(threshold_overides.keys())] = list(threshold_overides.values())
