@@ -7,12 +7,12 @@ RUN BUILDPKGS="build-essential apt-utils git" && \
 
 # install dependencies:
 COPY requirements.txt /tmp/
-RUN pip install --no-cache-dir -r /tmp/requirements.txt && \
+RUN pip install --upgrade pip && \
+    pip install --no-cache-dir -r /tmp/requirements.txt && \
     pip install --no-cache-dir ipykernel 
 
 # use version from argument (--build-arg version=0.9.7), or a default:
-ARG version
-ENV version ="0.9.9"
+ARG version="0.9.9"
 RUN pip install --no-cache-dir pyscenic==$version
 
 RUN apt-get remove --purge -y $BUILDPKGS && \
