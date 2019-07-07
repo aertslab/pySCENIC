@@ -19,3 +19,4 @@ interlap
 umap-learn
 loompy
 networkx
+scipy

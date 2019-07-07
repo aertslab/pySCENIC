@@ -20,3 +20,5 @@ umap-learn
 loompy
 networkx
 matplotlib
+scipy
+
