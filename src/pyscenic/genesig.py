@@ -86,7 +86,7 @@ class GeneSignature(yaml.YAMLObject):
         :param field_separator: The separator that separates fields in a line.
         :param gene_separator: The separator that separates the genes.
         """
-        assert not os.path.exists(fname), "{} already exists.".format(fname)
+        #assert not os.path.exists(fname), "{} already exists.".format(fname)
         with open(fname, "w") as file:
             for signature in signatures:
                 genes = gene_separator.join(signature.genes)
