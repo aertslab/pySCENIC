@@ -56,7 +56,7 @@ def load_exp_matrix_as_loom(fname,
     :param fname: The name of the loom file to load.
     :return: A 2-dimensional dataframe (rows = cells x columns = genes).
     """
-    with lp.connect(fname,mode='r') as ds:
+    with lp.connect(fname,mode='r',validate=False) as ds:
         # The orientation of the loom file is always:
         #   - Columns represent cells or aggregates of cells
         # 	- Rows represent genes
