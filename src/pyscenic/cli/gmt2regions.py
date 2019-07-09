@@ -11,7 +11,7 @@ CODE2DELINEATION = {name.lower(): member for name, member in Delineation.__membe
 
 
 def create_argument_parser():
-    parser = argparse.ArgumentParser(prog=os.path.basename(__file__).split('.')[0],
+    parser = argparse.ArgumentParser(prog=os.path.splitext(os.path.basename(__file__))[0],
                                      description="Convert a signature of gene symbols to a signature of region identifiers.",
                                      fromfile_prefix_chars='@', add_help=True)
     parser.add_argument('gmt_fname', nargs=1,

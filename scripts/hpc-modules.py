@@ -15,7 +15,7 @@ ADJACENCIES_EXT = "net.csv"
 
 
 def get_name(fname):
-    return os.path.basename(fname).split('.')[0]
+    return os.path.splitext(os.path.basename(fname))[0]
 
 
 def exp_mtx_fname(name):

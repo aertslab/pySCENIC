@@ -159,7 +159,7 @@ Finally the ranking databases are loaded:
 
     db_fnames = glob.glob(DATABASES_GLOB)
     def name(fname):
-        return os.path.basename(fname).split(".")[0]
+        return os.path.splitext(os.path.basename(fname))[0]
     dbs = [RankingDatabase(fname=fname, name=name(fname)) for fname in db_fnames]
     dbs
 
