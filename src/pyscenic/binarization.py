@@ -37,7 +37,7 @@ def derive_threshold(auc_mtx: pd.DataFrame, regulon_name: str, method: str = 'hd
         if method == 'hdt':
             # Use Hartigan's dip statistic to decide if distribution deviates from unimodality.
             _, pval, _ = diptst(np.msort(data))
-            return pval <= 0.05
+            return (pval is not None) and (pval <= 0.05)
         else:
             # Compare Bayesian Information Content of two Gaussian Mixture Models.
             X = data.reshape(-1, 1)
