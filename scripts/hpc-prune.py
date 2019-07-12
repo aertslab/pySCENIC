@@ -19,7 +19,7 @@ CONFIG_FILENAME = os.path.join(os.path.dirname(__file__), "hpc-prune.ini")
 
 
 # Setting the root logger for this entire project.
-LOGGER = logging.getLogger(__name__.split(".")[0])
+LOGGER = logging.getLogger(os.path.splitext(__name__)[0])
 
 
 def create_logging_handler(debug: bool) -> logging.Handler:
@@ -91,7 +91,7 @@ def run(args):
 
     LOGGER.info("Loading databases.")
     def name(fname):
-        return os.path.basename(fname).split(".")[0]
+        return os.path.splitext(os.path.basename(fname))[0]
     db_fnames = list(mapcat(glob.glob, cfg['data']['databases'].split(";")))
     dbs = [RankingDatabase(fname=fname, name=name(fname)) for fname in db_fnames]
 

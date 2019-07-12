@@ -49,7 +49,7 @@ class RegionRankingDatabase(InvertedRankingDatabase):
     def __init__(self, fname: str, name: str):
         super().__init__(fname, name)
 
-        basename = os.path.basename(fname).split('.')[0]
+        basename = os.path.splitext(os.path.basename(fname))[0]
         dirname = os.path.dirname(fname)
         region_delineation_fname = os.path.join(dirname, '{}.{}'.format(basename, REGIONS_BED_EXTENSION))
         with gzip.open(region_delineation_fname, "rt") as f:

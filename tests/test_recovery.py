@@ -10,7 +10,7 @@ from pkg_resources import resource_filename
 
 
 TEST_DATABASE_FNAME = resource_filename('resources.tests', "hg19-tss-centered-10kb-10species.mc9nr.feather")
-TEST_DATABASE_NAME = "hg19-tss-centered-10kb-10species"
+TEST_DATABASE_NAME = "hg19-tss-centered-10kb-10species.mc9nr"
 TEST_SIGNATURE_FNAME = resource_filename('resources.tests', "c6.all.v6.1.symbols.gmt")
 
 

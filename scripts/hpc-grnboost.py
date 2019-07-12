@@ -14,7 +14,7 @@ from functools import partial
 
 
 # Setting the root logger for this entire project.
-LOGGER = logging.getLogger(__name__.split(".")[0])
+LOGGER = logging.getLogger(os.path.splitext(__name__)[0])
 CONFIG_FILENAME = os.path.join(os.path.dirname(__file__), "hpc-grnboost.ini")
 
 
@@ -70,7 +70,7 @@ def run(cfg_fname):
 
     # Remove fnames that already have a corresponding results file.
     def add_output(fname, out_folder):
-        basename = os.path.basename(fname).split('.')[0]
+        basename = os.path.splitext(os.path.basename(fname))[0]
         return fname, os.path.join(out_folder, "{}.net.csv".format(basename))
     out_folder = cfg['data']['out_folder']
     for in_fname, out_fname in filter(lambda t: not os.path.exists(t[1]),

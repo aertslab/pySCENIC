@@ -103,7 +103,7 @@ def adjacencies2modules(args):
 
 def _load_dbs(fnames: Sequence[str]) -> Sequence[Type[RankingDatabase]]:
     def get_name(fname):
-        return os.path.basename(fname).split(".")[0]
+        return os.path.splitext(os.path.basename(fname))[0]
     return [opendb(fname=fname.name, name=get_name(fname.name)) for fname in fnames]
 
 
@@ -283,7 +283,7 @@ def add_loom_parameters(parser):
 
 
 def create_argument_parser():
-    parser = argparse.ArgumentParser(prog=os.path.basename(__file__).split('.')[0],
+    parser = argparse.ArgumentParser(prog=os.path.splitext(os.path.basename(__file__))[0],
                                      description='Single-CEll regulatory Network Inference and Clustering ({})'.format(VERSION),
                                      fromfile_prefix_chars='@', add_help=True,
                                      epilog="Arguments can be read from file using a @args.txt construct. "

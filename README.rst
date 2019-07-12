@@ -123,7 +123,7 @@ First we import the necessary modules and declare some constants:
     RESOURCES_FOLDER="~/resources"
     DATABASE_FOLDER = "~/databases/"
     SCHEDULER="123.122.8.24:8786"
-    DATABASES_GLOB = os.path.join(DATABASE_FOLDER, "mm9-*.feather")
+    DATABASES_GLOB = os.path.join(DATABASE_FOLDER, "mm9-*.mc9nr.feather")
     MOTIF_ANNOTATIONS_FNAME = os.path.join(RESOURCES_FOLDER, "motifs-v9-nr.mgi-m0.001-o0.0.tbl")
     MM_TFS_FNAME = os.path.join(RESOURCES_FOLDER, 'mm_tfs.txt')
     SC_EXP_FNAME = os.path.join(RESOURCES_FOLDER, "GSE60361_C1-3005-Expression.txt")
@@ -159,18 +159,18 @@ Finally the ranking databases are loaded:
 
     db_fnames = glob.glob(DATABASES_GLOB)
     def name(fname):
-        return os.path.basename(fname).split(".")[0]
+        return os.path.splitext(os.path.basename(fname))[0]
     dbs = [RankingDatabase(fname=fname, name=name(fname)) for fname in db_fnames]
     dbs
 
 ::
 
-        [FeatherRankingDatabase(name="mm9-tss-centered-10kb-10species"),
-         FeatherRankingDatabase(name="mm9-500bp-upstream-7species"),
-         FeatherRankingDatabase(name="mm9-500bp-upstream-10species"),
-         FeatherRankingDatabase(name="mm9-tss-centered-5kb-10species"),
-         FeatherRankingDatabase(name="mm9-tss-centered-10kb-7species"),
-         FeatherRankingDatabase(name="mm9-tss-centered-5kb-7species")]
+        [FeatherRankingDatabase(name="mm9-tss-centered-10kb-10species.mc9nr"),
+         FeatherRankingDatabase(name="mm9-500bp-upstream-7species.mc9nr"),
+         FeatherRankingDatabase(name="mm9-500bp-upstream-10species.mc9nr"),
+         FeatherRankingDatabase(name="mm9-tss-centered-5kb-10species.mc9nr"),
+         FeatherRankingDatabase(name="mm9-tss-centered-10kb-7species.mc9nr"),
+         FeatherRankingDatabase(name="mm9-tss-centered-5kb-7species.mc9nr")]
 
 Phase I: Inference of co-expression modules
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
