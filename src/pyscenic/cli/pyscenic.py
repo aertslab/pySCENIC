@@ -71,7 +71,7 @@ def find_adjacencies_command(args):
     LOGGER.info("Writing results to file.")
 
     extension = os.path.splitext(args.output.name)[1].lower()
-    separator = '\t' if extension == 'tsv' else ','
+    separator = '\t' if extension == '.tsv' else ','
     network.to_csv(args.output, index=False, sep=separator)
 
 
