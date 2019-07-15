@@ -8,7 +8,7 @@ numpy
 pandas==0.23.4
 cloudpickle
 dask==1.0.0
-distributed>=1.21.6
+distributed>=1.21.6,<2.0.0
 pyarrow>=0.11.1
 arboreto
 boltons
