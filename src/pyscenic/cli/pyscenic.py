@@ -64,7 +64,7 @@ def find_adjacencies_command(args):
     client, shutdown_callback = _prepare_client(args.client_or_address, num_workers=args.num_workers)
     method = grnboost2 if args.method == 'grnboost2' else genie3
     try:
-        network = method(expression_data=ex_mtx, tf_names=tf_names, verbose=True, client_or_address=client)
+        network = method(expression_data=ex_mtx, tf_names=tf_names, verbose=True, client_or_address=client, seed=args.seed)
     finally:
         shutdown_callback(False)
 
@@ -312,6 +312,8 @@ def create_argument_parser():
     parser_grn.add_argument('-m', '--method', choices=['genie3', 'grnboost2'],
                             default='grnboost2',
                             help='The algorithm for gene regulatory network reconstruction (default: grnboost2).')
+    parser_grn.add_argument('--seed', type=int, required=False, default=None,
+                            help='Seed value for regressor random state initialization. Applies to both GENIE3 and GRNBoost2. The default is to use a random seed.')
     add_computation_parameters(parser_grn)
     add_loom_parameters(parser_grn)
     parser_grn.set_defaults(func=find_adjacencies_command)
