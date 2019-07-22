@@ -253,10 +253,18 @@ class FeatherRankingDatabase(RankingDatabase):
         return tuple(reader.get_column_name(idx) for idx in range(self.total_genes) if reader.get_column_name(idx) != INDEX_NAME)
 
     def load_full(self) -> pd.DataFrame:
-        return FeatherReader(self._fname).read_pandas().set_index(INDEX_NAME)
+        df = FeatherReader(self._fname).read_pandas()
+        # Avoid copying the whole dataframe by replacing the index in place.
+        # This makes loading a database twice as fast in case the database file is already in the filesystem cache.
+        df.set_index(INDEX_NAME, inplace=True)
+        return df
 
     def load(self, gs: Type[GeneSignature]) -> pd.DataFrame:
-        return FeatherReader(self._fname).read_pandas(columns=(INDEX_NAME,) + gs.genes).set_index(INDEX_NAME)
+        df = FeatherReader(self._fname).read_pandas(columns=(INDEX_NAME,) + gs.genes)
+        # Avoid copying the whole dataframe by replacing the index in place.
+        # This makes loading a database twice as fast in case the database file is already in the filesystem cache.
+        df.set_index(INDEX_NAME, inplace=True)
+        return df
 
 
 class MemoryDecorator(RankingDatabase):
@@ -396,7 +404,10 @@ class InvertedRankingDatabase(RankingDatabase):
         self.idx2identifier = {idx: identifier for identifier, idx in self.identifier2idx.items()}
 
         # Load dataframe into memory in a format most suited for fast loading of gene signatures.
-        df = FeatherReader(fname).read_pandas().set_index(INDEX_NAME)
+        df = FeatherReader(fname).read_pandas()
+        # Avoid copying the whole dataframe by replacing the index in place.
+        # This makes loading a database twice as fast in case the database file is already in the filesystem cache.
+        df.set_index(INDEX_NAME, inplace=True)
         self.max_rank = len(df.columns)
         self.features = [pd.Series(index=row.values, data=row.index, name=name) for name, row in df.iterrows()]
 
