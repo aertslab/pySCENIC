@@ -396,7 +396,7 @@ class InvertedRankingDatabase(RankingDatabase):
         self.idx2identifier = {idx: identifier for identifier, idx in self.identifier2idx.items()}
 
         # Load dataframe into memory in a format most suited for fast loading of gene signatures.
-        df = FeatherReader(fname).read().set_index(INDEX_NAME)
+        df = FeatherReader(fname).read_pandas().set_index(INDEX_NAME)
         self.max_rank = len(df.columns)
         self.features = [pd.Series(index=row.values, data=row.index, name=name) for name, row in df.iterrows()]
 
