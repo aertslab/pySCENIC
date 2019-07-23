@@ -1,16 +1,50 @@
 # -*- coding: utf-8 -*-
 
 import os
-import pandas as pd
 import numpy as np
-from typing import Tuple, Set, Type
-from abc import ABCMeta, abstractmethod
+import pandas as pd
+import pyarrow as pa
 import sqlite3
+
+from abc import ABCMeta, abstractmethod
 from operator import itemgetter
-from .genesig import GeneSignature
+from typing import Tuple, Set, Type
+
 from cytoolz import memoize
 from pyarrow.feather import write_feather, FeatherReader
 from tqdm import tqdm
+
+from .genesig import GeneSignature
+
+
+class PyArrowThreads:
+    """
+    A static class to control how many threads PyArrow is allowed to use to convert a Feather database to a pandas
+    dataframe.
+
+    By default the number of threads is set to 4.
+    Overriding the number of threads is possible by using the environment variable "PYARROW_THREADS=nbr_threads".
+    """
+    pyarrow_threads = 4
+
+    if os.environ.get("PYARROW_THREADS"):
+        try:
+            # If "PYARROW_THREADS" is set, check if it is a number.
+            pyarrow_threads = int(os.environ.get("PYARROW_THREADS"))
+        except ValueError:
+            pass
+
+        if pyarrow_threads < 1:
+            # Set the number of PyArrow threads to 1 if a negative number or zero was specified.
+            pyarrow_threads = 1
+
+    @staticmethod
+    def set_nbr_pyarrow_threads(nbr_threads=None):
+        # Set number of threads to use for PyArrow when converting Feather database to pandas dataframe.
+        pa.set_cpu_count(nbr_threads if nbr_threads else PyArrowThreads.pyarrow_threads)
+
+
+PyArrowThreads.set_nbr_pyarrow_threads()
 
 
 class RankingDatabase(metaclass=ABCMeta):
