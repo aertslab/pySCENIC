@@ -28,6 +28,9 @@ def test_init(db):
 def test_total_genes(db):
     assert db.total_genes == 29
 
+def test_genes(db):
+    assert len(db.genes) == 29
+
 def test_load_full(db):
     rankings = db.load_full()
     assert len(rankings.index) == 24453

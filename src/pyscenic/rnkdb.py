@@ -277,6 +277,7 @@ class FeatherRankingDatabase(RankingDatabase):
     @property
     @memoize
     def total_genes(self) -> int:
+        # Do not count column 1 as it contains the index with the name of the features.
         return FeatherReader(self._fname).num_columns - 1
 
     @property
@@ -284,7 +285,11 @@ class FeatherRankingDatabase(RankingDatabase):
     def genes(self) -> Tuple[str]:
         # noinspection PyTypeChecker
         reader = FeatherReader(self._fname)
-        return tuple(reader.get_column_name(idx) for idx in range(self.total_genes) if reader.get_column_name(idx) != INDEX_NAME)
+        # Get all gene names (exclude "features" column).
+        return tuple(
+            reader.get_column_name(idx) for idx in range(reader.num_columns)
+            if reader.get_column_name(idx) != INDEX_NAME
+        )
 
     def load_full(self) -> pd.DataFrame:
         df = FeatherReader(self._fname).read_pandas()

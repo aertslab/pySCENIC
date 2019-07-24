@@ -18,13 +18,16 @@ def db():
 @pytest.fixture
 def gs():
     return GeneSignature.from_gmt(TEST_SIGNATURE_FNAME,
-                                    gene_separator="\t", field_separator="\t", )[0]
+                                  gene_separator="\t", field_separator="\t", )[0]
 
 def test_init(db):
     assert db.name == TEST_DATABASE_NAME
 
 def test_total_genes(db):
     assert db.total_genes == 22284
+
+def test_genes(db):
+    assert len(db.genes) == 22284
 
 def test_load_full(db):
     rankings = db.load_full()
