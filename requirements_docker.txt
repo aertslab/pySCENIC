@@ -34,7 +34,7 @@ MulticoreTSNE==0.1
 multiprocessing-on-dill==3.5.0a4
 natsort==6.0.0
 networkx==2.3
-numba==0.43.0
+numba==0.45.0
 numexpr==2.6.9
 numpy==1.16.2
 pandas==0.23.4
