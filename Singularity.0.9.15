@@ -16,8 +16,8 @@ From: python:3.6.8-slim
     apt-get install -y $BUILDPKGS
 
     pip install --no-cache-dir -r /tmp/requirements_docker.txt
-    pip install --no-cache-dir --upgrade pyscenic==0.9.14
-    pip install --no-cache-dir scanpy==1.4.3
+    pip install --no-cache-dir --upgrade pyscenic==0.9.15
+    pip install --no-cache-dir scanpy==1.4.4
 
     apt-get remove --purge -y $BUILDPKGS && \
     rm -rf /var/lib/apt/lists/*

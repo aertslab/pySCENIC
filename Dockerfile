@@ -18,9 +18,9 @@ RUN pip install --no-cache-dir --upgrade pip && \
     pip install --no-cache-dir -r /tmp/requirements_docker.txt
 
 # use version from argument (--build-arg version=0.9.7), or a default:
-ARG version="0.9.14"
+ARG version="0.9.15"
 RUN pip install --no-cache-dir pyscenic==$version && \
-    pip install --no-cache-dir scanpy==1.4.3
+    pip install --no-cache-dir scanpy==1.4.4
 
 RUN apt-get remove --purge -y $BUILDPKGS && \
     rm -rf /var/lib/apt/lists/*
