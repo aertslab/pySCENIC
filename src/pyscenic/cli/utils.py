@@ -238,7 +238,7 @@ def append_auc_mtx(fname: str, auc_mtx: pd.DataFrame, regulons: Sequence[Type[Ge
         name2logo = {}
 
     # Binarize matrix for AUC thresholds.
-    _, auc_thresholds = binarize(auc_mtx, num_workers=1)
+    _, auc_thresholds = binarize(auc_mtx, num_workers=num_workers)
     regulon_thresholds = [{"regulon": name,
                            "defaultThresholdValue":(threshold if isinstance(threshold, float) else threshold[0]),
                            "defaultThresholdName": "guassian_mixture_split",
