@@ -548,14 +548,14 @@ class InvertedRankingDatabase(RankingDatabase):
                          axis=1).T.astype(INVERTED_DB_DTYPE).rename(columns=self.idx2identifier)
 
 
-def convert2feather(fname: str, out_folder: str, name: str, extension: str="feather") -> str:
+def convert_sqlitedb_to_featherdb(fname: str, out_folder: str, name: str, extension: str= "feather") -> str:
     """
-    Convert a whole genome rankings database to a feather format based database.
+    Convert a whole genome SQLite rankings database to a feather format based database.
 
     More information on this format can be found here:
     .. feather-format: https://blog.rstudio.com/2016/03/29/feather/
 
-    :param fname: The filename of the legacy
+    :param fname: The filename of the legacy SQLite rankings database.
     :param out_folder: The name of the folder to write the new database to.
     :param name: The name of the rankings database.
     :param extension: The extension of the new database file.
@@ -572,7 +572,8 @@ def convert2feather(fname: str, out_folder: str, name: str, extension: str="feat
     db = SQLiteRankingDatabase(fname=fname, name=name)
     df = db.load_full()
     df.index.name = INDEX_NAME
-    df.reset_index(inplace=True) # Index is not stored in feather format. https://github.com/wesm/feather/issues/200
+    # Index is not stored in feather format: https://github.com/wesm/feather/issues/200
+    df.reset_index(inplace=True)
     write_feather(df, feather_fname)
     return feather_fname
 
