@@ -8,7 +8,7 @@ import sqlite3
 
 from abc import ABCMeta, abstractmethod
 from operator import itemgetter
-from typing import Tuple, Set, Type
+from typing import Dict, Set, Tuple, Type
 
 from cytoolz import memoize
 from pyarrow.feather import write_feather, FeatherReader
@@ -291,6 +291,11 @@ class FeatherRankingDatabase(RankingDatabase):
             if reader.get_column_name(idx) != INDEX_NAME
         )
 
+    @property
+    @memoize
+    def genes2idx(self) -> Dict[str, int]:
+        return {gene: idx for idx, gene in enumerate(self.genes)}
+
     def load_full(self) -> pd.DataFrame:
         df = FeatherReader(self._fname).read_pandas()
         # Avoid copying the whole dataframe by replacing the index in place.
@@ -299,7 +304,10 @@ class FeatherRankingDatabase(RankingDatabase):
         return df
 
     def load(self, gs: Type[GeneSignature]) -> pd.DataFrame:
-        df = FeatherReader(self._fname).read_pandas(columns=(INDEX_NAME,) + gs.genes)
+        # Read ranking columns for genes in order they appear in the Feather file.
+        df = FeatherReader(self._fname).read_pandas(
+            columns=(INDEX_NAME,) + sorted(gs.genes, key=lambda gene: self.genes2idx[gene])
+        )
         # Avoid copying the whole dataframe by replacing the index in place.
         # This makes loading a database twice as fast in case the database file is already in the filesystem cache.
         df.set_index(INDEX_NAME, inplace=True)
