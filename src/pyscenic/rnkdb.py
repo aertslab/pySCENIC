@@ -305,9 +305,11 @@ class FeatherRankingDatabase(RankingDatabase):
         return df
 
     def load(self, gs: Type[GeneSignature]) -> pd.DataFrame:
+        # For some genes in the signature there might not be a rank available in the database.
+        gene_set = self.geneset.intersection(set(gs.genes))
         # Read ranking columns for genes in order they appear in the Feather file.
         df = FeatherReader(self._fname).read_pandas(
-            columns=(INDEX_NAME,) + sorted(gs.genes, key=lambda gene: self.genes2idx[gene])
+            columns=(INDEX_NAME,) + tuple(sorted(gene_set, key=lambda gene: self.genes2idx[gene]))
         )
         # Avoid copying the whole dataframe by replacing the index in place.
         # This makes loading a database twice as fast in case the database file is already in the filesystem cache.
@@ -363,10 +365,12 @@ class ParquetRankingDatabase(RankingDatabase):
         return df
 
     def load(self, gs: Type[GeneSignature]) -> pd.DataFrame:
+        # For some genes in the signature there might not be a rank available in the database.
+        gene_set = self.geneset.intersection(set(gs.genes))
         # Read rankings columns for genes in order they appear in the Parquet file.
         df = pq.read_pandas(
             self._fname,
-            columns=(INDEX_NAME,) + sorted(gs.genes, key=lambda gene: self.genes2idx[gene])
+            columns=(INDEX_NAME,) + tuple(sorted(gene_set, key=lambda gene: self.genes2idx[gene]))
         ).to_pandas()
         # Avoid copying the whole dataframe by replacing the index in place.
         # This makes loading a database twice as fast in case the database file is already in the filesystem cache.
