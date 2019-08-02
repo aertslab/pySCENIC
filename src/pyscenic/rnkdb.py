@@ -4,6 +4,7 @@ import os
 import numpy as np
 import pandas as pd
 import pyarrow as pa
+import pyarrow.parquet as pq
 import sqlite3
 
 from abc import ABCMeta, abstractmethod
@@ -314,6 +315,65 @@ class FeatherRankingDatabase(RankingDatabase):
         return df
 
 
+class ParquetRankingDatabase(RankingDatabase):
+    def __init__(self, fname: str, name: str):
+        """
+        Create a new parquet database.
+
+        :param fname: The filename of the database.
+        :param name: The name of the database.
+        """
+        super().__init__(name=name)
+
+        assert os.path.isfile(fname), "Database {0:s} doesn't exist.".format(fname)
+        # FeatherReader cannot be pickle (important for dask framework) so filename is field instead.
+        self._fname = fname
+
+    @property
+    @memoize
+    def total_genes(self) -> int:
+        # Do not count column 1 as it contains the index with the name of the features.
+        return pq.read_metadata(self._fname).num_columns - 1
+
+    @property
+    @memoize
+    def genes(self) -> Tuple[str]:
+        # noinspection PyTypeChecker
+        metadata = pq.read_metadata(self._fname)
+        assert metadata.num_row_groups == 1, \
+            "Parquet database {0:s} has more than one row group.".format(self._fname)
+        metadata_row_group = metadata.row_group(0)
+        # Get all gene names (exclude "features" column).
+        return tuple(
+            metadata_row_group.column(idx).path_in_schema
+            for idx in range(0, metadata.num_columns)
+            if metadata_row_group.column(idx).path_in_schema != INDEX_NAME
+        )
+
+    @property
+    @memoize
+    def genes2idx(self) -> Dict[str, int]:
+        return {gene: idx for idx, gene in enumerate(self.genes)}
+
+    def load_full(self) -> pd.DataFrame:
+        df = pq.read_pandas(self._fname).to_pandas()
+        # Avoid copying the whole dataframe by replacing the index in place.
+        # This makes loading a database twice as fast in case the database file is already in the filesystem cache.
+        df.set_index(INDEX_NAME, inplace=True)
+        return df
+
+    def load(self, gs: Type[GeneSignature]) -> pd.DataFrame:
+        # Read rankings columns for genes in order they appear in the Parquet file.
+        df = pq.read_pandas(
+            self._fname,
+            columns=(INDEX_NAME,) + sorted(gs.genes, key=lambda gene: self.genes2idx[gene])
+        ).to_pandas()
+        # Avoid copying the whole dataframe by replacing the index in place.
+        # This makes loading a database twice as fast in case the database file is already in the filesystem cache.
+        df.set_index(INDEX_NAME, inplace=True)
+        return df
+
+
 class MemoryDecorator(RankingDatabase):
     """
     A decorator for a ranking database which loads the entire database in memory.
@@ -529,7 +589,10 @@ def opendb(fname: str, name: str) -> Type['RankingDatabase']:
     assert name, "A database should be given a proper name."
 
     extension = os.path.splitext(fname)[1]
-    if extension == ".feather":
+    if extension == ".parquet":
+        # noinspection PyTypeChecker
+        return ParquetRankingDatabase(fname, name=name)
+    elif extension == ".feather":
         if fname.endswith(".inverted.feather"):
             # noinspection PyTypeChecker
             return InvertedRankingDatabase(fname, name=name)
