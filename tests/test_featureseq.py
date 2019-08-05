@@ -1,7 +1,7 @@
 # coding=utf-8
 
 
-from pyscenic.featureseq import Feature, FeatureSeq
+from pyscenic.featureseq import Feature
 
 
 def test_feature_overlap():
@@ -33,5 +33,3 @@ def test_feature_bp_overlap():
     assert f2.get_overlap_in_bp_with(f3) == 0
     assert f3.get_overlap_in_bp_with(f4) == 0
     assert f3.get_overlap_in_bp_with(f3) == len(f3)
-
-
