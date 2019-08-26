@@ -6,7 +6,7 @@ import pandas as pd
 import loompy as lp
 from sklearn.manifold.t_sne import TSNE
 from .aucell import aucell
-from .genesig import Regulon
+from .genesig import Regulon, GeneSignature
 from typing import List, Mapping, Union, Sequence, Optional
 from operator import attrgetter
 from multiprocessing import cpu_count
@@ -37,6 +37,7 @@ def export2loom(ex_mtx: pd.DataFrame, regulons: List[Regulon], out_fname: str,
                 num_workers: int =cpu_count(),
                 embeddings: Mapping[str, pd.DataFrame] = {},
                 auc_mtx=None, 
+                auc_regulon_weights_key=['gene2weight'],
                 auc_thresholds=None,
                 compress: bool=False):
     """
@@ -64,9 +65,21 @@ def export2loom(ex_mtx: pd.DataFrame, regulons: List[Regulon], out_fname: str,
           "\nPlease run: \n regulons = [r.rename(r.name.replace('(+)',' ('+str(len(r))+'g)')) for r in regulons]",
           "\nor:\n regulons = [r.rename(r.name.replace('(',' (')) for r in regulons]")
 
+    # Create regulons with weight based on given key
+    print("Using {} to weight the genes when running AUCell.".format(auc_regulon_weights_key))
+    
+    def get_regulon_gene_data(regulon, key):
+        if key == 'gene2occurrence':
+            return regulon.gene2occurrence
+        if key == 'gene2weight':
+            return regulon.gene2weight
+        raise Exception('Cannot retrieve {} from given regulon. Not implemented.'.format(key))
+
+    regulon_signatures = list(map(lambda x: GeneSignature(name=x.name, gene2weight=get_regulon_gene_data(x, auc_regulon_weights_key)), regulons))
+
     # Calculate regulon enrichment per cell using AUCell.
     if auc_mtx is None:
-        auc_mtx = aucell(ex_mtx, regulons, num_workers=num_workers) # (n_cells x n_regulons)
+        auc_mtx = aucell(ex_mtx, regulon_signatures, num_workers=num_workers) # (n_cells x n_regulons)
         auc_mtx = auc_mtx.loc[ex_mtx.index]
 
     # Binarize matrix for AUC thresholds.
@@ -109,6 +122,24 @@ def export2loom(ex_mtx: pd.DataFrame, regulons: List[Regulon], out_fname: str,
     regulon_assignment = pd.DataFrame(data=data,
                                       index=ex_mtx.columns,
                                       columns=list(map(attrgetter('name'), regulons)))
+    
+    def encode_regulon_gene_data(key):
+        data = np.zeros(shape=(n_genes, n_regulons), dtype=float)
+        for idx, regulon in enumerate(regulons):
+            regulon_data = get_regulon_gene_data(regulon, key)
+            regulon_genes = list(dict(map(lambda x: x, regulon_data.items())).keys())
+            data[np.isin(genes, regulon_genes), idx] = list(dict(map(lambda x: x, regulon_data.items())).values())
+        return data
+
+    # Encode gene weights
+    regulon_gene_weights = pd.DataFrame(data=encode_regulon_gene_data(key='gene2weight'),
+                                        index=ex_mtx.columns,
+                                        columns=list(map(attrgetter('name'), regulons)))
+
+    # Encode gene occurrences
+    regulon_gene_occurrences = pd.DataFrame(data=encode_regulon_gene_data(key='gene2occurrence'),
+                                            index=ex_mtx.columns,
+                                            columns=list(map(attrgetter('name'), regulons)))
 
     # Encode cell type clusters.
     # The name of the column should match the identifier of the clustering.
@@ -125,6 +156,7 @@ def export2loom(ex_mtx: pd.DataFrame, regulons: List[Regulon], out_fname: str,
     
     default_embedding = next(iter(embeddings.values())).copy()
     default_embedding.columns=['_X', '_Y']
+    
     column_attrs = {
         "CellID": ex_mtx.index.values.astype('str'),
         "nGene": ngenes.values,
@@ -134,23 +166,38 @@ def export2loom(ex_mtx: pd.DataFrame, regulons: List[Regulon], out_fname: str,
         "ClusterID": clusterings.values,
         'Embeddings_X': create_structure_array(embeddings_X),
         'Embeddings_Y': create_structure_array(embeddings_Y),
-        }
+    }
     row_attrs = {
         "Gene": ex_mtx.columns.values.astype('str'),
         "Regulons": create_structure_array(regulon_assignment),
-        }
+        "RegulonGeneWeights": create_structure_array(regulon_gene_weights),
+        "RegulonGeneOccurrences": create_structure_array(regulon_gene_occurrences),
+    }
 
     def fetch_logo(context):
         for elem in context:
             if elem.endswith('.png'):
                 return elem
         return ""
+
     name2logo = {reg.name: fetch_logo(reg.context) for reg in regulons}
-    regulon_thresholds = [{"regulon": name,
-                            "defaultThresholdValue":(threshold if isinstance(threshold, float) else threshold[0]),
-                            "defaultThresholdName": "guassian_mixture_split",
-                            "allThresholds": {"guassian_mixture_split": (threshold if isinstance(threshold, float) else threshold[0])},
-                            "motifData": name2logo.get(name, "")} for name, threshold in auc_thresholds.iteritems()]
+
+    def get_meta_data(name, threshold):
+        regulon = list(filter(lambda x: x.name == name, regulons))[0]
+        return {
+            "regulon": name,
+            "tf": regulon.transcription_factor,
+            "score": regulon.score if hasattr(regulon, 'score') else 0.0,
+            "orthologousIdentity": regulon.orthologous_identity if hasattr(regulon, 'orthologous_identity') else 0.0,
+            "annotation": regulon.annotation if hasattr(regulon, 'annotation') else '',
+            "similarityQValue": regulon.score if hasattr(regulon, 'similarity_qvalue') else 0.0,
+            "motifData": name2logo.get(name, ""),
+            "defaultThresholdValue":(threshold if isinstance(threshold, float) else threshold[0]),
+            "defaultThresholdName": "guassian_mixture_split",
+            "allThresholds": {"guassian_mixture_split": (threshold if isinstance(threshold, float) else threshold[0])}
+        }
+
+    regulon_thresholds = [get_meta_data(name, threshold) for name, threshold in auc_thresholds.iteritems()]
 
     general_attrs = {
         "title": os.path.splitext(os.path.basename(out_fname))[0] if title is None else title,

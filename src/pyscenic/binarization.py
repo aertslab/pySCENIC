@@ -27,6 +27,7 @@ def derive_threshold(auc_mtx: pd.DataFrame, regulon_name: str, method: str = 'hd
         Mixture Models: single versus two components.
     :return: The threshold on the AUC values.
     '''
+    print(regulon_name)
     assert auc_mtx is not None and not auc_mtx.empty
     assert regulon_name in auc_mtx.columns
     assert method in {'hdt', 'bic'}
@@ -68,6 +69,7 @@ def binarize(auc_mtx: pd.DataFrame, threshold_overides:Optional[Mapping[str,floa
     :param threshold_overides: A dictionary that maps name of regulons to manually set thresholds.
     :return: A "binarized" dataframe and a series containing the AUC threshold used for each regulon.
     """
+    print("Binarize the supplied AUC matrix.")
     def derive_thresholds(auc_mtx):
         return pd.Series(index=auc_mtx.columns, data=[derive_threshold(auc_mtx, name) for name in tqdm(auc_mtx.columns)])
     thresholds = derive_thresholds(auc_mtx)
