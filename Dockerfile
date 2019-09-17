@@ -1,4 +1,4 @@
-FROM python:3.6.8-slim
+FROM python:3.7.4-slim
 
 ENV DEBIAN_FRONTEND=noninteractive
 RUN BUILDPKGS="build-essential apt-utils \
@@ -9,7 +9,7 @@ RUN BUILDPKGS="build-essential apt-utils \
     apt-get install -y debconf locales && dpkg-reconfigure locales && \
     apt-get install -y $BUILDPKGS && \
     ### run time:
-    apt-get install -y zlib1g hdf5-tools gfortran libgcc1 libstdc++ musl \
+    apt-get install -y zlib1g hdf5-tools gfortran libgcc1 libstdc++6 musl \
         libopenblas-base tcl tk libxml2 libffi6 less procps
 
 # install dependencies:
@@ -18,9 +18,9 @@ RUN pip install --no-cache-dir --upgrade pip && \
     pip install --no-cache-dir -r /tmp/requirements_docker.txt
 
 # use version from argument (--build-arg version=0.9.7), or a default:
-ARG version="0.9.15"
+ARG version="0.9.16"
 RUN pip install --no-cache-dir pyscenic==$version && \
-    pip install --no-cache-dir scanpy==1.4.4
+    pip install --no-cache-dir scanpy==1.4.4.post1
 
 RUN apt-get remove --purge -y $BUILDPKGS && \
     rm -rf /var/lib/apt/lists/*
