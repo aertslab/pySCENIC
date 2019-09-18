@@ -393,10 +393,6 @@ def create_argument_parser():
 
 
 def main(argv=None):
-    # Set logging level.
-    logging_debug_opt = False
-    LOGGER.addHandler(create_logging_handler(logging_debug_opt))
-    LOGGER.setLevel(logging.DEBUG)
 
     # Parse arguments.
     parser = create_argument_parser()
