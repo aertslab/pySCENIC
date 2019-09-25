@@ -98,6 +98,7 @@ def adjacencies2modules(args):
                                     top_n_targets=args.top_n_targets,
                                     top_n_regulators=args.top_n_regulators,
                                     min_genes=args.min_genes,
+                                    rho_mask_dropouts=args.mask_dropouts,
                                     keep_only_activating=(args.all_modules != "yes"))
 
 
@@ -255,6 +256,10 @@ def add_module_parameters(parser):
                        help='The name of the file that contains the expression matrix for the single cell experiment.'
                             ' Two file formats are supported: csv (rows=cells x columns=genes) or loom (rows=genes x columns=cells).'
                             ' (Only required if modules need to be generated)')
+    group.add_argument('--mask_dropouts', action='store_const', const=True, default=False,
+                        help='If modules need to be generated, this controls whether cell dropouts (cells in which expression of either TF or target gene is 0) are masked when calculating the correlation between a TF-target pair.'
+                        ' This affects which target genes are included in the initial modules, and the final pruned regulon (by default only positive regulons are kept (see --all_modules option)).'
+                        ' The default value in pySCENIC 0.9.16 and previous versions was to mask dropouts when calculating the correlation; however, all cells are now kept by default, to match the R version.')
     return parser
 
 
