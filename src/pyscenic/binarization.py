@@ -12,6 +12,7 @@ from scipy.optimize import minimize_scalar
 from sklearn import mixture
 
 from pyscenic.diptest import diptst
+from multiprocessing import Pool
 
 
 def derive_threshold(auc_mtx: pd.DataFrame, regulon_name: str, method: str = 'hdt') -> float:
@@ -38,7 +39,7 @@ def derive_threshold(auc_mtx: pd.DataFrame, regulon_name: str, method: str = 'hd
         if method == 'hdt':
             # Use Hartigan's dip statistic to decide if distribution deviates from unimodality.
             _, pval, _ = diptst(np.msort(data))
-            return pval <= 0.05
+            return (pval is not None) and (pval <= 0.05)
         else:
             # Compare Bayesian Information Content of two Gaussian Mixture Models.
             X = data.reshape(-1, 1)
@@ -60,7 +61,7 @@ def derive_threshold(auc_mtx: pd.DataFrame, regulon_name: str, method: str = 'hd
                                method='bounded').x[0]
 
 
-def binarize(auc_mtx: pd.DataFrame, threshold_overides:Optional[Mapping[str,float]]=None) -> (pd.DataFrame, pd.Series):
+def binarize(auc_mtx: pd.DataFrame, threshold_overides:Optional[Mapping[str,float]]=None, num_workers=1) -> (pd.DataFrame, pd.Series):
     """
     "Binarize" the supplied AUC matrix, i.e. decide if for each cells in the matrix a regulon is active or not based
     on the bimodal distribution of the AUC values for that regulon.
@@ -71,7 +72,9 @@ def binarize(auc_mtx: pd.DataFrame, threshold_overides:Optional[Mapping[str,floa
     """
     print("Binarize the supplied AUC matrix.")
     def derive_thresholds(auc_mtx):
-        return pd.Series(index=auc_mtx.columns, data=[derive_threshold(auc_mtx, name) for name in tqdm(auc_mtx.columns)])
+        with Pool( processes=num_workers ) as p:
+            thrs = p.starmap( derive_threshold,  [ (auc_mtx, c) for c in auc_mtx.columns ] )
+        return pd.Series(index=auc_mtx.columns, data=thrs)
     thresholds = derive_thresholds(auc_mtx)
     if threshold_overides is not None:
         thresholds[list(threshold_overides.keys())] = list(threshold_overides.values())

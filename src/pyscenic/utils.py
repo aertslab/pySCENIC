@@ -208,7 +208,7 @@ def modules_from_adjacencies(adjacencies: pd.DataFrame,
                         rho_dichotomize=True,
                         keep_only_activating=True,
                         rho_threshold=RHO_THRESHOLD,
-                        rho_mask_dropouts=True) -> Sequence[Regulon]:
+                        rho_mask_dropouts=False) -> Sequence[Regulon]:
     """
     Create modules from a dataframe containing weighted adjacencies between a TF and its target genes.
     
@@ -260,6 +260,7 @@ def modules_from_adjacencies(adjacencies: pd.DataFrame,
 
         # Add correlation column and create two disjoint set of adjacencies.
         LOGGER.info("Calculating Pearson correlations.")
+        LOGGER.warn(f"Note on correlation calculation: the default behaviour for calculating the correlations has changed after pySCENIC verion 0.9.16. Previously, the default was to calculate the correlation between a TF and target gene using only cells with non-zero expression values (mask_dropouts=True). The current default is now to use all cells to match the behavior of the R verision of SCENIC. The original settings can be retained by setting 'rho_mask_dropouts=True' in the modules_from_adjacencies function, or '--mask_dropouts' from the CLI.\n\tDropout masking is currently set to [{rho_mask_dropouts}].")
         adjacencies = add_correlation(adjacencies, ex_mtx,
                                   rho_threshold=rho_threshold, mask_dropouts=rho_mask_dropouts)
         activating_modules = adjacencies[adjacencies[COLUMN_NAME_REGULATION] > 0.0]

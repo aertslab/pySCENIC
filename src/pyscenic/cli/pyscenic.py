@@ -64,14 +64,14 @@ def find_adjacencies_command(args):
     client, shutdown_callback = _prepare_client(args.client_or_address, num_workers=args.num_workers)
     method = grnboost2 if args.method == 'grnboost2' else genie3
     try:
-        network = method(expression_data=ex_mtx, tf_names=tf_names, verbose=True, client_or_address=client)
+        network = method(expression_data=ex_mtx, tf_names=tf_names, verbose=True, client_or_address=client, seed=args.seed)
     finally:
         shutdown_callback(False)
 
     LOGGER.info("Writing results to file.")
 
     extension = os.path.splitext(args.output.name)[1].lower()
-    separator = '\t' if extension == 'tsv' else ','
+    separator = '\t' if extension == '.tsv' else ','
     network.to_csv(args.output, index=False, sep=separator)
 
 
@@ -98,12 +98,13 @@ def adjacencies2modules(args):
                                     top_n_targets=args.top_n_targets,
                                     top_n_regulators=args.top_n_regulators,
                                     min_genes=args.min_genes,
+                                    rho_mask_dropouts=args.mask_dropouts,
                                     keep_only_activating=(args.all_modules != "yes"))
 
 
 def _load_dbs(fnames: Sequence[str]) -> Sequence[Type[RankingDatabase]]:
     def get_name(fname):
-        return os.path.basename(fname).split(".")[0]
+        return os.path.splitext(os.path.basename(fname))[0]
     return [opendb(fname=fname.name, name=get_name(fname.name)) for fname in fnames]
 
 
@@ -196,7 +197,7 @@ def aucell_command(args):
     if extension == '.loom':
         try:
             copyfile(args.expression_mtx_fname.name, args.output.name)
-            append_auc_mtx(args.output.name, auc_mtx, signatures)
+            append_auc_mtx(args.output.name, auc_mtx, signatures, args.num_workers)
         except OSError as e:
             LOGGER.error("Expression matrix should be provided in the loom file format.")
             sys.exit(1)
@@ -255,6 +256,10 @@ def add_module_parameters(parser):
                        help='The name of the file that contains the expression matrix for the single cell experiment.'
                             ' Two file formats are supported: csv (rows=cells x columns=genes) or loom (rows=genes x columns=cells).'
                             ' (Only required if modules need to be generated)')
+    group.add_argument('--mask_dropouts', action='store_const', const=True, default=False,
+                        help='If modules need to be generated, this controls whether cell dropouts (cells in which expression of either TF or target gene is 0) are masked when calculating the correlation between a TF-target pair.'
+                        ' This affects which target genes are included in the initial modules, and the final pruned regulon (by default only positive regulons are kept (see --all_modules option)).'
+                        ' The default value in pySCENIC 0.9.16 and previous versions was to mask dropouts when calculating the correlation; however, all cells are now kept by default, to match the R version.')
     return parser
 
 
@@ -283,7 +288,7 @@ def add_loom_parameters(parser):
 
 
 def create_argument_parser():
-    parser = argparse.ArgumentParser(prog=os.path.basename(__file__).split('.')[0],
+    parser = argparse.ArgumentParser(prog=os.path.splitext(os.path.basename(__file__))[0],
                                      description='Single-CEll regulatory Network Inference and Clustering ({})'.format(VERSION),
                                      fromfile_prefix_chars='@', add_help=True,
                                      epilog="Arguments can be read from file using a @args.txt construct. "
@@ -312,6 +317,8 @@ def create_argument_parser():
     parser_grn.add_argument('-m', '--method', choices=['genie3', 'grnboost2'],
                             default='grnboost2',
                             help='The algorithm for gene regulatory network reconstruction (default: grnboost2).')
+    parser_grn.add_argument('--seed', type=int, required=False, default=None,
+                            help='Seed value for regressor random state initialization. Applies to both GENIE3 and GRNBoost2. The default is to use a random seed.')
     add_computation_parameters(parser_grn)
     add_loom_parameters(parser_grn)
     parser_grn.set_defaults(func=find_adjacencies_command)
@@ -391,10 +398,6 @@ def create_argument_parser():
 
 
 def main(argv=None):
-    # Set logging level.
-    logging_debug_opt = False
-    LOGGER.addHandler(create_logging_handler(logging_debug_opt))
-    LOGGER.setLevel(logging.DEBUG)
 
     # Parse arguments.
     parser = create_argument_parser()

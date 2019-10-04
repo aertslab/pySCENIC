@@ -217,7 +217,7 @@ def compress_meta(meta):
     return base64.b64encode(zlib.compress(json.dumps(meta).encode('ascii'))).decode('ascii')
 
 
-def append_auc_mtx(fname: str, auc_mtx: pd.DataFrame, regulons: Sequence[Type[GeneSignature]]) -> None:
+def append_auc_mtx(fname: str, auc_mtx: pd.DataFrame, regulons: Sequence[Type[GeneSignature]], num_workers=1) -> None:
     """
 
     Append AUC matrix to loom file.
@@ -238,7 +238,7 @@ def append_auc_mtx(fname: str, auc_mtx: pd.DataFrame, regulons: Sequence[Type[Ge
         name2logo = {}
 
     # Binarize matrix for AUC thresholds.
-    _, auc_thresholds = binarize(auc_mtx)
+    _, auc_thresholds = binarize(auc_mtx, num_workers=num_workers)
     regulon_thresholds = [{"regulon": name,
                            "defaultThresholdValue":(threshold if isinstance(threshold, float) else threshold[0]),
                            "defaultThresholdName": "guassian_mixture_split",

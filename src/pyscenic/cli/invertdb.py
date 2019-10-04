@@ -6,11 +6,11 @@ from pyscenic.rnkdb import opendb, InvertedRankingDatabase
 
 
 def derive_db_name(fname:str) -> str:
-    return os.path.basename(fname).split(".")[0]
+    return os.path.splitext(os.path.basename(fname))[0]
 
 
 def create_argument_parser():
-    parser = argparse.ArgumentParser(prog=os.path.basename(__file__).split('.')[0],
+    parser = argparse.ArgumentParser(prog=os.path.splitext(os.path.basename(__file__))[0],
                                      description="Inverts a rankings database to reduce disk volume.",
                                      fromfile_prefix_chars='@', add_help=True)
     parser.add_argument('db_fnames', nargs='+',

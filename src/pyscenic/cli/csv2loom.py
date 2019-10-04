@@ -6,7 +6,7 @@ from pyscenic.cli.utils import save_df_as_loom, load_exp_matrix
 
 
 def create_argument_parser():
-    parser = argparse.ArgumentParser(prog=os.path.basename(__file__).split('.')[0],
+    parser = argparse.ArgumentParser(prog=os.path.splitext(os.path.basename(__file__))[0],
                                      description="Convert a expression matrix from csv to loom file format.",
                                      add_help=True)
     parser.add_argument('csv_fname',
