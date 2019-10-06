@@ -37,7 +37,7 @@ def export2loom(ex_mtx: pd.DataFrame, regulons: List[Regulon], out_fname: str,
                 num_workers: int =cpu_count(),
                 embeddings: Mapping[str, pd.DataFrame] = {},
                 auc_mtx=None, 
-                auc_regulon_weights_key=['gene2weight'],
+                auc_regulon_weights_key='gene2weight',
                 auc_thresholds=None,
                 compress: bool=False):
     """
@@ -58,12 +58,12 @@ def export2loom(ex_mtx: pd.DataFrame, regulons: List[Regulon], out_fname: str,
     # Information on the SCope specific alterations: https://github.com/aertslab/SCope/wiki/Data-Format
 
     if cell_annotations is None:
-        cell_annotations=dict(zip(ex_mtx.index, ['-']*ex_mtx.shape[0]))
+        cell_annotations=dict(zip(ex_mtx.index.astype(str), ['-']*ex_mtx.shape[0]))
 
-    if(regulons[0].name.find(' ')==-1):
+    if(regulons[0].name.find('_')==-1):
         print("Regulon name does not seem to be compatible with SCOPE. It should include a space to allow selection of the TF.",
-          "\nPlease run: \n regulons = [r.rename(r.name.replace('(+)',' ('+str(len(r))+'g)')) for r in regulons]",
-          "\nor:\n regulons = [r.rename(r.name.replace('(',' (')) for r in regulons]")
+          "\nPlease run: \n regulons = [r.rename(r.name.replace('(+)','_('+str(len(r))+'g)')) for r in regulons]",
+          "\nor:\n regulons = [r.rename(r.name.replace('(','_(')) for r in regulons]")
 
     # Create regulons with weight based on given key
     print("Using {} to weight the genes when running AUCell.".format(auc_regulon_weights_key))
@@ -75,10 +75,9 @@ def export2loom(ex_mtx: pd.DataFrame, regulons: List[Regulon], out_fname: str,
             return regulon.gene2weight
         raise Exception('Cannot retrieve {} from given regulon. Not implemented.'.format(key))
 
-    regulon_signatures = list(map(lambda x: GeneSignature(name=x.name, gene2weight=get_regulon_gene_data(x, auc_regulon_weights_key)), regulons))
-
     # Calculate regulon enrichment per cell using AUCell.
     if auc_mtx is None:
+        regulon_signatures = list(map(lambda x: GeneSignature(name=x.name, gene2weight=get_regulon_gene_data(x, auc_regulon_weights_key)), regulons))
         auc_mtx = aucell(ex_mtx, regulon_signatures, num_workers=num_workers) # (n_cells x n_regulons)
         auc_mtx = auc_mtx.loc[ex_mtx.index]
 

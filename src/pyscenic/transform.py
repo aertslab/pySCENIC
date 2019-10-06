@@ -261,9 +261,8 @@ def _regulon4group(tf_name, context, df_group, save_columns=[]) -> Optional[Regu
                                     row[COLUMN_NAME_ORTHOLOGOUS_IDENTITY]),
                         context=context,
                         transcription_factor=tf_name,
-                        gene2weight=row[COLUMN_NAME_TARGET_GENES])
-
-    print(tf_name)
+                        gene2weight=row[COLUMN_NAME_TARGET_GENES],
+                        gene2occurrence=[])
 
     # Find most enriched annotated motif and add this to the context
     df_selected = df_group.sort_values(by=COLUMN_NAME_NES, ascending=False)
