@@ -61,7 +61,7 @@ You can also install the bleeding edge (i.e. less stable) version of the package
     cd pySCENIC/
     pip install .
 
-**pySCENIC containers** are also available for download and immediate use. In this case, no compiling or installation is required, provided either Docker or Singularity software is installed on the user's system.  Images are available from both `Docker Hub`_ and `Singularity Hub`_. Usage of the containers is shown below (`Docker and Singularity Images`_).
+**pySCENIC containers** are also available for download and immediate use. In this case, no compiling or installation is required, provided either Docker or Singularity software is installed on the user's system.  Images are available from `Docker Hub`_. Usage of the containers is shown below (`Docker and Singularity Images`_).
 
 To successfully use this pipeline you also need **auxilliary datasets**:
 
@@ -319,7 +319,6 @@ A mount point (or more than one) needs to be specified, which contains the input
         -v /path/to/data:/scenicdata \
         aertslab/pyscenic:[version] pyscenic ctx \
             /scenicdata/expr_mat.adjacencies.tsv \
-            /scenicdata/hg19-500bp-upstream-7species.mc9nr.feather \
             /scenicdata/hg19-tss-centered-5kb-7species.mc9nr.feather \
             /scenicdata/hg19-tss-centered-10kb-7species.mc9nr.feather \
             --annotations_fname /scenicdata/motifs-v9-nr.hgnc-m0.001-o0.0.tbl \
@@ -339,7 +338,7 @@ A mount point (or more than one) needs to be specified, which contains the input
 Singularity
 ~~~~~~~~~~~
 
-Singularity images are available from `Singularity Hub`_ and can be obtained by running :code:`singularity pull shub://aertslab/pySCENIC:0.9.7` with the proper version tag.
+As of release `0.9.19`, pySCENIC Singularity images are no longer being built on `Singularity Hub`_, however images can easily be built using Docker Hub as a source: `singularity build aertslab-pyscenic-0.9.19.sif docker://aertslab/pyscenic:0.9.19`.
 
 To run pySCENIC with Singularity, the usage is very similar to that of Docker.
 Note that in Singularity 3.0+, the mount points are automatically overlaid, but bind points can be specified similarly to Docker with :code:`--bind`/:code:`-B`.
@@ -347,7 +346,7 @@ The first step (GRN inference) is shown as an example:
 
 .. code-block:: bash
 
-    singularity exec pySCENIC_0.9.7.sif \
+    singularity exec pySCENIC_0.9.19.sif \
         pyscenic grn \
             --num_workers 6 \
             -o expr_mat.adjacencies.tsv \
@@ -358,7 +357,7 @@ The first step (GRN inference) is shown as an example:
 Using the Docker or Singularity images with Jupyter notebook
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-As of version 0.9.7, the pySCENIC containers have the ipykernel package installed, and can also be used interactively in a notebook.
+As of version 0.9.7, the pySCENIC containers have the `ipykernel` package installed, and can also be used interactively in a notebook.
 This can be achieved using a kernel command similar to the following (for singularity).
 Note that in this case, a bind needs to be specified.
 
@@ -474,6 +473,6 @@ References
 .. |bioconda| image:: https://img.shields.io/badge/install%20with-bioconda-brightgreen.svg?style=flat-square
 .. _bioconda: https://anaconda.org/bioconda/pyscenic
 .. _`Singularity Hub`: https://www.singularity-hub.org/collections/2033
-.. _`Docker Hub`: https://cloud.docker.com/u/aertslab/repository/docker/aertslab/pyscenic
+.. _`Docker Hub`: https://hub.docker.com/r/aertslab/pyscenic
 .. _`scenic-nf`: https://github.com/aertslab/scenic-nf
 
