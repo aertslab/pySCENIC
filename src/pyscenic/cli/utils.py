@@ -172,7 +172,8 @@ def save_enriched_motifs(df, fname:str) -> None:
             with open(fname, 'w') as f:
                 f.write(json.dumps(name2targets))
         elif extension == '.dat':
-            pickle.dump(regulons, fname)
+            with open(fname, 'wb') as f:
+                pickle.dump(regulons, f)
         elif extension == '.gmt':
             GeneSignature.to_gmt(fname, regulons)
         elif extension in {'.yaml', '.yml'}:

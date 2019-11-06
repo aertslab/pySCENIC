@@ -87,7 +87,7 @@ class GeneSignature(yaml.YAMLObject):
         :param gene_separator: The separator that separates the genes.
         """
         #assert not os.path.exists(fname), "{} already exists.".format(fname)
-        with open(fname, "w") as file:
+        with open(fname, "wt") as file:
             for signature in signatures:
                 genes = gene_separator.join(signature.genes)
                 file.write("{}{}{}{}{}\n".format(signature.name, field_separator,
@@ -344,7 +344,6 @@ class Regulon(GeneSignature, yaml.YAMLObject):
         if len(value) == 0:
             raise ValueError("A regulon must have a transcription factor.")
 
-    @property
     def metadata(self, field_separator: str = ',') -> str:
         return "tf={}{}score={}".format(self.transcription_factor, field_separator, self.score)
 

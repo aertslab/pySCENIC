@@ -1,16 +1,17 @@
-FROM python:3.7.4-slim
+FROM python:3.7.4-slim AS compile-image
 
 ENV DEBIAN_FRONTEND=noninteractive
-RUN BUILDPKGS="build-essential apt-utils \
+RUN BUILDPKGS="build-essential \
         python3-dev libhdf5-dev libfreetype6-dev libtool \
         m4 autoconf automake patch bison flex libpng-dev libopenblas-dev \
         tcl-dev tk-dev libxml2-dev zlib1g-dev libffi-dev cmake" && \
     apt-get update && \
-    apt-get install -y debconf locales && dpkg-reconfigure locales && \
-    apt-get install -y $BUILDPKGS && \
-    ### run time:
-    apt-get install -y zlib1g hdf5-tools gfortran libgcc1 libstdc++6 musl \
-        libopenblas-base tcl tk libxml2 libffi6 less procps
+    apt-get install -y --no-install-recommends apt-utils debconf locales && dpkg-reconfigure locales && \
+    apt-get install -y --no-install-recommends $BUILDPKGS
+
+RUN python -m venv /opt/venv
+# Make sure we use the virtualenv:
+ENV PATH="/opt/venv/bin:$PATH"
 
 # install dependencies:
 COPY requirements_docker.txt /tmp/
@@ -18,11 +19,26 @@ RUN pip install --no-cache-dir --upgrade pip && \
     pip install --no-cache-dir -r /tmp/requirements_docker.txt
 
 # use version from argument (--build-arg version=0.9.7), or a default:
-ARG version="0.9.16"
+ARG version="0.9.19"
 RUN pip install --no-cache-dir pyscenic==$version && \
     pip install --no-cache-dir scanpy==1.4.4.post1
 
-RUN apt-get remove --purge -y $BUILDPKGS && \
+
+FROM python:3.7.4-slim AS build-image
+
+RUN apt-get -y update && \
+    apt-get -y --no-install-recommends install \
+        # Need to run ps
+        procps \
+        libxml2 \
+        less \
+        # Need to run MulticoreTSNE
+        libgomp1 && \
+    rm -rf /var/cache/apt/* && \
     rm -rf /var/lib/apt/lists/*
 
+COPY --from=compile-image /opt/venv /opt/venv
+
+# Make sure we use the virtualenv:
+ENV PATH="/opt/venv/bin:$PATH"
 
