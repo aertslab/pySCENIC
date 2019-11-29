@@ -277,7 +277,7 @@ A command line version of the tool is included. This tool is available after pro
     Single-CEll regulatory Network Inference and Clustering
 
     positional arguments:
-      {grnboost,ctx,aucell}
+      {grn,ctx,aucell}
                             sub-command help
         grn                 Derive co-expression modules from expression matrix.
         ctx                 Find enriched motifs for a gene signature and
@@ -307,7 +307,7 @@ A mount point (or more than one) needs to be specified, which contains the input
 
 .. code-block:: bash
 
-    docker run \
+    docker run -it --rm \
         -v /path/to/data:/scenicdata \
         aertslab/pyscenic:[version] pyscenic grn \
             --num_workers 6 \
@@ -315,7 +315,7 @@ A mount point (or more than one) needs to be specified, which contains the input
             /scenicdata/expr_mat.tsv \
             /scenicdata/allTFs_hg38.txt
 
-    docker run \
+    docker run -it --rm \
         -v /path/to/data:/scenicdata \
         aertslab/pyscenic:[version] pyscenic ctx \
             /scenicdata/expr_mat.adjacencies.tsv \
@@ -327,7 +327,7 @@ A mount point (or more than one) needs to be specified, which contains the input
             --output /scenicdata/regulons.csv \
             --num_workers 6
 
-    docker run \
+    docker run -it --rm \
         -v /path/to/data:/scenicdata \
         aertslab/pyscenic:[version] pyscenic aucell \
             /scenicdata/expr_mat.tsv \
@@ -338,7 +338,7 @@ A mount point (or more than one) needs to be specified, which contains the input
 Singularity
 ~~~~~~~~~~~
 
-As of release `0.9.19`, pySCENIC Singularity images are no longer being built on `Singularity Hub`_, however images can easily be built using Docker Hub as a source: `singularity build aertslab-pyscenic-0.9.19.sif docker://aertslab/pyscenic:0.9.19`.
+As of release `0.9.19`, pySCENIC Singularity images are no longer being built on `Singularity Hub`_, however images can easily be built using Docker Hub as a source: :code:`singularity build aertslab-pyscenic-0.9.19.sif docker://aertslab/pyscenic:0.9.19`.
 
 To run pySCENIC with Singularity, the usage is very similar to that of Docker.
 Note that in Singularity 3.0+, the mount points are automatically overlaid, but bind points can be specified similarly to Docker with :code:`--bind`/:code:`-B`.
@@ -346,7 +346,7 @@ The first step (GRN inference) is shown as an example:
 
 .. code-block:: bash
 
-    singularity exec pySCENIC_0.9.19.sif \
+    singularity run pySCENIC_0.9.19.sif \
         pyscenic grn \
             --num_workers 6 \
             -o expr_mat.adjacencies.tsv \
@@ -370,7 +370,7 @@ Running pySCENIC with Nextflow
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 The CLI to pySCENIC has also been streamlined into a pipeline that can be run with a single command, using the Nextflow workflow manager.
-For details on this usage, see the `scenic-nf`_ repository.
+For details on this usage, along with more detailed pySCENIC tutorials, see the `SCENICprotocol`_ repository.
 
 
 Frequently Asked Questions
@@ -429,7 +429,7 @@ Can I draw the distribution of AUC values for a regulon across cells?
 Website
 -------
 
-For more information, please visit LCB_ and SCENIC_.
+For more information, please visit LCB_, SCENIC_ (R version), or SCENICprotocol_ (for a Nextflow implementation).
 
 License
 -------
@@ -474,5 +474,5 @@ References
 .. _bioconda: https://anaconda.org/bioconda/pyscenic
 .. _`Singularity Hub`: https://www.singularity-hub.org/collections/2033
 .. _`Docker Hub`: https://hub.docker.com/r/aertslab/pyscenic
-.. _`scenic-nf`: https://github.com/aertslab/scenic-nf
+.. _`SCENICprotocol`: https://github.com/aertslab/SCENICprotocol
 
