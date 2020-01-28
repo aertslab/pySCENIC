@@ -129,7 +129,7 @@ def test_intersection3():
 
 
 def test_regulon():
-    reg = Regulon(name='TP53 regulon', gene2weight={'TP53': 0.8, 'SOX4': 0.75}, transcription_factor="TP53")
+    reg = Regulon(name='TP53 regulon', gene2weight={'TP53': 0.8, 'SOX4': 0.75}, transcription_factor="TP53", gene2occurrence={"TP53": 1})
     assert reg.transcription_factor == "TP53"
 
 
@@ -156,7 +156,7 @@ def test_noweights():
     assert gs1['TP53'] == 0.8
     assert gs2['TP53'] == 1.0
 
-    reg1 = Regulon(name='TP53 regulon', gene2weight={'TP53': 0.8, 'SOX4': 0.75}, transcription_factor="TP53")
+    reg1 = Regulon(name='TP53 regulon', gene2weight={'TP53': 0.8, 'SOX4': 0.75}, transcription_factor="TP53", gene2occurrence={"TP53": 1})
     reg2 = reg1.noweights()
     assert reg1['TP53'] == 0.8
     assert reg2['TP53'] == 1.0
