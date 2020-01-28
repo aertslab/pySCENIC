@@ -199,7 +199,6 @@ def add_scenic_metadata(adata: 'sc.AnnData',
                         copy: bool = False) -> 'sc.AnnData':
     """
     Add AUCell values and regulon metadata to AnnData object.
-
     :param adata: The AnnData object.
     :param auc_mtx: The dataframe containing the AUCell values (#observations x #regulons).
     :param bin_rep: Also add binarized version of AUCell values as separate representation. This representation
@@ -256,9 +255,7 @@ def add_scenic_metadata(adata: 'sc.AnnData',
 
 def export_regulons(regulons: Sequence[Regulon], fname: str) -> None:
     """
-
     Export regulons as GraphML.
-
     :param regulons: The sequence of regulons to export.
     :param fname: The name of the file to create.
     """

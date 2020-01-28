@@ -231,7 +231,7 @@ def modules2df(db: Type[RankingDatabase], modules: Sequence[Regulon], motif_anno
                       for module in modules])
 
 
-def _regulon4group(tf_name, context, df_group) -> Optional[Regulon]:
+def _regulon4group(tf_name, context, df_group, save_columns=[]) -> Optional[Regulon]:
     def score(nes, motif_similarity_qval, orthologuous_identity):
         # The combined score starts from the NES score which is then corrected for less confidence in the TF annotation
         # in two steps:
@@ -261,26 +261,47 @@ def _regulon4group(tf_name, context, df_group) -> Optional[Regulon]:
                                     row[COLUMN_NAME_ORTHOLOGOUS_IDENTITY]),
                         context=context,
                         transcription_factor=tf_name,
-                        gene2weight=row[COLUMN_NAME_TARGET_GENES])
+                        gene2weight=row[COLUMN_NAME_TARGET_GENES],
+                        gene2occurrence=[])
 
-    # Find most enriched annotated motif and add this to the context.
+    # Find most enriched annotated motif and add this to the context
     df_selected = df_group.sort_values(by=COLUMN_NAME_NES, ascending=False)
-    motif_logo = '{}.png'.format(df_selected.head(1).reset_index()[COLUMN_NAME_MOTIF_ID].values[0]) if len(df_selected) > 0 else ""
+    first_result_by_nes = df_selected.head(1).reset_index()
+    motif_logo = '{}.png'.format(first_result_by_nes[COLUMN_NAME_MOTIF_ID].values[0]) if len(df_selected) > 0 else ""
+
+    # Add additional columns to the regulon
+    nes = first_result_by_nes[COLUMN_NAME_NES].values[0] if COLUMN_NAME_NES in save_columns else 0.0
+    orthologous_identity = first_result_by_nes[COLUMN_NAME_ORTHOLOGOUS_IDENTITY].values[0] if COLUMN_NAME_ORTHOLOGOUS_IDENTITY in save_columns else 0.0
+    similarity_qvalue = first_result_by_nes[COLUMN_NAME_MOTIF_SIMILARITY_QVALUE].values[0] if COLUMN_NAME_MOTIF_SIMILARITY_QVALUE in save_columns else 0.0
+    annotation = first_result_by_nes[COLUMN_NAME_ANNOTATION].values[0] if COLUMN_NAME_ANNOTATION in save_columns else ''
 
     # First we create a regulon for each enriched and annotated feature and then we aggregate these regulons into a
     # single one using the union operator. This operator combined all target genes into a single set of genes keeping
     # the maximum weight associated with a gene. In addition, the maximum combined score is kept as the score of the
     # entire regulon.
-    return reduce(Regulon.union, (row2regulon(row) for _, row in df_group.iterrows())).copy(context=frozenset(set(context).union({motif_logo})))
+    return reduce(Regulon.union, (row2regulon(row) for _, row in df_group.iterrows())).copy(
+        context=frozenset(set(context).union({motif_logo})),
+        nes=nes,
+        orthologous_identity=orthologous_identity,
+        similarity_qvalue=similarity_qvalue,
+        annotation=annotation)
 
+    nes = first_result_by_nes[COLUMN_NAME_NES].values[0] if COLUMN_NAME_NES in save_columns else 0.0
+    orthologous_identity = first_result_by_nes[COLUMN_NAME_ORTHOLOGOUS_IDENTITY].values[0] if COLUMN_NAME_ORTHOLOGOUS_IDENTITY in save_columns else 0.0
+    similarity_qvalue = first_result_by_nes[COLUMN_NAME_MOTIF_SIMILARITY_QVALUE].values[0] if COLUMN_NAME_MOTIF_SIMILARITY_QVALUE in save_columns else 0.0
+    annotation = first_result_by_nes[COLUMN_NAME_ANNOTATION].values[0] if COLUMN_NAME_ANNOTATION in save_columns else ''
 
-def df2regulons(df) -> Sequence[Regulon]:
+def df2regulons(df, save_columns=[]) -> Sequence[Regulon]:
     """
     Create regulons from a dataframe of enriched features.
 
     :param df: The dataframe.
+    :param save_columns: Additional columns to save from the given dataframe of enriched features. Possible values are COLUMN_NAME_NES, COLUMN_NAME_ORTHOLOGOUS_IDENTITY, COLUMN_NAME_MOTIF_SIMILARITY_QVALUE, COLUMN_NAME_ANNOTATION.
     :return: A sequence of regulons.
     """
+    
+    print("Create regulons from a dataframe of enriched features.")
+    print("Additional columns saved: {}".format(save_columns))
 
     # Because the code below will alter the dataframe we need to make a defensive copy of it.
     df = df.copy()
@@ -298,7 +319,7 @@ def df2regulons(df) -> Sequence[Regulon]:
 
     # Group all rows per TF and type (+)/(-). Each group results in a single regulon.
     not_none = lambda r: r is not None
-    return list(filter(not_none, (_regulon4group(tf_name, frozenset([interaction_type]), df_grp)
+    return list(filter(not_none, (_regulon4group(tf_name, frozenset([interaction_type]), df_grp, save_columns)
                                   for (tf_name, interaction_type), df_grp in df.groupby(by=[COLUMN_NAME_TF,
                                                                                                   COLUMN_NAME_TYPE]))))
 

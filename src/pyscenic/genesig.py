@@ -330,10 +330,14 @@ class Regulon(GeneSignature, yaml.YAMLObject):
                          score=data['score'],
                          context=frozenset(data['context']),
                          transcription_factor=data['transcription_factor'])
-
+    gene2occurrence = attr.ib(converter=convert)  # Mapping[str, float]
     transcription_factor = attr.ib()  # str
     context = attr.ib(default=frozenset())  # FrozenSet[str]
     score = attr.ib(default=0.0)  # float
+    nes = attr.ib(default=0.0) # float
+    orthologous_identity = attr.ib(default=0.0) # float
+    similarity_qvalue = attr.ib(default=0.0) # float
+    annotation = attr.ib(default='') # str
 
     @transcription_factor.validator
     def non_empty(self, attribute, value):
