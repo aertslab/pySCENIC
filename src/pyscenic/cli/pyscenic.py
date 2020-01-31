@@ -98,6 +98,7 @@ def adjacencies2modules(args):
     try:
         ex_mtx = load_exp_matrix(args.expression_mtx_fname.name,
                                  (args.transpose == 'yes'),
+                                 False, # sparse loading is disabled here for now
                                  args.cell_id_attribute,
                                  args.gene_attribute)
     except ValueError as e:
@@ -185,6 +186,7 @@ def aucell_command(args):
     try:
         ex_mtx = load_exp_matrix(args.expression_mtx_fname.name,
                                  (args.transpose == 'yes'),
+                                 False, # sparse loading is disabled here for now
                                  args.cell_id_attribute,
                                  args.gene_attribute)
     except ValueError as e:
