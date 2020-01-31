@@ -61,12 +61,16 @@ def find_adjacencies_command(args):
         LOGGER.warning("Expression data is available for less than 80% of the supplied transcription factors.")
 
     LOGGER.info("Inferring regulatory networks.")
-    client, shutdown_callback = _prepare_client(args.client_or_address, num_workers=args.num_workers)
+    if str(args.client_or_address).lower() != 'multiprocessing':
+        client, shutdown_callback = _prepare_client(args.client_or_address, num_workers=args.num_workers)
+    else:
+        client = 'multiprocessing'
     method = grnboost2 if args.method == 'grnboost2' else genie3
     try:
-        network = method(expression_data=ex_mtx, tf_names=tf_names, verbose=True, client_or_address=client, seed=args.seed)
+        network = method(expression_data=ex_mtx, tf_names=tf_names, verbose=True, client_or_address=client, multiprocessing_workers=args.num_workers, seed=args.seed)
     finally:
-        shutdown_callback(False)
+        if str(args.client_or_address).lower() != 'multiprocessing':
+            shutdown_callback(False)
 
     LOGGER.info("Writing results to file.")
 
