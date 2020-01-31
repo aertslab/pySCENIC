@@ -48,6 +48,7 @@ def save_df_as_loom(df: pd.DataFrame, fname: str) -> None:
 
 
 def load_exp_matrix_as_loom(fname,
+                            return_sparse=False,
                             attribute_name_cell_id: str = ATTRIBUTE_NAME_CELL_IDENTIFIER,
                             attribute_name_gene: str = ATTRIBUTE_NAME_GENE) -> pd.DataFrame:
     """
@@ -56,13 +57,21 @@ def load_exp_matrix_as_loom(fname,
     :param fname: The name of the loom file to load.
     :return: A 2-dimensional dataframe (rows = cells x columns = genes).
     """
-    with lp.connect(fname,mode='r',validate=False) as ds:
-        # The orientation of the loom file is always:
-        #   - Columns represent cells or aggregates of cells
-        # 	- Rows represent genes
-        return pd.DataFrame(data=ds[:, :],
-                            index=ds.ra[attribute_name_gene],
-                            columns=ds.ca[attribute_name_cell_id]).T
+    if return_sparse:
+        with lp.connect(fname,mode='r',validate=False) as ds:
+            ex_mtx = ds.layers[''].sparse().T.tocsc()
+            genes = ds.ra[attribute_name_gene]
+            cells = ds.ca[attribute_name_cell_id]
+        return ex_mtx, genes, cells
+
+    else:
+        with lp.connect(fname,mode='r',validate=False) as ds:
+            # The orientation of the loom file is always:
+            #   - Columns represent cells or aggregates of cells
+            # 	- Rows represent genes
+            return pd.DataFrame(data=ds[:, :],
+                                index=ds.ra[attribute_name_gene],
+                                columns=ds.ca[attribute_name_cell_id]).T
 
 
 FILE_EXTENSION2SEPARATOR = {
@@ -72,6 +81,7 @@ FILE_EXTENSION2SEPARATOR = {
 
 
 def load_exp_matrix(fname: str, transpose: bool = False,
+                    return_sparse: bool = False,
                     attribute_name_cell_id: str = ATTRIBUTE_NAME_CELL_IDENTIFIER,
                     attribute_name_gene: str = ATTRIBUTE_NAME_GENE) -> pd.DataFrame:
     """
@@ -81,6 +91,7 @@ def load_exp_matrix(fname: str, transpose: bool = False,
 
     :param fname: The name of the file that contains the expression matrix.
     :param transpose: Is the expression matrix stored as (rows = genes x columns = cells)?
+    :param return_sparse: Returns a sparse matrix when loading from loom
     :return: A 2-dimensional dataframe (rows = cells x columns = genes).
     """
     extension = os.path.splitext(fname)[1].lower()
@@ -88,7 +99,7 @@ def load_exp_matrix(fname: str, transpose: bool = False,
         df = pd.read_csv(fname, sep=FILE_EXTENSION2SEPARATOR[extension], header=0, index_col=0)
         return df.T if transpose else df
     elif extension == '.loom':
-        return load_exp_matrix_as_loom(fname, attribute_name_cell_id, attribute_name_gene)
+        return load_exp_matrix_as_loom(fname, return_sparse, attribute_name_cell_id, attribute_name_gene)
     else:
         raise ValueError("Unknown file format \"{}\".".format(fname))
 
