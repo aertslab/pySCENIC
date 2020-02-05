@@ -53,7 +53,7 @@ def find_adjacencies_command(args):
 
     if args.sparse:
         n_total_genes = len(ex_mtx[1])
-        n_matching_genes = len(pd.Series(ex_mtx[1]).isin(tf_names))
+        n_matching_genes = len(ex_mtx[1].isin(tf_names))
     else:
         n_total_genes = len(ex_mtx.columns)
         n_matching_genes = len(ex_mtx.columns.isin(tf_names))

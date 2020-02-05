@@ -60,7 +60,7 @@ def load_exp_matrix_as_loom(fname,
     if return_sparse:
         with lp.connect(fname,mode='r',validate=False) as ds:
             ex_mtx = ds.layers[''].sparse().T.tocsc()
-            genes = ds.ra[attribute_name_gene]
+            genes = pd.Series(ds.ra[attribute_name_gene])
             cells = ds.ca[attribute_name_cell_id]
         return ex_mtx, genes, cells
 
