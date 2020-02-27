@@ -148,8 +148,8 @@ def export2loom(ex_mtx: pd.DataFrame, regulons: List[Regulon], out_fname: str,
     name2logo = {reg.name: fetch_logo(reg.context) for reg in regulons}
     regulon_thresholds = [{"regulon": name,
                             "defaultThresholdValue":(threshold if isinstance(threshold, float) else threshold[0]),
-                            "defaultThresholdName": "guassian_mixture_split",
-                            "allThresholds": {"guassian_mixture_split": (threshold if isinstance(threshold, float) else threshold[0])},
+                            "defaultThresholdName": "gaussian_mixture_split",
+                            "allThresholds": {"gaussian_mixture_split": (threshold if isinstance(threshold, float) else threshold[0])},
                             "motifData": name2logo.get(name, "")} for name, threshold in auc_thresholds.iteritems()]
 
     general_attrs = {
