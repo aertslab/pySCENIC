@@ -42,6 +42,7 @@ def find_adjacencies_command(args):
     try:
         ex_mtx = load_exp_matrix(args.expression_mtx_fname.name,
                                  (args.transpose == 'yes'),
+                                 args.sparse,
                                  args.cell_id_attribute,
                                  args.gene_attribute)
     except ValueError as e:
@@ -50,8 +51,12 @@ def find_adjacencies_command(args):
 
     tf_names = load_tf_names(args.tfs_fname.name)
 
-    n_total_genes = len(ex_mtx.columns)
-    n_matching_genes = len(ex_mtx.columns.isin(tf_names))
+    if args.sparse:
+        n_total_genes = len(ex_mtx[1])
+        n_matching_genes = len(ex_mtx[1].isin(tf_names))
+    else:
+        n_total_genes = len(ex_mtx.columns)
+        n_matching_genes = len(ex_mtx.columns.isin(tf_names))
     if n_total_genes == 0:
         LOGGER.error("The expression matrix supplied does not contain any genes. "
                      "Make sure the extension of the file matches the format (tab separation for TSV and "
@@ -86,6 +91,7 @@ def adjacencies2modules(args):
     try:
         ex_mtx = load_exp_matrix(args.expression_mtx_fname.name,
                                  (args.transpose == 'yes'),
+                                 False, # sparse loading is disabled here for now
                                  args.cell_id_attribute,
                                  args.gene_attribute)
     except ValueError as e:
@@ -173,6 +179,7 @@ def aucell_command(args):
     try:
         ex_mtx = load_exp_matrix(args.expression_mtx_fname.name,
                                  (args.transpose == 'yes'),
+                                 False, # sparse loading is disabled here for now
                                  args.cell_id_attribute,
                                  args.gene_attribute)
     except ValueError as e:
@@ -284,6 +291,8 @@ def add_loom_parameters(parser):
     group.add_argument('--gene_attribute',
                        type=str, default=ATTRIBUTE_NAME_GENE,
                        help='The name of the row attribute that specifies the gene symbols in the loom file.')
+    group.add_argument('--sparse', action='store_const', const=True, default=False,
+                        help='If set, load the expression data as a sparse matrix. Currently applies to the grn inference step only.')
     return parser
 
 
