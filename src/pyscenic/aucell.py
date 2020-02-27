@@ -23,7 +23,7 @@ DTYPE = 'uint32'
 DTYPE_C = c_uint32
 
 
-def create_rankings(ex_mtx: pd.DataFrame) -> pd.DataFrame:
+def create_rankings(ex_mtx: pd.DataFrame, seed=None) -> pd.DataFrame:
     """
     Create a whole genome rankings dataframe from a single cell expression profile dataframe.
 
@@ -44,7 +44,7 @@ def create_rankings(ex_mtx: pd.DataFrame) -> pd.DataFrame:
     #    # Run below statement multiple times to see effect of shuffling in case of a tie.
     #    df.sample(frac=1.0, replace=False).rank(ascending=False, method='first', na_option='bottom').sort_index() - 1
     #
-    return ex_mtx.sample(frac=1.0, replace=False, axis=1).rank(axis=1, ascending=False, method='first', na_option='bottom').astype(DTYPE) - 1
+    return ex_mtx.sample(frac=1.0, replace=False, axis=1, random_state=seed).rank(axis=1, ascending=False, method='first', na_option='bottom').astype(DTYPE) - 1
 
 
 def derive_auc_threshold(ex_mtx: pd.DataFrame) -> pd.DataFrame:
@@ -140,6 +140,7 @@ def aucell4r(df_rnk: pd.DataFrame, signatures: Sequence[Type[GeneSignature]],
 
 def aucell(exp_mtx: pd.DataFrame, signatures: Sequence[Type[GeneSignature]],
            auc_threshold: float = 0.05, noweights: bool = False, normalize: bool = False,
+           seed=None,
            num_workers: int = cpu_count()) -> pd.DataFrame:
     """
     Calculate enrichment of gene signatures for single cells.
@@ -153,5 +154,5 @@ def aucell(exp_mtx: pd.DataFrame, signatures: Sequence[Type[GeneSignature]],
     :param num_workers: The number of cores to use.
     :return: A dataframe with the AUCs (n_cells x n_modules).
     """
-    return aucell4r(create_rankings(exp_mtx), signatures, auc_threshold, noweights, normalize, num_workers)
+    return aucell4r(create_rankings(exp_mtx, seed), signatures, auc_threshold, noweights, normalize, num_workers)
 

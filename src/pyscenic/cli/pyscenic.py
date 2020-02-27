@@ -190,6 +190,7 @@ def aucell_command(args):
     auc_mtx = aucell(ex_mtx, signatures,
                          auc_threshold=args.auc_threshold,
                          noweights=(args.weights != 'yes'),
+                         seed=args.seed,
                          num_workers=args.num_workers)
 
     LOGGER.info("Writing results to file.")
@@ -197,7 +198,7 @@ def aucell_command(args):
     if extension == '.loom':
         try:
             copyfile(args.expression_mtx_fname.name, args.output.name)
-            append_auc_mtx(args.output.name, auc_mtx, signatures, args.num_workers)
+            append_auc_mtx(args.output.name, auc_mtx, signatures, args.seed, args.num_workers)
         except OSError as e:
             LOGGER.error("Expression matrix should be provided in the loom file format.")
             sys.exit(1)
@@ -390,6 +391,8 @@ def create_argument_parser():
     parser_aucell.add_argument('--num_workers',
                        type=int, default=cpu_count(),
                        help='The number of workers to use (default: {}).'.format(cpu_count()))
+    parser_aucell.add_argument('--seed', type=int, required=False, default=None,
+                            help='Seed for the expression matrix ranking step. The default is to use a random seed.')
     add_recovery_parameters(parser_aucell)
     add_loom_parameters(parser_aucell)
     parser_aucell.set_defaults(func=aucell_command)

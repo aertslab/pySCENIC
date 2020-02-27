@@ -15,7 +15,7 @@ from pyscenic.diptest import diptst
 from multiprocessing import Pool
 
 
-def derive_threshold(auc_mtx: pd.DataFrame, regulon_name: str, method: str = 'hdt') -> float:
+def derive_threshold(auc_mtx: pd.DataFrame, regulon_name: str, seed=None, method: str = 'hdt') -> float:
     '''
     Derive threshold on the AUC values of the given regulon to binarize the cells in two clusters: "on" versus "off"
     state of the regulator.
@@ -34,6 +34,9 @@ def derive_threshold(auc_mtx: pd.DataFrame, regulon_name: str, method: str = 'hd
 
     data = auc_mtx[regulon_name].values
 
+    if seed:
+        np.random.seed(seed=seed)
+
     def isbimodal(data, method):
         if method == 'hdt':
             # Use Hartigan's dip statistic to decide if distribution deviates from unimodality.
@@ -42,8 +45,8 @@ def derive_threshold(auc_mtx: pd.DataFrame, regulon_name: str, method: str = 'hd
         else:
             # Compare Bayesian Information Content of two Gaussian Mixture Models.
             X = data.reshape(-1, 1)
-            gmm2 = mixture.GaussianMixture(n_components=2, covariance_type='full').fit(X)
-            gmm1 = mixture.GaussianMixture(n_components=1, covariance_type='full').fit(X)
+            gmm2 = mixture.GaussianMixture(n_components=2, covariance_type='full', random_state=seed).fit(X)
+            gmm1 = mixture.GaussianMixture(n_components=1, covariance_type='full', random_state=seed).fit(X)
             return gmm2.bic(X) <= gmm1.bic(X)
 
     if not isbimodal(data, method):
@@ -52,7 +55,7 @@ def derive_threshold(auc_mtx: pd.DataFrame, regulon_name: str, method: str = 'hd
     else:
         # Fit a two component Gaussian Mixture model on the AUC distribution using an Expectation-Maximization algorithm
         # to identify the peaks in the distribution.
-        gmm2 = mixture.GaussianMixture(n_components=2, covariance_type='full').fit(data.reshape(-1, 1))
+        gmm2 = mixture.GaussianMixture(n_components=2, covariance_type='full', random_state=seed).fit(data.reshape(-1, 1))
         # For a bimodal distribution the threshold is defined as the "trough" in between the two peaks.
         # This is solved as a minimization problem on the kernel smoothed density.
         return minimize_scalar(fun=stats.gaussian_kde(data),
@@ -60,7 +63,7 @@ def derive_threshold(auc_mtx: pd.DataFrame, regulon_name: str, method: str = 'hd
                                method='bounded').x[0]
 
 
-def binarize(auc_mtx: pd.DataFrame, threshold_overides:Optional[Mapping[str,float]]=None, num_workers=1) -> (pd.DataFrame, pd.Series):
+def binarize(auc_mtx: pd.DataFrame, threshold_overides:Optional[Mapping[str,float]]=None, seed=None, num_workers=1) -> (pd.DataFrame, pd.Series):
     """
     "Binarize" the supplied AUC matrix, i.e. decide if for each cells in the matrix a regulon is active or not based
     on the bimodal distribution of the AUC values for that regulon.
@@ -69,9 +72,9 @@ def binarize(auc_mtx: pd.DataFrame, threshold_overides:Optional[Mapping[str,floa
     :param threshold_overides: A dictionary that maps name of regulons to manually set thresholds.
     :return: A "binarized" dataframe and a series containing the AUC threshold used for each regulon.
     """
-    def derive_thresholds(auc_mtx):
+    def derive_thresholds(auc_mtx, seed=seed):
         with Pool( processes=num_workers ) as p:
-            thrs = p.starmap( derive_threshold,  [ (auc_mtx, c) for c in auc_mtx.columns ] )
+            thrs = p.starmap( derive_threshold,  [ (auc_mtx, c, seed) for c in auc_mtx.columns ] )
         return pd.Series(index=auc_mtx.columns, data=thrs)
     thresholds = derive_thresholds(auc_mtx)
     if threshold_overides is not None:

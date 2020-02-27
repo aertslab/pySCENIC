@@ -218,7 +218,7 @@ def compress_meta(meta):
     return base64.b64encode(zlib.compress(json.dumps(meta).encode('ascii'))).decode('ascii')
 
 
-def append_auc_mtx(fname: str, auc_mtx: pd.DataFrame, regulons: Sequence[Type[GeneSignature]], num_workers=1) -> None:
+def append_auc_mtx(fname: str, auc_mtx: pd.DataFrame, regulons: Sequence[Type[GeneSignature]], seed=None, num_workers=1) -> None:
     """
 
     Append AUC matrix to loom file.
@@ -239,11 +239,11 @@ def append_auc_mtx(fname: str, auc_mtx: pd.DataFrame, regulons: Sequence[Type[Ge
         name2logo = {}
 
     # Binarize matrix for AUC thresholds.
-    _, auc_thresholds = binarize(auc_mtx, num_workers=num_workers)
+    _, auc_thresholds = binarize(auc_mtx, seed=seed, num_workers=num_workers)
     regulon_thresholds = [{"regulon": name,
                            "defaultThresholdValue":(threshold if isinstance(threshold, float) else threshold[0]),
-                           "defaultThresholdName": "guassian_mixture_split",
-                           "allThresholds": {"guassian_mixture_split": (threshold if isinstance(threshold, float) else threshold[0])},
+                           "defaultThresholdName": "gaussian_mixture_split",
+                           "allThresholds": {"gaussian_mixture_split": (threshold if isinstance(threshold, float) else threshold[0])},
                            "motifData": name2logo.get(name, "")} for name, threshold in auc_thresholds.iteritems()]
 
     # Calculate the number of genes per cell.
@@ -284,3 +284,4 @@ def append_auc_mtx(fname: str, auc_mtx: pd.DataFrame, regulons: Sequence[Type[Ge
             meta_data = {}
         meta_data["regulonThresholds"] = regulon_thresholds
         ds.attrs[ATTRIBUTE_NAME_METADATA] = compress_meta(meta_data)
+
