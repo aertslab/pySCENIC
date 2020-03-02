@@ -141,7 +141,7 @@ A mount point (or more than one) needs to be specified, which contains the input
 Singularity
 ~~~~~~~~~~~
 
-As of release code::`0.9.19`, pySCENIC Singularity images are no longer being built on `Singularity Hub`_, however images can easily be built using Docker Hub as a source:
+As of release :code:`0.9.19`, pySCENIC Singularity images are no longer being built on `Singularity Hub`_, however images can easily be built using Docker Hub as a source:
 
 .. code-block:: bash
 

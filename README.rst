@@ -12,8 +12,21 @@ The pioneering work was done in R and results were published in Nature Methods [
 pySCENIC can be run on a single desktop machine but easily scales to multi-core clusters to analyze thousands of cells
 in no time. The latter is achieved via the dask_ framework for distributed computing [2]_.
 
-Full documentation available on `Read the Docs <https://pyscenic.readthedocs.io/en/latest/>`_
+**Full documentation** is available on `Read the Docs <https://pyscenic.readthedocs.io/en/latest/>`_
 
+News
+----
+
+2020-02-27
+^^^^^^^^^^
+
+**0.10.0 release**
+
+* Added a helper script `arboreto_with_multiprocessing.py <https://github.com/aertslab/pySCENIC/blob/master/scripts/arboreto_with_multiprocessing.py>`_ that runs the Arboreto GRN algorithms (GRNBoost2, GENIE3) without Dask for compatibility.
+
+* Ability to set a fixed seed in both the AUCell step and in the calculation of regulon thresholds (CLI parameter :code:`--seed`; aucell function parameter :code:`seed`).
+
+* (since 0.9.18) In the modules_from_adjacencies function, the default value of :code:`rho_mask_dropouts` is changed to False. This now matches the behavior of the R version of SCENIC. The cli version has an additional option to turn dropout masking back on (:code:`--mask_dropouts`).
 
 Overview
 --------
