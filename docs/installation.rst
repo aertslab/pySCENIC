@@ -34,7 +34,11 @@ Containers
 ~~~~~~~~~
 
 **pySCENIC containers** are also available for download and immediate use. In this case, no compiling or installation is required, provided either Docker or Singularity software is installed on the user's system.  Images are available from `Docker Hub`_. Usage of the containers is shown below (`Docker and Singularity Images`_).
+To pull the docker images, for example:
 
+.. code-block:: bash
+
+    docker pull aertslab/pyscenic:0.10.0
 
 Auxiliary datasets
 ------------------
@@ -72,7 +76,7 @@ A command line version of the tool is included. This tool is available after pro
     { ~ }  » pyscenic                                            ~
     usage: pyscenic [-h] {grn,ctx,aucell} ...
 
-    Single-CEll regulatory Network Inference and Clustering (0.9.19)
+    Single-CEll regulatory Network Inference and Clustering (0.10.0)
 
     positional arguments:
       {grn,ctx,aucell}  sub-command help
@@ -145,7 +149,7 @@ As of release :code:`0.9.19`, pySCENIC Singularity images are no longer being bu
 
 .. code-block:: bash
 
-    singularity build aertslab-pyscenic-0.9.19.sif docker://aertslab/pyscenic:0.9.19
+    singularity build aertslab-pyscenic-0.10.0.sif docker://aertslab/pyscenic:0.10.0
 
 
 To run pySCENIC with Singularity, the usage is very similar to that of Docker.
@@ -154,7 +158,7 @@ The first step (GRN inference) is shown as an example:
 
 .. code-block:: bash
 
-    singularity run pySCENIC_0.9.19.sif \
+    singularity run aertslab-pyscenic-0.10.0.sif \
         pyscenic grn \
             --num_workers 6 \
             -o expr_mat.adjacencies.tsv \
@@ -171,7 +175,7 @@ Note that in this case, a bind needs to be specified.
 
 .. code-block:: bash
 
-    singularity exec -B /data:/data pySCENIC_0.9.7.sif ipython kernel -f {connection_file}
+    singularity exec -B /data:/data aertslab-pyscenic-0.10.0.sif ipython kernel -f {connection_file}
 
 
 Nextflow

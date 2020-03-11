@@ -1,10 +1,8 @@
 Tutorial
 ========
 
-Other
------
-
-* See pySCENIC notebooks_ with example analyses
+There are a number of tutorials available to demonstrate how to use pySCENIC.
+Some of these are in the form of Jupyter notebooks in the pySCENIC notebooks_ directory, and contain example analyses.
 
 Case studies 
 ------------

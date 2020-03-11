@@ -13,8 +13,8 @@ It is recommended to use the older version of Dask and Distributed for stability
     pip install dask==1.0.0 distributed'>=1.21.6,<2.0.0'
 
 
-But in many cases this still results in issues.
-An alternative is to use the multiprocessing implementation of Arboreto recently included in pySCENIC (:code:`scripts/arboreto_with_multiprocessing.py`).
+But in many cases this still results in issues with the GRN step.
+An alternative is to use the multiprocessing implementation of Arboreto recently included in pySCENIC (`arboreto_with_multiprocessing.py <https://github.com/aertslab/pySCENIC/blob/master/scripts/arboreto_with_multiprocessing.py>`_).
 This script uses the Arboreto and pySCENIC codebase to run GRNBoost2 (or GENIE3) without Dask.
 The eliminates the possibility of running the GRN step across multiple nodes, but brings provides additional stability.
 The run time is generally equivalent to the Dask implementation using the same number of workers.
@@ -26,10 +26,13 @@ The basic usage is:
     arboreto_with_multiprocessing.py \
         expr_mat.loom \
         allTFs_hg38.txt \
+        --method grnboost2 \
         --output adj.tsv \
         --num_workers 20 \
         --seed 777
 
+The algorithm can be selected using the "code:`--method` option (:code:`genie3` or :code:`grnboost2`).
+Possible input formats for the expression data are the same as for the pySCENIC CLI: loom, and csv.
 
 Can I create my own ranking databases?
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
