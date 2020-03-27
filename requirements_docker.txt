@@ -60,7 +60,7 @@ networkx==2.3
 numba==0.46.0
 numexpr==2.7.0
 numpy==1.17.2
-pandas==0.25.1
+pandas==0.25.3
 pandocfilters==1.4.2
 papermill==1.2.0
 parso==0.5.1
