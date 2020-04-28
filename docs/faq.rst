@@ -31,8 +31,32 @@ The basic usage is:
         --num_workers 20 \
         --seed 777
 
-The algorithm can be selected using the "code:`--method` option (:code:`genie3` or :code:`grnboost2`).
+The algorithm can be selected using the ``--method`` option (``genie3`` or ``grnboost2``).
 Possible input formats for the expression data are the same as for the pySCENIC CLI: loom, and csv.
+
+
+How can I prioritize the target genes within a particular regulon?
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+It can be useful to have a better idea of which particular target genes within a regulon are more important, especially in the cases of regulons with many genes.
+There are multiple possibilities to address this.
+
+1. **iRegulon analysis.** One possibility is to take the pre-refinement modules for the regulon of interest, and export them for analysis in `iRegulon <http://iregulon.aertslab.org/>`_.
+   There are six unrefined modules created from the GRN output for each TF of interest, which are generated using multiple approaches.
+   The use of iRegulon for the pruning/refinement allows for more control over the pruning of these modules and possibly a better idea of which genes are more important.
+   See the last section, *Further exploration of modules directly from the network inference output*, in 
+   `this notebook <http://htmlpreview.github.io/?https://github.com/aertslab/SCENICprotocol/blob/master/notebooks/PBMC10k_downstream-analysis.html>`_
+   for an example of how to get started.
+   A full tutorial on module refinement with iRegulon can be found `here <http://iregulon.aertslab.org/tutorial.html>`_.
+
+2. **pySCENIC multi-runs.** Another approach is to run the whole pySCENIC procedure multiple times (~10-100x).
+   Because of the stochastic nature of the GRN step in particular, a slightly varying result is produced for each run, both in terms of the overall regulons found, as well as the target genes for a particular regulon.
+   The target genes (and regulons themselves) can then be scored by the number of times it occurs across all runs, and considered as 'high confidence' if they occur in >80% of runs, for example.
+   This has the potential to be very computationally intensive for a whole dataset, but if only a few regulons are of interest, pySCENIC can be run using only these (by limiting the TFs included in the TFs file that goes into the GRN step). 
+   The multi-runs capability is implemented in the SCENIC section of our `single cell Nextflow pipeline <https://github.com/vib-singlecell-nf/vsn-pipelines>`_.
+   The entrypoint `scenic_multiruns <https://vsn-pipelines.readthedocs.io/en/latest/pipelines.html#scenic-multiruns-scenic-multiruns-single-sample-scenic-multiruns>`_ provides an automated way to run this procedure.
+
+
 
 Can I create my own ranking databases?
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
