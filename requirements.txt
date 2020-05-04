@@ -9,7 +9,7 @@ pandas>=0.20.1,<1.0.0
 cloudpickle
 dask==1.0.0
 distributed>=1.21.6,<2.0.0
-pyarrow>=0.11.1
+pyarrow>=0.11.1,<0.17.0
 arboreto
 boltons
 setuptools
