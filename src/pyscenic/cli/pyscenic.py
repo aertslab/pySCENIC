@@ -24,6 +24,8 @@ from pyscenic.log import create_logging_handler
 import sys
 from typing import Type, Sequence
 from .utils import load_exp_matrix, load_signatures, save_matrix, save_enriched_motifs, load_adjacencies, load_modules, append_auc_mtx, ATTRIBUTE_NAME_CELL_IDENTIFIER, ATTRIBUTE_NAME_GENE
+from .utils import is_valid_suffix, suffixes_to_separator
+from pathlib import Path, PurePath
 
 try:
     from pyscenic._version import get_versions
@@ -75,9 +77,8 @@ def find_adjacencies_command(args):
 
     LOGGER.info("Writing results to file.")
 
-    extension = os.path.splitext(args.output.name)[1].lower()
-    separator = '\t' if extension == '.tsv' else ','
-    network.to_csv(args.output, index=False, sep=separator)
+    extension = PurePath(fname).suffixes
+    network.to_csv(args.output, index=False, sep=suffixes_to_separator(extension))
 
 
 def adjacencies2modules(args):
@@ -130,8 +131,8 @@ def prune_targets_command(args):
     # Potential improvements are switching to JSON or to use a CLoader:
     # https://stackoverflow.com/questions/27743711/can-i-speedup-yaml
     # The alternative for which was opted in the end is binary pickling.
-    extension = os.path.splitext(args.module_fname.name)[1].lower()
-    if extension in {'.csv', '.tsv'}:
+    extension = PurePath(args.module_fname.name).suffixes
+    if is_valid_suffix(extension, 'ctx'):
         if args.expression_mtx_fname is None:
             LOGGER.error("No expression matrix is supplied.")
             sys.exit(0)
@@ -201,8 +202,8 @@ def aucell_command(args):
                          num_workers=args.num_workers)
 
     LOGGER.info("Writing results to file.")
-    extension = os.path.splitext(args.output.name)[1].lower()
-    if extension == '.loom':
+    extension = PurePath(args.output.name).suffixes
+    if '.loom' in extension:
         try:
             copyfile(args.expression_mtx_fname.name, args.output.name)
             append_auc_mtx(args.output.name, auc_mtx, signatures, args.seed, args.num_workers)

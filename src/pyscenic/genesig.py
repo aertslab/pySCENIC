@@ -11,8 +11,9 @@ import yaml
 from cytoolz import merge_with, dissoc, keyfilter, first, second
 from frozendict import frozendict
 from itertools import chain
-
+import gzip
 from cytoolz import memoize, merge
+
 
 
 def convert(genes):
@@ -25,6 +26,13 @@ def convert(genes):
     # Genes supplied as iterable of genes.
     elif isinstance(genes, Iterable) and all(isinstance(n, str) for n in genes):
         return frozendict(zip(genes, repeat(1.0)))
+
+
+def openfile(filename, mode='r'):
+    if filename.endswith('.gz'):
+        return gzip.open(filename, mode)
+    else:
+        return open(filename, mode)
 
 
 @attr.s(frozen=True)
@@ -66,8 +74,10 @@ class GeneSignature(yaml.YAMLObject):
         assert os.path.exists(fname), "{} does not exist.".format(fname)
 
         def signatures():
-            with open(fname, "r") as file:
+            with openfile(fname, "r") as file:
                 for line in file:
+                    if isinstance(line, (bytes, bytearray)):
+                        line = line.decode()
                     if line.startswith("#") or not line.strip():
                         continue
                     columns = re.split(field_separator, line.rstrip())
@@ -87,7 +97,7 @@ class GeneSignature(yaml.YAMLObject):
         :param gene_separator: The separator that separates the genes.
         """
         #assert not os.path.exists(fname), "{} already exists.".format(fname)
-        with open(fname, "wt") as file:
+        with openfile(fname, "wt") as file:
             for signature in signatures:
                 genes = gene_separator.join(signature.genes)
                 file.write("{}{}{}{}{}\n".format(signature.name, field_separator,
@@ -106,7 +116,7 @@ class GeneSignature(yaml.YAMLObject):
         """
         # https://software.broadinstitute.org/cancer/software/gsea/wiki/index.php/Data_formats
         assert os.path.exists(fname), "{} does not exist.".format(fname)
-        with open(fname, "r") as file:
+        with openfile(fname, "r") as file:
             return GeneSignature(name=name,
                              gene2weight=[line.rstrip() for line in file if not line.startswith("#") and line.strip()])
 
@@ -124,7 +134,7 @@ class GeneSignature(yaml.YAMLObject):
         assert os.path.exists(fname), "{} does not exist.".format(fname)
 
         def columns():
-            with open(fname, "r") as file:
+            with openfile(fname, "r") as file:
                 for line in file:
                     if line.startswith("#") or not line.strip():
                         continue
