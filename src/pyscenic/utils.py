@@ -2,7 +2,7 @@
 
 import pandas as pd
 from urllib.parse import urljoin
-from .genesig import Regulon, GeneSignature
+from .genesig import Regulon, GeneSignature, openfile
 from .math import masked_rho4pairs
 from itertools import chain
 import numpy as np
@@ -292,7 +292,7 @@ def save_to_yaml(signatures: Sequence[Type[GeneSignature]], fname: str):
     :param signatures:
     :return:
     """
-    with open(fname, 'w') as f:
+    with openfile(fname, 'w') as f:
         f.write(dump(signatures, default_flow_style=False, Dumper=Dumper))
 
 
@@ -302,7 +302,7 @@ def load_from_yaml(fname: str) -> Sequence[Type[GeneSignature]]:
     :param fname:
     :return:
     """
-    with open(fname, 'r') as f:
+    with openfile(fname, 'r') as f:
         return load(f.read(), Loader=Loader)
 
 
@@ -333,7 +333,5 @@ def load_motifs(fname: str, sep: str = ',') -> pd.DataFrame:
     df[('Enrichment', COLUMN_NAME_CONTEXT)] = df[('Enrichment', COLUMN_NAME_CONTEXT)].apply(lambda s: eval(s))
     df[('Enrichment', COLUMN_NAME_TARGET_GENES)] = df[('Enrichment', COLUMN_NAME_TARGET_GENES)].apply(lambda s: eval(s))
     return df
-
-
 
 
