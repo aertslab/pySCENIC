@@ -22,17 +22,17 @@ from pyscenic.cli.utils import load_exp_matrix
 parser_grn = argparse.ArgumentParser(description='Run Arboreto using a multiprocessing pool')
 
 parser_grn.add_argument('expression_mtx_fname',
-        type=argparse.FileType('r'),
+        type=str,
         help='The name of the file that contains the expression matrix for the single cell experiment.'
         ' Two file formats are supported: csv (rows=cells x columns=genes) or loom (rows=genes x columns=cells).')
 parser_grn.add_argument('tfs_fname',
-        type=argparse.FileType('r'),
+        type=str,
         help='The name of the file that contains the list of transcription factors (TXT; one TF per line).')
 parser_grn.add_argument('-m', '--method', choices=['genie3', 'grnboost2'],
         default='grnboost2',
         help='The algorithm for gene regulatory network reconstruction (default: grnboost2).')
 parser_grn.add_argument('-o', '--output',
-        type=argparse.FileType('w'), default=sys.stdout,
+        type=str, default=sys.stdout,
         help='Output file/stream, i.e. a table of TF-target genes (TSV).')
 parser_grn.add_argument('--num_workers',
         type=int, default=cpu_count(),
@@ -90,7 +90,7 @@ def run_infer_partial_network(target_gene_index):
 if __name__ == '__main__':
 
     start_time = time.time()
-    ex_matrix = load_exp_matrix(args.expression_mtx_fname.name,
+    ex_matrix = load_exp_matrix(args.expression_mtx_fname,
                              (args.transpose == 'yes'),
                              args.sparse,
                              args.cell_id_attribute,
@@ -105,7 +105,7 @@ if __name__ == '__main__':
     end_time = time.time()
     print(f'Loaded expression matrix of {ex_matrix.shape[0]} cells and {ex_matrix.shape[1]} genes in {end_time - start_time} seconds...', file=sys.stdout)
 
-    tf_names = load_tf_names(args.tfs_fname.name)
+    tf_names = load_tf_names(args.tfs_fname)
     print(f'Loaded {len(tf_names)} TFs...', file=sys.stdout)
 
     ex_matrix, gene_names, tf_names = _prepare_input(ex_matrix, gene_names, tf_names)
@@ -126,5 +126,5 @@ if __name__ == '__main__':
     end_time = time.time()
     print(f'Done in {end_time - start_time} seconds.', file=sys.stdout)
 
-    adj.to_csv(args.output, index=False, sep="\t")
+    adj.to_csv(args.output, index=False, sep='\t')
 
