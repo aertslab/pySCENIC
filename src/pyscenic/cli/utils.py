@@ -10,10 +10,11 @@ import pandas as pd
 import loompy as lp
 from operator import attrgetter
 from typing import Type, Sequence
-from pyscenic.genesig import GeneSignature
+from pyscenic.genesig import GeneSignature, openfile
 from pyscenic.transform import df2regulons
 from pyscenic.utils import load_motifs, load_from_yaml, save_to_yaml
 from pyscenic.binarization import binarize
+from pathlib import Path, PurePath
 
 
 __all__ = ['save_matrix', 'load_exp_matrix', 'load_signatures', 'save_enriched_motifs', 'load_adjacencies',
@@ -74,10 +75,25 @@ def load_exp_matrix_as_loom(fname,
                                 columns=ds.ca[attribute_name_cell_id]).T
 
 
-FILE_EXTENSION2SEPARATOR = {
-    '.tsv': '\t',
-    '.csv': ','
-}
+def suffixes_to_separator(extension):
+    if '.csv' in extension:
+        return ','
+    if '.tsv' in extension:
+        return '\t'
+
+
+def is_valid_suffix(extension, method):
+    assert(isinstance(extension,list)), 'extension should be of type "list"'
+    if method in ['grn', 'aucell']:
+        valid_extensions = ['.csv', '.tsv', '.loom']
+    elif method == 'ctx':
+        valid_extensions = ['.csv', '.tsv']
+    elif method == 'ctx_yaml':
+        valid_extensions = ['.yaml', '.yml']
+    if len(set(extension).intersection(valid_extensions)) > 0:
+        return True
+    else:
+        return False
 
 
 def load_exp_matrix(fname: str, transpose: bool = False,
@@ -94,12 +110,13 @@ def load_exp_matrix(fname: str, transpose: bool = False,
     :param return_sparse: Returns a sparse matrix when loading from loom
     :return: A 2-dimensional dataframe (rows = cells x columns = genes).
     """
-    extension = os.path.splitext(fname)[1].lower()
-    if extension in FILE_EXTENSION2SEPARATOR.keys():
-        df = pd.read_csv(fname, sep=FILE_EXTENSION2SEPARATOR[extension], header=0, index_col=0)
-        return df.T if transpose else df
-    elif extension == '.loom':
-        return load_exp_matrix_as_loom(fname, return_sparse, attribute_name_cell_id, attribute_name_gene)
+    extension = PurePath(fname).suffixes
+    if is_valid_suffix(extension, 'grn'):
+        if '.loom' in extension:
+            return load_exp_matrix_as_loom(fname, return_sparse, attribute_name_cell_id, attribute_name_gene)
+        else:
+            df = pd.read_csv(fname, sep=suffixes_to_separator(extension), header=0, index_col=0)
+            return df.T if transpose else df
     else:
         raise ValueError("Unknown file format \"{}\".".format(fname))
 
@@ -114,18 +131,24 @@ def save_matrix(df: pd.DataFrame, fname: str, transpose: bool = False) -> None:
     :param fname: The name of the file to be written.
     :param transpose: Should the expression matrix be stored as (rows = genes x columns = cells)?
     """
-    extension = os.path.splitext(fname)[1].lower()
-    if extension in FILE_EXTENSION2SEPARATOR.keys():
-        (df.T if transpose else df).to_csv(fname, sep=FILE_EXTENSION2SEPARATOR[extension])
-    elif extension == '.loom':
-        return save_df_as_loom(df, fname)
+    extension = PurePath(fname).suffixes
+    if is_valid_suffix(extension, 'aucell'):
+        if '.loom' in extension:
+            return save_df_as_loom(df, fname)
+        else:
+            (df.T if transpose else df).to_csv(fname, sep=suffixes_to_separator(extension))
     else:
         raise ValueError("Unknown file format \"{}\".".format(fname))
 
 
 def guess_separator(fname: str) -> str:
-    with open(fname, 'r') as f:
+    with openfile(fname, 'r') as f:
         lines = f.readlines()
+
+    # decode if gzipped file:
+    for i,x in enumerate(lines):
+        if isinstance(x, (bytes, bytearray)):
+            lines[i] = x.decode()
 
     def count_columns(sep):
         return [len(line.split(sep)) for line in lines if not line.strip().startswith('#') and line.strip()]
@@ -146,18 +169,19 @@ def load_signatures(fname: str) -> Sequence[Type[GeneSignature]]:
     :param fname: The name of the file that contains the signatures.
     :return: A list of gene signatures.
     """
-    extension = os.path.splitext(fname)[1].lower()
-    if extension in FILE_EXTENSION2SEPARATOR.keys():
-        return df2regulons(load_motifs(fname, sep=FILE_EXTENSION2SEPARATOR[extension]))
-    elif extension in {'.yaml', '.yml'}:
+    extension = PurePath(fname).suffixes
+    if is_valid_suffix(extension, 'ctx'):
+        # csv/tsv
+        return df2regulons(load_motifs(fname, sep=suffixes_to_separator(extension)))
+    elif is_valid_suffix(extension, 'ctx_yaml'):
         return load_from_yaml(fname)
-    elif extension.endswith('.gmt'):
+    elif '.gmt' in extension:
         sep = guess_separator(fname)
         return GeneSignature.from_gmt(fname,
                                   field_separator=sep,
                                   gene_separator=sep)
     elif extension == '.dat':
-        with open(fname, 'rb') as f:
+        with openfile(fname, 'rb') as f:
             return pickle.load(f)
     else:
         raise ValueError("Unknown file format \"{}\".".format(fname))
@@ -173,29 +197,29 @@ def save_enriched_motifs(df, fname:str) -> None:
     :param fname:
     :return:
     """
-    extension = os.path.splitext(fname)[1].lower()
-    if extension in FILE_EXTENSION2SEPARATOR.keys():
-        df.to_csv(fname, sep=FILE_EXTENSION2SEPARATOR[extension])
+    extension = PurePath(fname).suffixes
+    if is_valid_suffix(extension, 'ctx'):
+        df.to_csv(fname, sep=suffixes_to_separator(extension))
     else:
         regulons = df2regulons(df)
-        if extension == '.json':
+        if '.json' in extension:
             name2targets = {r.name: list(r.gene2weight.keys()) for r in regulons}
-            with open(fname, 'w') as f:
+            with openfile(fname, 'w') as f:
                 f.write(json.dumps(name2targets))
-        elif extension == '.dat':
-            with open(fname, 'wb') as f:
+        elif '.dat' in extension:
+            with openfile(fname, 'wb') as f:
                 pickle.dump(regulons, f)
-        elif extension == '.gmt':
+        elif '.gmt' in extension:
             GeneSignature.to_gmt(fname, regulons)
-        elif extension in {'.yaml', '.yml'}:
+        elif is_valid_suffix(extension, 'ctx_yaml'):
             save_to_yaml(regulons, fname)
         else:
             raise ValueError("Unknown file format \"{}\".".format(fname))
 
 
 def load_adjacencies(fname: str) -> pd.DataFrame:
-    extension = os.path.splitext(fname)[1].lower().lower()
-    return pd.read_csv(fname, sep=FILE_EXTENSION2SEPARATOR[extension], dtype={0:str,1:str,2:np.float64}, keep_default_na=False )
+    extension = PurePath(fname).suffixes
+    return pd.read_csv(fname, sep=suffixes_to_separator(extension), dtype={0:str,1:str,2:np.float64}, keep_default_na=False )
 
 
 def load_modules(fname: str) -> Sequence[Type[GeneSignature]]:
@@ -203,12 +227,13 @@ def load_modules(fname: str) -> Sequence[Type[GeneSignature]]:
     # Potential improvements are switching to JSON or to use a CLoader:
     # https://stackoverflow.com/questions/27743711/can-i-speedup-yaml
     # The alternative for which was opted in the end is binary pickling.
-    if fname.endswith('.yaml') or fname.endswith('.yml'):
+    extension = PurePath(fname).suffixes
+    if is_valid_suffix(extension, 'ctx_yaml'):
         return load_from_yaml(fname)
-    elif fname.endswith('.dat'):
-        with open(fname, 'rb') as f:
+    elif '.dat' in extension:
+        with openfile(fname, 'rb') as f:
             return pickle.load(f)
-    elif fname.endswith('.gmt'):
+    elif '.gmt' in extension:
         sep = guess_separator(fname)
         return GeneSignature.from_gmt(fname,
                                       field_separator=sep,
