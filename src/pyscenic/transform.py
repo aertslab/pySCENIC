@@ -300,6 +300,7 @@ def df2regulons(df, save_columns=[]) -> Sequence[Regulon]:
     :return: A sequence of regulons.
     """
     
+    assert not df.empty, 'Signatures dataframe is empty!'
     print("Create regulons from a dataframe of enriched features.")
     print("Additional columns saved: {}".format(save_columns))
 
