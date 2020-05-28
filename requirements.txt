@@ -1,3 +1,4 @@
+-e git+https://github.com/cflerin/arboreto.git@dev#egg=arboreto-post1
 cytoolz
 multiprocessing_on_dill
 llvmlite
