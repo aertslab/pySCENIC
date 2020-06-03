@@ -263,6 +263,9 @@ def modules_from_adjacencies(adjacencies: pd.DataFrame,
 
         # Add correlation column and create two disjoint set of adjacencies.
         LOGGER.info("Calculating Pearson correlations.")
+        # test for genes present in the adjacencies but not present in the expression matrix:
+        unique_adj_genes = set(adjacencies[COLUMN_NAME_TF]).union(set(adjacencies[COLUMN_NAME_TARGET])) - set(ex_mtx.columns)
+        assert len(unique_adj_genes)==0, f"Found {len(unique_adj_genes)} genes present in the network (adjacencies) output, but missing from the expression matrix. Is this a different gene expression matrix?"
         LOGGER.warn(f"Note on correlation calculation: the default behaviour for calculating the correlations has changed after pySCENIC verion 0.9.16. Previously, the default was to calculate the correlation between a TF and target gene using only cells with non-zero expression values (mask_dropouts=True). The current default is now to use all cells to match the behavior of the R verision of SCENIC. The original settings can be retained by setting 'rho_mask_dropouts=True' in the modules_from_adjacencies function, or '--mask_dropouts' from the CLI.\n\tDropout masking is currently set to [{rho_mask_dropouts}].")
         adjacencies = add_correlation(adjacencies, ex_mtx,
                                   rho_threshold=rho_threshold, mask_dropouts=rho_mask_dropouts)
