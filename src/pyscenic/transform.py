@@ -124,6 +124,11 @@ def module2features_auc1st_impl(db: Type[RankingDatabase], module: Regulon, moti
     features, genes, rankings = df.index.values, df.columns.values, df.values
     weights = np.asarray([module[gene] for gene in genes]) if weighted_recovery else np.ones(len(genes))
 
+    # include check for modules with no genes that could be mapped to the db. This can happen when including non protein-coding genes in the expression matrix.
+    if(df.empty):
+        LOGGER.warning("No genes in module {} could be mapped to {}. Skipping this module.".format(module.name, db.name))
+        return pd.DataFrame(), None, None, genes, None
+
     # Calculate recovery curves, AUC and NES values.
     # For fast unweighted implementation so weights to None.
     aucs = calc_aucs(df, db.total_genes, weights, auc_threshold)
