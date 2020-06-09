@@ -8,6 +8,7 @@
    installation
    tutorial
    faq
+   releasenotes
 
 .. include:: ../README.rst
 
