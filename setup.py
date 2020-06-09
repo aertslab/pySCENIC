@@ -78,6 +78,7 @@ setuptools.setup(
     py_modules=[os.path.splitext(os.path.basename(path))[0] for path in glob.glob('src/*.py')],
     include_package_data=True,
     install_requires=read_requirements('requirements.txt'),
+    scripts=['src/pyscenic/cli/arboreto_with_multiprocessing.py'],
     entry_points = {
         'console_scripts': ['pyscenic = pyscenic.cli.pyscenic:main',
                             'db2feather = pyscenic.cli.db2feather:main',
@@ -86,3 +87,4 @@ setuptools.setup(
                             'gmt2regions = pyscenic.cli.gmt2regions:main'],
     }
 )
+

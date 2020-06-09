@@ -13,7 +13,8 @@ from arboreto.algo import genie3, grnboost2, _prepare_input
 from arboreto.core import SGBM_KWARGS, RF_KWARGS, EARLY_STOP_WINDOW_LENGTH
 from arboreto.core import to_tf_matrix, target_gene_indices, infer_partial_network
 
-from pyscenic.cli.utils import load_exp_matrix
+from pyscenic.cli.utils import load_exp_matrix, suffixes_to_separator
+from pathlib import PurePath
 
 
 ################################################################################
@@ -126,5 +127,6 @@ if __name__ == '__main__':
     end_time = time.time()
     print(f'Done in {end_time - start_time} seconds.', file=sys.stdout)
 
-    adj.to_csv(args.output, index=False, sep='\t')
+    extension = PurePath(args.output).suffixes
+    adj.to_csv(args.output, index=False, sep=suffixes_to_separator(extension))
 

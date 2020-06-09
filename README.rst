@@ -17,12 +17,20 @@ in no time. The latter is achieved via the dask_ framework for distributed compu
 News
 ----
 
+2020-05-17
+^^^^^^^^^^
+
+**0.10.1 release**
+
+* CLI: file compression (optionally) enabled for intermediate files for the major steps: grn (adjacencies matrix), ctx (regulons), and aucell (auc matrix). Compression is used when the file name argument has a .gz ending.
+
+
 2020-02-27
 ^^^^^^^^^^
 
 **0.10.0 release**
 
-* Added a helper script `arboreto_with_multiprocessing.py <https://github.com/aertslab/pySCENIC/blob/master/scripts/arboreto_with_multiprocessing.py>`_ that runs the Arboreto GRN algorithms (GRNBoost2, GENIE3) without Dask for compatibility.
+* Added a helper script `arboreto_with_multiprocessing.py <https://github.com/aertslab/pySCENIC/blob/master/src/pyscenic/cli/arboreto_with_multiprocessing.py>`_ that runs the Arboreto GRN algorithms (GRNBoost2, GENIE3) without Dask for compatibility.
 
 * Ability to set a fixed seed in both the AUCell step and in the calculation of regulon thresholds (CLI parameter :code:`--seed`; aucell function parameter :code:`seed`).
 
@@ -47,10 +55,15 @@ All the functionality of the original R implementation is available and in addit
 3. Regulons, i.e. the regulatory network that connects a TF with its target genes, with targets that are repressed are now also derived and used for cell enrichment analysis.
 
 
-Website
--------
+Additional resources
+--------------------
 
-For more information, please visit LCB_, SCENIC_ (R version), or SCENICprotocol_ (for a Nextflow implementation).
+For more information, please visit LCB_, or SCENIC_ (R version).
+The CLI to pySCENIC has also been streamlined into a pipeline that can be run with a single command, using the Nextflow workflow manager.
+There are two Nextflow implementations available:
+
+* `SCENICprotocol`_: A Nextflow DSL1 implementation of pySCENIC alongside a basic "best practices" expression analysis. Includes details on pySCENIC installation, usage, and downstream analysis, along with detailed tutorials.
+* `VSNPipelines`_: A Nextflow DSL2 implementation of pySCENIC with a comprehensive and customizable pipeline for expression analysis. Includes additional pySCENIC features (multi-runs, integrated motif- and track-based regulon pruning, loom file generation).
 
 
 Acknowledgments
@@ -82,6 +95,7 @@ References
 .. _arboreto: https://arboreto.readthedocs.io
 .. _LCB: https://aertslab.org
 .. _`SCENICprotocol`: https://github.com/aertslab/SCENICprotocol
+.. _`VSNPipelines`: https://github.com/vib-singlecell-nf/vsn-pipelines
 .. _notebooks: https://github.com/aertslab/pySCENIC/tree/master/notebooks
 .. _issue: https://github.com/aertslab/pySCENIC/issues/new
 .. _PyPI: https://pypi.python.org/pypi/pyscenic

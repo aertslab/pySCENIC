@@ -115,31 +115,31 @@ A mount point (or more than one) needs to be specified, which contains the input
 .. code-block:: bash
 
     docker run -it --rm \
-        -v /path/to/data:/scenicdata \
-        aertslab/pyscenic:[version] pyscenic grn \
+        -v /data:/data \
+        aertslab/pyscenic:0.10.0 pyscenic grn \
             --num_workers 6 \
-            -o /scenicdata/expr_mat.adjacencies.tsv \
-            /scenicdata/expr_mat.tsv \
-            /scenicdata/allTFs_hg38.txt
+            -o /data/expr_mat.adjacencies.tsv \
+            /data/expr_mat.tsv \
+            /data/allTFs_hg38.txt
 
     docker run -it --rm \
-        -v /path/to/data:/scenicdata \
-        aertslab/pyscenic:[version] pyscenic ctx \
-            /scenicdata/expr_mat.adjacencies.tsv \
-            /scenicdata/hg19-tss-centered-5kb-7species.mc9nr.feather \
-            /scenicdata/hg19-tss-centered-10kb-7species.mc9nr.feather \
-            --annotations_fname /scenicdata/motifs-v9-nr.hgnc-m0.001-o0.0.tbl \
-            --expression_mtx_fname /scenicdata/expr_mat.tsv \
+        -v /data:/data \
+        aertslab/pyscenic:0.10.0 pyscenic ctx \
+            /data/expr_mat.adjacencies.tsv \
+            /data/hg19-tss-centered-5kb-7species.mc9nr.feather \
+            /data/hg19-tss-centered-10kb-7species.mc9nr.feather \
+            --annotations_fname /data/motifs-v9-nr.hgnc-m0.001-o0.0.tbl \
+            --expression_mtx_fname /data/expr_mat.tsv \
             --mode "dask_multiprocessing" \
-            --output /scenicdata/regulons.csv \
+            --output /data/regulons.csv \
             --num_workers 6
 
     docker run -it --rm \
-        -v /path/to/data:/scenicdata \
-        aertslab/pyscenic:[version] pyscenic aucell \
-            /scenicdata/expr_mat.tsv \
-            /scenicdata/regulons.csv \
-            -o /scenicdata/auc_mtx.csv \
+        -v /data:/data \
+        aertslab/pyscenic:0.10.0 pyscenic aucell \
+            /data/expr_mat.tsv \
+            /data/regulons.csv \
+            -o /data/auc_mtx.csv \
             --num_workers 6
 
 Singularity
@@ -169,7 +169,7 @@ The first step (GRN inference) is shown as an example:
 Using the Docker or Singularity images with Jupyter notebook
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-As of version 0.9.7, the pySCENIC containers have the `ipykernel` package installed, and can also be used interactively in a notebook.
+As of version 0.9.7, the pySCENIC containers have the ``ipykernel`` package installed, and can also be used interactively in a notebook.
 This can be achieved using a kernel command similar to the following (for singularity).
 Note that in this case, a bind needs to be specified.
 
@@ -181,12 +181,15 @@ Note that in this case, a bind needs to be specified.
 Nextflow
 --------
 
-The CLI to pySCENIC has also been streamlined into a pipeline that can be run with a single command, using the Nextflow workflow manager.
-For details on this usage, along with more detailed pySCENIC tutorials, see the `SCENICprotocol`_ repository.
+There are two Nextflow implementations available:
+
+* `SCENICprotocol`_: A Nextflow DSL1 implementation.
+* `VSNPipelines`_: A Nextflow DSL2 implementation.
 
 
 .. _`Singularity Hub`: https://www.singularity-hub.org/collections/2033
 .. _`SCENICprotocol`: https://github.com/aertslab/SCENICprotocol
+.. _`VSNPipelines`: https://github.com/vib-singlecell-nf/vsn-pipelines
 .. _dask: https://dask.pydata.org/en/latest/
 .. _distributed: https://distributed.readthedocs.io/en/latest/
 .. _`Docker Hub`: https://hub.docker.com/r/aertslab/pyscenic
