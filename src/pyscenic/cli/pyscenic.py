@@ -78,7 +78,7 @@ def find_adjacencies_command(args):
     LOGGER.info("Writing results to file.")
 
     extension = PurePath(args.output.name).suffixes
-    network.to_csv(args.output, index=False, sep=suffixes_to_separator(extension))
+    network.to_csv(args.output.name, index=False, sep=suffixes_to_separator(extension))
 
 
 def adjacencies2modules(args):
