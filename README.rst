@@ -8,6 +8,7 @@ Clustering) which enables biologists to infer transcription factors, gene regula
 single-cell RNA-seq data.
 
 The pioneering work was done in R and results were published in Nature Methods [1]_.
+A new and comprehensive description of this Python implementation of the SCENIC pipeline is available in Nature Protocols [5]_ (`see here <https://doi.org/10.1038/s41596-020-0336-2>`_).
 
 pySCENIC can be run on a single desktop machine but easily scales to multi-core clusters to analyze thousands of cells
 in no time. The latter is achieved via the dask_ framework for distributed computing [2]_.
@@ -83,6 +84,7 @@ References
 .. [2] Rocklin, M. Dask: parallel computation with blocked algorithms and task scheduling. conference.scipy.org
 .. [3] Huynh-Thu, V. A. et al. Inferring regulatory networks from expression data using tree-based methods. PLoS ONE 5, (2010).
 .. [4] Zeisel, A. et al. Cell types in the mouse cortex and hippocampus revealed by single-cell RNA-seq. Science 347, 1138–1142 (2015).
+.. [5] Van de Sande B., Flerin C., et al. A scalable SCENIC workflow for single-cell gene regulatory network analysis. Nat Protoc. June 2020:1-30. doi:10.1038/s41596-020-0336-2
 
 .. |buildstatus| image:: https://travis-ci.org/aertslab/pySCENIC.svg?branch=master
 .. _buildstatus: https://travis-ci.org/aertslab/pySCENIC
