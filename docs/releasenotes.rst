@@ -1,6 +1,15 @@
 Release Notes
 =============
 
+0.10.3 | 2020-07-15
+^^^^^^^^^^^^^^^^^^^
+
+* Integrate arboreto multiprocessing script into pySCENIC CLI
+* Skip modules with zero db overlap in cisTarget step
+* Additional error message if regulons file is empty
+* Additional error if there is a mismatch between the genes present in the GRN and the expression matrix
+* Fixed bug in motif url construciton when running without pruning
+
 0.10.2 | 2020-06-05
 ^^^^^^^^^^^^^^^^^^^
 
