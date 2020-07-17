@@ -33,7 +33,7 @@ News and releases
 0.10.0 | 2020-02-27
 ^^^^^^^^^^^^^^^^^^^
 
-* Added a helper script `arboreto_with_multiprocessing.py <https://github.com/aertslab/pySCENIC/blob/master/scripts/arboreto_with_multiprocessing.py>`_ that runs the Arboreto GRN algorithms (GRNBoost2, GENIE3) without Dask for compatibility.
+* Added a helper script `arboreto_with_multiprocessing.py <https://github.com/aertslab/pySCENIC/blob/master/src/pyscenic/cli/arboreto_with_multiprocessing.py>`_ that runs the Arboreto GRN algorithms (GRNBoost2, GENIE3) without Dask for compatibility.
 
 * Ability to set a fixed seed in both the AUCell step and in the calculation of regulon thresholds (CLI parameter :code:`--seed`; aucell function parameter :code:`seed`).
 
