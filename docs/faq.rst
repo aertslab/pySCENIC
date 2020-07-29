@@ -57,6 +57,42 @@ There are multiple possibilities to address this.
    The entrypoint `scenic_multiruns <https://vsn-pipelines.readthedocs.io/en/latest/pipelines.html#scenic-multiruns-scenic-multiruns-single-sample-scenic-multiruns>`_ provides an automated way to run this procedure.
 
 
+How can I create a SCope-compatible loom file?
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+pySCENIC is capable of reading and writing loom files.
+However, the loom file created in the AUCell step has the pySCENIC results embedded, but no dimensionality reductions are included.
+In order to create a loom file that is ready to be uploaded to the `SCope viewer <http://scope.aertslab.org/>`_, we can use a helper script from `VSN Pipelines <https://github.com/vib-singlecell-nf/vsn-pipelines>`_.
+These need to be downloaded:
+
+.. code-block:: bash
+
+    wget https://raw.githubusercontent.com/vib-singlecell-nf/scenic/master/bin/add_visualization.py
+    wget https://raw.githubusercontent.com/vib-singlecell-nf/scenic/master/bin/export_to_loom.py
+
+The ``add_visualization.py`` script will take as input the loom file created by ``pyscenic aucell`` and add a basic UMAP and t-SNE based on the SCENIC AUCell matrix.
+Some additional packages are required for this, in particular ``MulticoreTSNE`` and ``umap``.
+The usage is as follows:
+
+.. code-block:: python
+
+    python add_visualization.py \
+        --loom_input auc_mtx.loom \
+        --loom_output scenic_visualize.loom \
+        --num_workers 8
+
+The output loom file is then ready for use in SCope.
+
+This can also be easily run using the Docker image, which already contains all of the necessary packages (it's still necessary to download the above python files, however):
+
+.. code-block:: bash
+
+    docker run -it --rm -v $PWD:$PWD -w $PWD aertslab/pyscenic:0.10.3 \
+        python add_visualization.py \
+            --loom_input auc_mtx.loom \
+            --loom_output scenic_visualize.loom \
+            --num_workers 8
+
 
 Can I create my own ranking databases?
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
