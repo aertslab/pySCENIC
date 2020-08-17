@@ -85,7 +85,7 @@ def suffixes_to_separator(extension):
 def is_valid_suffix(extension, method):
     assert(isinstance(extension,list)), 'extension should be of type "list"'
     if method in ['grn', 'aucell']:
-        valid_extensions = ['.csv', '.tsv', '.loom']
+        valid_extensions = ['.csv', '.tsv', '.loom', '.h5ad']
     elif method == 'ctx':
         valid_extensions = ['.csv', '.tsv']
     elif method == 'ctx_yaml':
@@ -114,6 +114,15 @@ def load_exp_matrix(fname: str, transpose: bool = False,
     if is_valid_suffix(extension, 'grn'):
         if '.loom' in extension:
             return load_exp_matrix_as_loom(fname, return_sparse, attribute_name_cell_id, attribute_name_gene)
+        elif '.h5ad' in extension:
+            from anndata import read_h5ad
+            adata = read_h5ad(filename=fname, backed='r')
+            if return_sparse:
+                # expr, gene, cell:
+                return adata.X.value, adata.var_names.values, adata.obs_names.values
+            else:
+                return pd.DataFrame(adata.X.value.todense(), index=adata.obs_names.values, columns=adata.var_names.values)
+
         else:
             df = pd.read_csv(fname, sep=suffixes_to_separator(extension), header=0, index_col=0)
             return df.T if transpose else df
