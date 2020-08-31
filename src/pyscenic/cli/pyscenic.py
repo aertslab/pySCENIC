@@ -210,6 +210,18 @@ def aucell_command(args):
         except OSError as e:
             LOGGER.error("Expression matrix should be provided in the loom file format.")
             sys.exit(1)
+    if '.h5ad' in extension:
+        from pyscenic.export import add_scenic_metadata
+        from anndata import read_h5ad
+        # check input file is also h5ad:
+        if '.h5ad' in PurePath(args.expression_mtx_fname.name).suffixes:
+            copyfile(args.expression_mtx_fname.name, args.output.name)
+            add_scenic_metadata(read_h5ad(filename=args.output.name, backed='r'),
+                                auc_mtx,
+                                signatures).write(args.output.name)
+        else:
+            LOGGER.error("Expression matrix should be provided in the h5ad (anndata) file format.")
+            sys.exit(1)
     elif args.output.name == '<stdout>':
         transpose = (args.transpose == 'yes')
         (auc_mtx.T if transpose else auc_mtx).to_csv(args.output)
