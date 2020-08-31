@@ -10,6 +10,11 @@ TEST_DATABASE_FNAME = resource_filename('resources.tests', "hg19-tss-centered-10
 TEST_DATABASE_NAME = "hg19-tss-centered-10kb-10species.mc9nr"
 TEST_SIGNATURE_FNAME = resource_filename('resources.tests', "c6.all.v6.1.symbols.gmt")
 
+##################################################
+# temporarily disable testing of the parqet databases until we have a working test database
+from os import path
+pytestmark = pytest.mark.skipif(not path.exists(TEST_DATABASE_FNAME), reason="Parquet testing is temporarily disabled.")
+##################################################
 
 @pytest.fixture
 def db():
