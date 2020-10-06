@@ -18,6 +18,31 @@ in no time. The latter is achieved via the dask_ framework for distributed compu
 News and releases
 -----------------
 
+dev | 2020-08-31
+^^^^^^^^^^^^^^^^
+
+**Major features:**
+
+* cisTarget databases:
+
+  * Support for Apache Parquet format
+  * Feather V2 (0.17.0+) compatibility
+  * Faster loading from feather databases
+  * Bugfix: loading genes from a database (previously the last gene name in the database)
+
+* Support for Anndata input and output
+
+* Upgrade to new pandas version
+
+* Input checks and more descriptive error messages.
+
+  * Check that regulons loaded are not empty.
+
+* Bugfixes:
+
+  * Motif url construction fixed when running ctx without pruning
+  * Compression of intermediate files in the CLI steps
+
 0.10.3 | 2020-07-15
 ^^^^^^^^^^^^^^^^^^^
 
