@@ -189,7 +189,7 @@ def load_signatures(fname: str) -> Sequence[Type[GeneSignature]]:
         return GeneSignature.from_gmt(fname,
                                   field_separator=sep,
                                   gene_separator=sep)
-    elif extension == '.dat':
+    elif '.dat' in extension:
         with openfile(fname, 'rb') as f:
             return pickle.load(f)
     else:
