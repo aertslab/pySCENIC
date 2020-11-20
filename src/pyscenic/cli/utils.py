@@ -243,10 +243,7 @@ def load_modules(fname: str) -> Sequence[Type[GeneSignature]]:
         with openfile(fname, 'rb') as f:
             return pickle.load(f)
     elif '.gmt' in extension:
-        sep = guess_separator(fname)
-        return GeneSignature.from_gmt(fname,
-                                      field_separator=sep,
-                                      gene_separator=sep)
+        return GeneSignature.from_gmt(fname)
     else:
         raise ValueError("Unknown file format for \"{}\".".format(fname))
 
