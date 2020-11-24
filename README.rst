@@ -18,6 +18,11 @@ in no time. The latter is achieved via the dask_ framework for distributed compu
 News and releases
 -----------------
 
+0.10.4 | 2020-11-24
+^^^^^^^^^^^^^^^^^^^
+
+* Included new CLI option to add correlation information to the GRN adjacencies file. This can be called with ``pyscenic add_cor``.
+
 0.10.3 | 2020-07-15
 ^^^^^^^^^^^^^^^^^^^
 

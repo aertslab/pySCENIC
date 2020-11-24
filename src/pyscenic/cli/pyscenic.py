@@ -16,7 +16,7 @@ from multiprocessing import cpu_count
 from arboreto.algo import grnboost2, genie3
 from arboreto.utils import load_tf_names
 
-from pyscenic.utils import modules_from_adjacencies
+from pyscenic.utils import modules_from_adjacencies, add_correlation
 from pyscenic.rnkdb import opendb, RankingDatabase
 from pyscenic.prune import prune2df, find_features, _prepare_client
 from pyscenic.aucell import aucell
@@ -107,6 +107,34 @@ def adjacencies2modules(args):
                                     min_genes=args.min_genes,
                                     rho_mask_dropouts=args.mask_dropouts,
                                     keep_only_activating=(args.all_modules != "yes"))
+
+
+def addCorrelations(args):
+    try:
+        adjacencies = load_adjacencies(args.adjacencies.name)
+    except ValueError as e:
+        LOGGER.error(e)
+        sys.exit(1)
+
+    LOGGER.info("Loading expression matrix.")
+    try:
+        ex_mtx = load_exp_matrix(args.expression_mtx_fname.name,
+                                 (args.transpose == 'yes'),
+                                 False, # sparse loading is disabled here for now
+                                 args.cell_id_attribute,
+                                 args.gene_attribute)
+    except ValueError as e:
+        LOGGER.error(e)
+        sys.exit(1)
+
+    LOGGER.info("Calculating correlations.")
+    adjacencies_wCor = add_correlation(adjacencies, ex_mtx,
+            rho_threshold=0.03, mask_dropouts=args.mask_dropouts)
+
+    LOGGER.info("Writing results to file.")
+
+    extension = PurePath(args.output.name).suffixes
+    adjacencies_wCor.to_csv(args.output.name, index=False, sep=suffixes_to_separator(extension))
 
 
 def _load_dbs(fnames: Sequence[str]) -> Sequence[Type[RankingDatabase]]:
@@ -276,7 +304,7 @@ def add_computation_parameters(parser):
     group = parser.add_argument_group('computation arguments')
     group.add_argument('--num_workers',
                        type=int, default=cpu_count(),
-                       help='The number of workers to use. Only valid of using dask_multiprocessing, custom_multiprocessing or local as mode. (default: {}).'.format(cpu_count()))
+                       help='The number of workers to use. Only valid if using dask_multiprocessing, custom_multiprocessing or local as mode. (default: {}).'.format(cpu_count()))
     group.add_argument('--client_or_address',
                        type=str, default='local',
                        help='The client or the IP address of the dask scheduler to use.'
@@ -333,6 +361,27 @@ def create_argument_parser():
     add_computation_parameters(parser_grn)
     add_loom_parameters(parser_grn)
     parser_grn.set_defaults(func=find_adjacencies_command)
+
+    #-----------------------------------------
+    # create the parser for the "add_cor" command
+    #-----------------------------------------
+    parser_add_cor = subparsers.add_parser('add_cor',
+                            help='[Optional] Add Pearson correlations based on TF-gene expression to the network adjacencies output from the GRN step, and output these to a new adjacencies file. This will normally be done during the "ctx" step.')
+    parser_add_cor.add_argument('adjacencies',
+                            type=argparse.FileType('r'),
+                            help='The name of the file that contains the GRN adjacencies (output from the GRN step).')
+    parser_add_cor.add_argument('expression_mtx_fname',
+                            type=argparse.FileType('r'),
+                            help='The name of the file that contains the expression matrix for the single cell experiment.'
+                                 ' Two file formats are supported: csv (rows=cells x columns=genes) or loom (rows=genes x columns=cells).')
+    parser_add_cor.add_argument('-o', '--output',
+                            type=argparse.FileType('w'), default=sys.stdout,
+                            help='Output file/stream, i.e. the adjacencies table with correlations (csv, tsv).')
+    parser_add_cor.add_argument('-t', '--transpose', action='store_const', const = 'yes',
+                            help='Transpose the expression matrix (rows=genes x columns=cells).')
+    add_loom_parameters(parser_add_cor)
+    add_module_parameters(parser_add_cor)
+    parser_add_cor.set_defaults(func=addCorrelations)
 
     #-----------------------------------------
     # create the parser for the "ctx" command
