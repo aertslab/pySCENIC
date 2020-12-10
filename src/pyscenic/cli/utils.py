@@ -260,7 +260,7 @@ def compress_meta(meta):
     return base64.b64encode(zlib.compress(json.dumps(meta).encode('ascii'))).decode('ascii')
 
 
-def append_auc_mtx(fname: str, auc_mtx: pd.DataFrame, regulons: Sequence[Type[GeneSignature]], seed=None, num_workers=1) -> None:
+def append_auc_mtx(fname: str, ex_mtx: pd.DataFrame, auc_mtx: pd.DataFrame, regulons: Sequence[Type[GeneSignature]], seed=None, num_workers=1) -> None:
     """
 
     Append AUC matrix to loom file.
@@ -289,7 +289,6 @@ def append_auc_mtx(fname: str, auc_mtx: pd.DataFrame, regulons: Sequence[Type[Ge
                            "motifData": name2logo.get(name, "")} for name, threshold in auc_thresholds.iteritems()]
 
     # Calculate the number of genes per cell.
-    ex_mtx = load_exp_matrix(fname)
     binary_mtx = ex_mtx.copy()
     binary_mtx[binary_mtx != 0] = 1.0
     ngenes = binary_mtx.sum(axis=1).astype(int)

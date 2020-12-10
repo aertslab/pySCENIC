@@ -206,7 +206,7 @@ def aucell_command(args):
     if '.loom' in extension:
         try:
             copyfile(args.expression_mtx_fname.name, args.output.name)
-            append_auc_mtx(args.output.name, auc_mtx, signatures, args.seed, args.num_workers)
+            append_auc_mtx(args.output.name, ex_mtx, auc_mtx, signatures, args.seed, args.num_workers)
         except OSError as e:
             LOGGER.error("Expression matrix should be provided in the loom file format.")
             sys.exit(1)
