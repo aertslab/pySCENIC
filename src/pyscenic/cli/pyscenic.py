@@ -238,7 +238,7 @@ def aucell_command(args):
         except OSError as e:
             LOGGER.error("Expression matrix should be provided in the loom file format.")
             sys.exit(1)
-    if '.h5ad' in extension:
+    elif '.h5ad' in extension:
         from pyscenic.export import add_scenic_metadata
         from anndata import read_h5ad
         # check input file is also h5ad:
