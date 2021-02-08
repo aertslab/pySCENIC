@@ -20,3 +20,6 @@ umap-learn
 loompy
 networkx
 scipy
+fsspec
+requests
+aiohttp
