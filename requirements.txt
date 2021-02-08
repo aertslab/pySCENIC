@@ -1,7 +1,7 @@
 cytoolz
 multiprocessing_on_dill
 llvmlite
-numba
+numba>=0.51.2
 attrs
 frozendict
 numpy
