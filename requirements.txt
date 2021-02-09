@@ -10,7 +10,7 @@ cloudpickle
 dask
 distributed
 pyarrow>=0.11.1,<0.17.0
-arboreto
+arboreto>=0.1.6
 boltons
 setuptools
 pyyaml
