@@ -5,7 +5,7 @@ import numpy as np
 from numba import njit, float64, int64
 
 
-@njit(signature=float64(float64[:], float64[:], float64))
+@njit(float64(float64[:], float64[:], float64))
 def masked_rho(x: np.ndarray, y: np.ndarray, mask: float = 0.0) -> float:
     """
     Calculates the masked correlation coefficient of two vectors.
@@ -30,7 +30,7 @@ def masked_rho(x: np.ndarray, y: np.ndarray, mask: float = 0.0) -> float:
     return cov_xy / (std_x * std_y)
 
 
-@njit(signature=float64[:, :](float64[:, :], float64[:, :], float64), parallel=True)
+@njit(float64[:, :](float64[:, :], float64[:, :], float64), parallel=True)
 def masked_rho_2d(x: np.ndarray, y: np.ndarray, mask: float = 0.0) -> np.ndarray:
     """
     Calculates the masked correlation coefficients of two arrays.
@@ -50,7 +50,7 @@ def masked_rho_2d(x: np.ndarray, y: np.ndarray, mask: float = 0.0) -> np.ndarray
     return rhos
 
 
-@njit(signature=float64[:](float64[:, :], int64[:, :], float64), parallel=True)
+@njit(float64[:](float64[:, :], int64[:, :], float64), parallel=True)
 def masked_rho4pairs(mtx: np.ndarray, col_idx_pairs: np.ndarray, mask: float = 0.0) -> np.ndarray:
     """
     Calculates the masked correlation of columns pairs in a matrix.
