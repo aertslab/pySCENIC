@@ -224,7 +224,10 @@ def module2df(db: Type[RankingDatabase], module: Regulon, motif_annotations: pd.
     del df['Ranking']
     if not return_recovery_curves:
         del df['Recovery']
-    return df
+        assert all([ col in df.columns for col in DF_META_DATA ]), f"Column comparison to expected metadata failed! Found:\n{df.columns}"
+        return df[DF_META_DATA.columns]
+    else:
+        return df
 
 
 def modules2df(db: Type[RankingDatabase], modules: Sequence[Regulon], motif_annotations: pd.DataFrame,
