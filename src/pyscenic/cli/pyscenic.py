@@ -71,7 +71,10 @@ def find_adjacencies_command(args):
     client, shutdown_callback = _prepare_client(args.client_or_address, num_workers=args.num_workers)
     method = grnboost2 if args.method == 'grnboost2' else genie3
     try:
-        network = method(expression_data=ex_mtx, tf_names=tf_names, verbose=True, client_or_address=client, seed=args.seed)
+        if args.sparse:
+            network = method(expression_data=ex_mtx[0], gene_names=ex_mtx[1], tf_names=tf_names, verbose=True, client_or_address=client, seed=args.seed)
+        else:
+            network = method(expression_data=ex_mtx, tf_names=tf_names, verbose=True, client_or_address=client, seed=args.seed)
     finally:
         shutdown_callback(False)
 
