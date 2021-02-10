@@ -1,16 +1,51 @@
 # -*- coding: utf-8 -*-
 
 import os
-import pandas as pd
 import numpy as np
-from typing import Tuple, Set, Type
-from abc import ABCMeta, abstractmethod
+import pandas as pd
+import pyarrow as pa
+import pyarrow.parquet as pq
 import sqlite3
+
+from abc import ABCMeta, abstractmethod
 from operator import itemgetter
-from .genesig import GeneSignature
+from typing import Dict, Set, Tuple, Type
+
 from cytoolz import memoize
 from pyarrow.feather import write_feather, FeatherReader
 from tqdm import tqdm
+
+from .genesig import GeneSignature
+
+
+class PyArrowThreads:
+    """
+    A static class to control how many threads PyArrow is allowed to use to convert a Feather database to a pandas
+    dataframe.
+
+    By default the number of threads is set to 4.
+    Overriding the number of threads is possible by using the environment variable "PYARROW_THREADS=nbr_threads".
+    """
+    pyarrow_threads = 4
+
+    if os.environ.get("PYARROW_THREADS"):
+        try:
+            # If "PYARROW_THREADS" is set, check if it is a number.
+            pyarrow_threads = int(os.environ.get("PYARROW_THREADS"))
+        except ValueError:
+            pass
+
+        if pyarrow_threads < 1:
+            # Set the number of PyArrow threads to 1 if a negative number or zero was specified.
+            pyarrow_threads = 1
+
+    @staticmethod
+    def set_nbr_pyarrow_threads(nbr_threads=None):
+        # Set number of threads to use for PyArrow when converting Feather database to pandas dataframe.
+        pa.set_cpu_count(nbr_threads if nbr_threads else PyArrowThreads.pyarrow_threads)
+
+
+PyArrowThreads.set_nbr_pyarrow_threads()
 
 
 class RankingDatabase(metaclass=ABCMeta):
@@ -243,6 +278,7 @@ class FeatherRankingDatabase(RankingDatabase):
     @property
     @memoize
     def total_genes(self) -> int:
+        # Do not count column 1 as it contains the index with the name of the features.
         return FeatherReader(self._fname).num_columns - 1
 
     @property
@@ -250,13 +286,96 @@ class FeatherRankingDatabase(RankingDatabase):
     def genes(self) -> Tuple[str]:
         # noinspection PyTypeChecker
         reader = FeatherReader(self._fname)
-        return tuple(reader.get_column_name(idx) for idx in range(self.total_genes) if reader.get_column_name(idx) != INDEX_NAME)
+        # Get all gene names (exclude "features" column).
+        return tuple(
+            reader.get_column_name(idx) for idx in range(reader.num_columns)
+            if reader.get_column_name(idx) != INDEX_NAME
+        )
+
+    @property
+    @memoize
+    def genes2idx(self) -> Dict[str, int]:
+        return {gene: idx for idx, gene in enumerate(self.genes)}
 
     def load_full(self) -> pd.DataFrame:
-        return FeatherReader(self._fname).read_pandas().set_index(INDEX_NAME)
+        df = FeatherReader(self._fname).read_pandas()
+        # Avoid copying the whole dataframe by replacing the index in place.
+        # This makes loading a database twice as fast in case the database file is already in the filesystem cache.
+        df.set_index(INDEX_NAME, inplace=True)
+        return df
 
     def load(self, gs: Type[GeneSignature]) -> pd.DataFrame:
-        return FeatherReader(self._fname).read_pandas(columns=(INDEX_NAME,) + gs.genes).set_index(INDEX_NAME)
+        # For some genes in the signature there might not be a rank available in the database.
+        gene_set = self.geneset.intersection(set(gs.genes))
+        # Read ranking columns for genes in order they appear in the Feather file.
+        df = FeatherReader(self._fname).read_pandas(
+            columns=(INDEX_NAME,) + tuple(sorted(gene_set, key=lambda gene: self.genes2idx[gene]))
+        )
+        # Avoid copying the whole dataframe by replacing the index in place.
+        # This makes loading a database twice as fast in case the database file is already in the filesystem cache.
+        df.set_index(INDEX_NAME, inplace=True)
+        return df
+
+
+class ParquetRankingDatabase(RankingDatabase):
+    def __init__(self, fname: str, name: str):
+        """
+        Create a new parquet database.
+
+        :param fname: The filename of the database.
+        :param name: The name of the database.
+        """
+        super().__init__(name=name)
+
+        assert os.path.isfile(fname), "Database {0:s} doesn't exist.".format(fname)
+        # FeatherReader cannot be pickle (important for dask framework) so filename is field instead.
+        self._fname = fname
+
+    @property
+    @memoize
+    def total_genes(self) -> int:
+        # Do not count column 1 as it contains the index with the name of the features.
+        return pq.read_metadata(self._fname).num_columns - 1
+
+    @property
+    @memoize
+    def genes(self) -> Tuple[str]:
+        # noinspection PyTypeChecker
+        metadata = pq.read_metadata(self._fname)
+        assert metadata.num_row_groups == 1, \
+            "Parquet database {0:s} has more than one row group.".format(self._fname)
+        metadata_row_group = metadata.row_group(0)
+        # Get all gene names (exclude "features" column).
+        return tuple(
+            metadata_row_group.column(idx).path_in_schema
+            for idx in range(0, metadata.num_columns)
+            if metadata_row_group.column(idx).path_in_schema != INDEX_NAME
+        )
+
+    @property
+    @memoize
+    def genes2idx(self) -> Dict[str, int]:
+        return {gene: idx for idx, gene in enumerate(self.genes)}
+
+    def load_full(self) -> pd.DataFrame:
+        df = pq.read_pandas(self._fname).to_pandas()
+        # Avoid copying the whole dataframe by replacing the index in place.
+        # This makes loading a database twice as fast in case the database file is already in the filesystem cache.
+        df.set_index(INDEX_NAME, inplace=True)
+        return df
+
+    def load(self, gs: Type[GeneSignature]) -> pd.DataFrame:
+        # For some genes in the signature there might not be a rank available in the database.
+        gene_set = self.geneset.intersection(set(gs.genes))
+        # Read rankings columns for genes in order they appear in the Parquet file.
+        df = pq.read_pandas(
+            self._fname,
+            columns=(INDEX_NAME,) + tuple(sorted(gene_set, key=lambda gene: self.genes2idx[gene]))
+        ).to_pandas()
+        # Avoid copying the whole dataframe by replacing the index in place.
+        # This makes loading a database twice as fast in case the database file is already in the filesystem cache.
+        df.set_index(INDEX_NAME, inplace=True)
+        return df
 
 
 class MemoryDecorator(RankingDatabase):
@@ -396,7 +515,10 @@ class InvertedRankingDatabase(RankingDatabase):
         self.idx2identifier = {idx: identifier for identifier, idx in self.identifier2idx.items()}
 
         # Load dataframe into memory in a format most suited for fast loading of gene signatures.
-        df = FeatherReader(fname).read().set_index(INDEX_NAME)
+        df = FeatherReader(fname).read_pandas()
+        # Avoid copying the whole dataframe by replacing the index in place.
+        # This makes loading a database twice as fast in case the database file is already in the filesystem cache.
+        df.set_index(INDEX_NAME, inplace=True)
         self.max_rank = len(df.columns)
         self.features = [pd.Series(index=row.values, data=row.index, name=name) for name, row in df.iterrows()]
 
@@ -430,14 +552,14 @@ class InvertedRankingDatabase(RankingDatabase):
                          axis=1).T.astype(INVERTED_DB_DTYPE).rename(columns=self.idx2identifier)
 
 
-def convert2feather(fname: str, out_folder: str, name: str, extension: str="feather") -> str:
+def convert_sqlitedb_to_featherdb(fname: str, out_folder: str, name: str, extension: str= "feather") -> str:
     """
-    Convert a whole genome rankings database to a feather format based database.
+    Convert a whole genome SQLite rankings database to a feather format based database.
 
     More information on this format can be found here:
     .. feather-format: https://blog.rstudio.com/2016/03/29/feather/
 
-    :param fname: The filename of the legacy
+    :param fname: The filename of the legacy SQLite rankings database.
     :param out_folder: The name of the folder to write the new database to.
     :param name: The name of the rankings database.
     :param extension: The extension of the new database file.
@@ -454,7 +576,8 @@ def convert2feather(fname: str, out_folder: str, name: str, extension: str="feat
     db = SQLiteRankingDatabase(fname=fname, name=name)
     df = db.load_full()
     df.index.name = INDEX_NAME
-    df.reset_index(inplace=True) # Index is not stored in feather format. https://github.com/wesm/feather/issues/200
+    # Index is not stored in feather format: https://github.com/wesm/feather/issues/200
+    df.reset_index(inplace=True)
     write_feather(df, feather_fname)
     return feather_fname
 
@@ -471,7 +594,10 @@ def opendb(fname: str, name: str) -> Type['RankingDatabase']:
     assert name, "A database should be given a proper name."
 
     extension = os.path.splitext(fname)[1]
-    if extension == ".feather":
+    if extension == ".parquet":
+        # noinspection PyTypeChecker
+        return ParquetRankingDatabase(fname, name=name)
+    elif extension == ".feather":
         if fname.endswith(".inverted.feather"):
             # noinspection PyTypeChecker
             return InvertedRankingDatabase(fname, name=name)

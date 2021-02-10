@@ -1,12 +1,10 @@
 # -*- coding: utf-8 -*-
 
-from pyscenic.genesig import GeneSignature, Regulon
-from configparser import ConfigParser
-import os
-import pytest
 import attr
+import pytest
 from pkg_resources import resource_filename
 
+from pyscenic.genesig import GeneSignature, Regulon
 
 TEST_SIGNATURE = "msigdb_cancer_c6"
 TEST_SIGNATURE_FNAME = resource_filename('resources.tests', "c6.all.v6.1.symbols.gmt")
@@ -40,7 +38,7 @@ def test_init3():
     assert len(gs1) == 2
     assert gs1.gene2weight['TP53'] == 0.5
     assert gs1.gene2weight['SOX4'] == 0.75
-    
+
 
 def test_immut():
     gs1 = GeneSignature(name="test1", gene2weight={'TP53': 0.5, 'SOX4': 0.75})
@@ -80,6 +78,7 @@ def test_union1():
     assert 'SOX4' in gsu
     assert 'SOX2' in gsu
     assert len(gsu) == 3
+
 
 def test_union3():
     gs1 = GeneSignature(name="test1", gene2weight={'TP53': 0.8, 'SOX4': 0.75})
@@ -134,8 +133,7 @@ def test_regulon():
 
 
 def test_load_gmt():
-    gss = GeneSignature.from_gmt(field_separator='\t', gene_separator='\t',
-                                 fname=TEST_SIGNATURE_FNAME)
+    gss = GeneSignature.from_gmt(field_separator='\t', gene_separator='\t', fname=TEST_SIGNATURE_FNAME)
     # http://software.broadinstitute.org/gsea/msigdb/collections.jsp#C6
     assert len(gss) == 189
     assert gss[0].name == "GLI1_UP.V1_DN"
@@ -144,8 +142,7 @@ def test_load_gmt():
 
 
 def test_add():
-    gss = GeneSignature.from_gmt(field_separator='\t', gene_separator='\t',
-                                 fname=TEST_SIGNATURE_FNAME)
+    gss = GeneSignature.from_gmt(field_separator='\t', gene_separator='\t', fname=TEST_SIGNATURE_FNAME)
     res = gss[0].add("MEF2")
     assert "MEF2" in res
 
@@ -162,6 +159,7 @@ def test_noweights():
     assert reg2['TP53'] == 1.0
     assert isinstance(reg2, Regulon)
 
+
 def test_head():
     gs1 = GeneSignature(name="test1", gene2weight={'TP53': 0.8, 'SOX4': 0.75})
     gs2 = gs1.head(1)
@@ -171,4 +169,3 @@ def test_head():
     assert gs2['TP53'] == 0.8
     assert gs2['SOX4'] == 0.75
     assert len(gs2) == 2
-

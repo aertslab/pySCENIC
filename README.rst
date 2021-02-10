@@ -18,30 +18,49 @@ in no time. The latter is achieved via the dask_ framework for distributed compu
 News and releases
 -----------------
 
+0.11.0 | 2021-02-10
+^^^^^^^^^^^^^^^^
+
+**Major features:**
+
+* Updated `Arboreto <https://github.com/aertslab/arboreto>`_ release (GRN inference step) includes:
+
+  * Support for sparse matrices (using the ``--sparse`` flag in ``pyscenic grn``, or passing a sparse matrix to ``grnboost2``/``genie3``).
+  * Fixes to avoid dask metadata mismatch error
+
+* Updated cisTarget:
+
+  * Fix for metadata mismatch in ctx prune2df step
+  * Support for databases Apache Parquet format
+  * Faster loading from feather databases
+  * Bugfix: loading genes from a database (previously missing the last gene name in the database)
+
+* Support for Anndata input and output
+
+* Package updates:
+
+  * Upgrade to newer pandas version
+  * Upgrade to newer numba version
+  * Upgrade to newer versions of dask, distributed
+
+* Input checks and more descriptive error messages.
+
+  * Check that regulons loaded are not empty.
+
+* Bugfixes:
+
+  * Motif url construction fixed when running ctx without pruning
+  * Compression of intermediate files in the CLI steps
+  * Handle loom files with non-standard gene/cell attribute names
+  * Reformat the genesig gmt input/output
+  * Fix AUCell output to loom with non-standard loom attributes
+
+
 0.10.4 | 2020-11-24
 ^^^^^^^^^^^^^^^^^^^
 
 * Included new CLI option to add correlation information to the GRN adjacencies file. This can be called with ``pyscenic add_cor``.
 
-0.10.3 | 2020-07-15
-^^^^^^^^^^^^^^^^^^^
-
-* Integrate arboreto multiprocessing script into pySCENIC CLI
-* Skip modules with zero db overlap in cisTarget step
-* Additional error message if regulons file is empty
-* Additional error if there is a mismatch between the genes present in the GRN and the expression matrix
-* Fixed bug in motif url construciton when running without pruning
-
-0.10.2 | 2020-06-05
-^^^^^^^^^^^^^^^^^^^
-
-* Bugfix for CLI grn step
-
-
-0.10.1 | 2020-05-17
-^^^^^^^^^^^^^^^^^^^
-
-* CLI: file compression (optionally) enabled for intermediate files for the major steps: grn (adjacencies matrix), ctx (regulons), and aucell (auc matrix). Compression is used when the file name argument has a .gz ending.
 
 
 See also the extended `Release Notes <https://pyscenic.readthedocs.io/en/latest/releasenotes.html>`_.
@@ -94,8 +113,8 @@ References
 .. |buildstatus| image:: https://travis-ci.org/aertslab/pySCENIC.svg?branch=master
 .. _buildstatus: https://travis-ci.org/aertslab/pySCENIC
 
-.. |pypipackage| image:: https://badge.fury.io/py/pyscenic.svg
-.. _pypipackage: https://badge.fury.io/py/pyscenic
+.. |pypipackage| image:: https://img.shields.io/pypi/v/pySCENIC?color=%23026aab
+.. _pypipackage: https://pypi.org/project/pyscenic/
 
 .. |docstatus| image:: https://readthedocs.org/projects/pyscenic/badge/?version=latest
 .. _docstatus: http://pyscenic.readthedocs.io/en/latest/?badge=latest

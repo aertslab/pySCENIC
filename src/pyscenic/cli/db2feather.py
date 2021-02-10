@@ -2,7 +2,7 @@
 
 import os
 import argparse
-from pyscenic.rnkdb import convert2feather
+from pyscenic.rnkdb import convert_sqlitedb_to_featherdb
 
 
 def derive_db_name(fname:str) -> str:
@@ -25,7 +25,7 @@ def create_argument_parser():
 def convert(out_folder, in_fnames):
     for fname in in_fnames:
         print("Converting {}".format(fname.name))
-        convert2feather(fname.name, out_folder, derive_db_name(fname.name))
+        convert_sqlitedb_to_featherdb(fname.name, out_folder, derive_db_name(fname.name))
 
 
 def main():

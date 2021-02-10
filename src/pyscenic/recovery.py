@@ -4,7 +4,7 @@ import pandas as pd
 import numpy as np
 from itertools import repeat
 from typing import Type, Optional, List, Tuple
-from numba import *
+from numba import jit
 import logging
 
 from .rnkdb import RankingDatabase

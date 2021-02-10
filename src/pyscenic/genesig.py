@@ -61,7 +61,7 @@ class GeneSignature(yaml.YAMLObject):
                              gene2weight=zip(data['genes'], data['weights']))
 
     @classmethod
-    def from_gmt(cls, fname: str, field_separator: str = ',', gene_separator: str = ',') -> List['GeneSignature']:
+    def from_gmt(cls, fname: str, field_separator: str = '\t', gene_separator: str = '\t') -> List['GeneSignature']:
         """
         Load gene signatures from a GMT file.
 
@@ -81,13 +81,13 @@ class GeneSignature(yaml.YAMLObject):
                     if line.startswith("#") or not line.strip():
                         continue
                     columns = re.split(field_separator, line.rstrip())
-                    genes = columns[2:] if field_separator == gene_separator else columns[2].split(gene_separator)
+                    genes = columns[2:]
                     yield GeneSignature(name=columns[0], gene2weight=genes)
         return list(signatures())
 
 
     @classmethod
-    def to_gmt(cls, fname: str, signatures: List[Type['GeneSignature']], field_separator: str = ',', gene_separator: str = ',') -> None:
+    def to_gmt(cls, fname: str, signatures: List[Type['GeneSignature']], field_separator: str = '\t', gene_separator: str = '\t') -> None:
         """
         Save list of signatures as GMT file.
 
@@ -101,7 +101,7 @@ class GeneSignature(yaml.YAMLObject):
             for signature in signatures:
                 genes = gene_separator.join(signature.genes)
                 file.write("{}{}{}{}{}\n".format(signature.name, field_separator,
-                                                 signature.metadata(gene_separator), field_separator,
+                                                 signature.metadata(','), field_separator,
                                                  genes))
 
 

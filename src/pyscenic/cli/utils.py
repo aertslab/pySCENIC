@@ -85,7 +85,7 @@ def suffixes_to_separator(extension):
 def is_valid_suffix(extension, method):
     assert(isinstance(extension,list)), 'extension should be of type "list"'
     if method in ['grn', 'aucell']:
-        valid_extensions = ['.csv', '.tsv', '.loom']
+        valid_extensions = ['.csv', '.tsv', '.loom', '.h5ad']
     elif method == 'ctx':
         valid_extensions = ['.csv', '.tsv']
     elif method == 'ctx_yaml':
@@ -114,6 +114,15 @@ def load_exp_matrix(fname: str, transpose: bool = False,
     if is_valid_suffix(extension, 'grn'):
         if '.loom' in extension:
             return load_exp_matrix_as_loom(fname, return_sparse, attribute_name_cell_id, attribute_name_gene)
+        elif '.h5ad' in extension:
+            from anndata import read_h5ad
+            adata = read_h5ad(filename=fname, backed='r')
+            if return_sparse:
+                # expr, gene, cell:
+                return adata.X.value, adata.var_names.values, adata.obs_names.values
+            else:
+                return pd.DataFrame(adata.X.value.todense(), index=adata.obs_names.values, columns=adata.var_names.values)
+
         else:
             df = pd.read_csv(fname, sep=suffixes_to_separator(extension), header=0, index_col=0)
             return df.T if transpose else df
@@ -180,7 +189,7 @@ def load_signatures(fname: str) -> Sequence[Type[GeneSignature]]:
         return GeneSignature.from_gmt(fname,
                                   field_separator=sep,
                                   gene_separator=sep)
-    elif extension == '.dat':
+    elif '.dat' in extension:
         with openfile(fname, 'rb') as f:
             return pickle.load(f)
     else:
@@ -234,10 +243,7 @@ def load_modules(fname: str) -> Sequence[Type[GeneSignature]]:
         with openfile(fname, 'rb') as f:
             return pickle.load(f)
     elif '.gmt' in extension:
-        sep = guess_separator(fname)
-        return GeneSignature.from_gmt(fname,
-                                      field_separator=sep,
-                                      gene_separator=sep)
+        return GeneSignature.from_gmt(fname)
     else:
         raise ValueError("Unknown file format for \"{}\".".format(fname))
 
@@ -254,7 +260,7 @@ def compress_meta(meta):
     return base64.b64encode(zlib.compress(json.dumps(meta).encode('ascii'))).decode('ascii')
 
 
-def append_auc_mtx(fname: str, auc_mtx: pd.DataFrame, regulons: Sequence[Type[GeneSignature]], seed=None, num_workers=1) -> None:
+def append_auc_mtx(fname: str, ex_mtx: pd.DataFrame, auc_mtx: pd.DataFrame, regulons: Sequence[Type[GeneSignature]], seed=None, num_workers=1) -> None:
     """
 
     Append AUC matrix to loom file.
@@ -283,7 +289,6 @@ def append_auc_mtx(fname: str, auc_mtx: pd.DataFrame, regulons: Sequence[Type[Ge
                            "motifData": name2logo.get(name, "")} for name, threshold in auc_thresholds.iteritems()]
 
     # Calculate the number of genes per cell.
-    ex_mtx = load_exp_matrix(fname)
     binary_mtx = ex_mtx.copy()
     binary_mtx[binary_mtx != 0] = 1.0
     ngenes = binary_mtx.sum(axis=1).astype(int)

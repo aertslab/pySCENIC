@@ -71,7 +71,10 @@ def find_adjacencies_command(args):
     client, shutdown_callback = _prepare_client(args.client_or_address, num_workers=args.num_workers)
     method = grnboost2 if args.method == 'grnboost2' else genie3
     try:
-        network = method(expression_data=ex_mtx, tf_names=tf_names, verbose=True, client_or_address=client, seed=args.seed)
+        if args.sparse:
+            network = method(expression_data=ex_mtx[0], gene_names=ex_mtx[1], tf_names=tf_names, verbose=True, client_or_address=client, seed=args.seed)
+        else:
+            network = method(expression_data=ex_mtx, tf_names=tf_names, verbose=True, client_or_address=client, seed=args.seed)
     finally:
         shutdown_callback(False)
 
@@ -234,9 +237,21 @@ def aucell_command(args):
     if '.loom' in extension:
         try:
             copyfile(args.expression_mtx_fname.name, args.output.name)
-            append_auc_mtx(args.output.name, auc_mtx, signatures, args.seed, args.num_workers)
+            append_auc_mtx(args.output.name, ex_mtx, auc_mtx, signatures, args.seed, args.num_workers)
         except OSError as e:
             LOGGER.error("Expression matrix should be provided in the loom file format.")
+            sys.exit(1)
+    elif '.h5ad' in extension:
+        from pyscenic.export import add_scenic_metadata
+        from anndata import read_h5ad
+        # check input file is also h5ad:
+        if '.h5ad' in PurePath(args.expression_mtx_fname.name).suffixes:
+            copyfile(args.expression_mtx_fname.name, args.output.name)
+            add_scenic_metadata(read_h5ad(filename=args.output.name, backed='r'),
+                                auc_mtx,
+                                signatures).write(args.output.name)
+        else:
+            LOGGER.error("Expression matrix should be provided in the h5ad (anndata) file format.")
             sys.exit(1)
     elif args.output.name == '<stdout>':
         transpose = (args.transpose == 'yes')
