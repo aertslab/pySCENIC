@@ -23,7 +23,7 @@ News and releases
 
 **Major features:**
 
-* Updated `Arboreto <https://github.com/aertslab/arboreto>`_ release (GRN inference step) includes:
+* Updated arboreto_ release (GRN inference step) includes:
 
   * Support for sparse matrices (using the ``--sparse`` flag in ``pyscenic grn``, or passing a sparse matrix to ``grnboost2``/``genie3``).
   * Fixes to avoid dask metadata mismatch error
