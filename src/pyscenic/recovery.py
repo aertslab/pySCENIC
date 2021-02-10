@@ -179,7 +179,7 @@ def leading_edge(rcc: np.ndarray, avg2stdrcc: np.ndarray,
         # but is inline with the RcisTarget implementation.
         filtered_idx = sranking <= rank_at_max
         filtered_gene_ids = gene_ids[filtered_idx]
-        return list(zip(filtered_gene_ids, weights[filtered_idx] if weights is not None else sranking[filtered_idx]))
+        return list(zip(filtered_gene_ids, weights[sorted_idx][filtered_idx] if weights is not None else sranking[filtered_idx]))
 
     rank_at_max, n_recovered_genes = critical_point()
     # noinspection PyTypeChecker
