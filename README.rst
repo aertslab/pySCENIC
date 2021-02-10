@@ -19,7 +19,7 @@ News and releases
 -----------------
 
 0.11.0 | 2021-02-10
-^^^^^^^^^^^^^^^^
+^^^^^^^^^^^^^^^^^^^
 
 **Major features:**
 
@@ -49,6 +49,7 @@ News and releases
 
 * Bugfixes:
 
+  * In the regulons output from the cisTarget step, the gene weights were incorrectly assigned to their respective target genes (PR #254).
   * Motif url construction fixed when running ctx without pruning
   * Compression of intermediate files in the CLI steps
   * Handle loom files with non-standard gene/cell attribute names
