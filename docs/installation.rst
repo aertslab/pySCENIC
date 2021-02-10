@@ -14,6 +14,19 @@ The latest stable release of the **package** itself can be installed via
     pip install pyscenic
 
 
+Note that pySCENIC needs some prerequisites installed before running ``pip install`` in a new conda environment.
+For example:
+
+.. code-block:: bash
+
+    conda create -y -n pyscenic python=3.7
+    conda activate pyscenic
+    conda install -y numpy
+    conda install -y -c anaconda cytoolz
+
+    pip install pyscenic
+
+
 .. caution::
     pySCENIC needs a python 3.6 or greater interpreter.
 
@@ -73,21 +86,27 @@ A command line version of the tool is included. This tool is available after pro
 
 .. code-block:: bash
 
-    { ~ }  » pyscenic                                            ~
-    usage: pyscenic [-h] {grn,ctx,aucell} ...
+    $ pyscenic -h
+    usage: pyscenic [-h] {grn,add_cor,ctx,aucell} ...
 
-    Single-CEll regulatory Network Inference and Clustering (0.10.0)
+    Single-CEll regulatory Network Inference and Clustering (0.11.0)
 
     positional arguments:
-      {grn,ctx,aucell}  sub-command help
-        grn             Derive co-expression modules from expression matrix.
-        ctx             Find enriched motifs for a gene signature and optionally
-                        prune targets from this signature based on cis-regulatory
-                        cues.
-        aucell          Quantify activity of gene signatures across single cells.
+      {grn,add_cor,ctx,aucell}
+                            sub-command help
+        grn                 Derive co-expression modules from expression matrix.
+        add_cor             [Optional] Add Pearson correlations based on TF-gene
+                            expression to the network adjacencies output from the
+                            GRN step, and output these to a new adjacencies file.
+                            This will normally be done during the "ctx" step.
+        ctx                 Find enriched motifs for a gene signature and
+                            optionally prune targets from this signature based on
+                            cis-regulatory cues.
+        aucell              Quantify activity of gene signatures across single
+                            cells.
 
     optional arguments:
-      -h, --help        show this help message and exit
+      -h, --help            show this help message and exit
 
     Arguments can be read from file using a @args.txt construct. For more
     information on loom file format see http://loompy.org . For more information
