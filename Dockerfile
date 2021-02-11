@@ -1,4 +1,4 @@
-FROM python:3.7.4-slim AS compile-image
+FROM python:3.7.9-slim AS compile-image
 
 ENV DEBIAN_FRONTEND=noninteractive
 RUN BUILDPKGS="build-essential \
@@ -15,16 +15,16 @@ ENV PATH="/opt/venv/bin:$PATH"
 
 # install dependencies:
 COPY requirements_docker.txt /tmp/
-RUN pip install --no-cache-dir --upgrade pip && \
+RUN pip install --no-cache-dir --upgrade pip wheel && \
     pip install --no-cache-dir -r /tmp/requirements_docker.txt
 
-# use version from argument (--build-arg version=0.9.7), or a default:
-ARG version="0.9.19"
+# use version from argument (--build-arg version=0.11.0), or a default:
+ARG version="0.11.0"
 RUN pip install --no-cache-dir pyscenic==$version && \
-    pip install --no-cache-dir scanpy==1.4.4.post1
+    pip install --no-cache-dir scanpy==1.7.0
 
 
-FROM python:3.7.4-slim AS build-image
+FROM python:3.7.9-slim AS build-image
 
 RUN apt-get -y update && \
     apt-get -y --no-install-recommends install \
