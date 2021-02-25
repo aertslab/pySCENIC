@@ -67,8 +67,8 @@ These need to be downloaded:
 
 .. code-block:: bash
 
-    wget https://raw.githubusercontent.com/vib-singlecell-nf/scenic/master/bin/add_visualization.py
-    wget https://raw.githubusercontent.com/vib-singlecell-nf/scenic/master/bin/export_to_loom.py
+    wget https://raw.githubusercontent.com/vib-singlecell-nf/vsn-pipelines/master/src/scenic/bin/add_visualization.py
+    wget https://raw.githubusercontent.com/vib-singlecell-nf/vsn-pipelines/master/src/scenic/bin/export_to_loom.py
 
 The ``add_visualization.py`` script will take as input the loom file created by ``pyscenic aucell`` and add a basic UMAP and t-SNE based on the SCENIC AUCell matrix.
 Some additional packages are required for this, in particular ``MulticoreTSNE`` and ``umap``.
