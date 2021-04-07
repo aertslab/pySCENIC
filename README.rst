@@ -88,7 +88,8 @@ All the functionality of the original R implementation is available and in addit
 Additional resources
 --------------------
 
-For more information, please visit LCB_, or SCENIC_ (R version).
+For more information, please visit the main SCENIC_ website.
+There is a tutorial to `create new cisTarget databases <https://github.com/aertslab/create_cisTarget_databases>`_.
 The CLI to pySCENIC has also been streamlined into a pipeline that can be run with a single command, using the Nextflow workflow manager.
 There are two Nextflow implementations available:
 
@@ -124,7 +125,6 @@ References
 .. _dask: https://dask.pydata.org/en/latest/
 .. _distributed: https://distributed.readthedocs.io/en/latest/
 .. _arboreto: https://arboreto.readthedocs.io
-.. _LCB: https://aertslab.org
 .. _`SCENICprotocol`: https://github.com/aertslab/SCENICprotocol
 .. _`VSNPipelines`: https://github.com/vib-singlecell-nf/vsn-pipelines
 .. _notebooks: https://github.com/aertslab/pySCENIC/tree/master/notebooks
