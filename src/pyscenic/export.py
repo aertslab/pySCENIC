@@ -4,7 +4,7 @@ import os
 import numpy as np
 import pandas as pd
 import loompy as lp
-from sklearn.manifold.t_sne import TSNE
+from sklearn.manifold import TSNE
 from .aucell import aucell
 from .genesig import Regulon
 from typing import List, Mapping, Union, Sequence, Optional
