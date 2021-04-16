@@ -18,6 +18,14 @@ in no time. The latter is achieved via the dask_ framework for distributed compu
 News and releases
 -----------------
 
+0.11.1 | 2021-02-11
+^^^^^^^^^^^^^^^^^^^
+
+* Fix bug in motif url construction (#275)
+* Fix for export2loom with sparse dataframe (#278)
+* Fix sklearn t-SNE import (#285)
+* Updates to Docker image (expose port 8787 for Dask dashboard)
+
 0.11.0 | 2021-02-10
 ^^^^^^^^^^^^^^^^^^^
 
