@@ -21,7 +21,7 @@ RUN pip install --no-cache-dir --upgrade pip wheel && \
 # use version from argument (--build-arg version=0.11.0), or a default:
 ARG version="0.11.0"
 RUN pip install --no-cache-dir pyscenic==$version && \
-    pip install --no-cache-dir scanpy==1.7.0
+    pip install --no-cache-dir scanpy==1.7.2
 
 
 FROM python:3.7.9-slim AS build-image
@@ -41,4 +41,6 @@ COPY --from=compile-image /opt/venv /opt/venv
 
 # Make sure we use the virtualenv:
 ENV PATH="/opt/venv/bin:$PATH"
+
+EXPOSE 8787
 

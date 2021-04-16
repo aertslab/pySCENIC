@@ -323,7 +323,7 @@ def add_motif_url(df: pd.DataFrame, base_url: str):
     :param base_url:
     :return:
     """
-    df[("Enrichment", COLUMN_NAME_MOTIF_URL)] = list(map(partial(urljoin, base=base_url), df.index.get_level_values(COLUMN_NAME_MOTIF_ID)))
+    df[("Enrichment", COLUMN_NAME_MOTIF_URL)] = list(map(partial(urljoin, base_url), df.index.get_level_values(COLUMN_NAME_MOTIF_ID)))
     return df
 
 

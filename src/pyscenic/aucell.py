@@ -60,10 +60,7 @@ def derive_auc_threshold(ex_mtx: pd.DataFrame) -> pd.DataFrame:
         that when using this value as the AUC threshold for 99% of the cells all ranked genes used for AUC calculation will
         have had a detected expression in the single-cell experiment.
     """
-    binary_mtx = ex_mtx.copy()
-    binary_mtx[binary_mtx != 0] = 1.0
-    n_genes = len(binary_mtx.columns)
-    return binary_mtx.sum(axis=1).quantile([.01, .05, .10, .50, 1])/n_genes
+    return pd.Series(np.count_nonzero(ex_mtx, axis=1)).quantile([.01, .05, .10, .50, 1])/ex_mtx.shape[1]
 
 
 enrichment = enrichment4cells

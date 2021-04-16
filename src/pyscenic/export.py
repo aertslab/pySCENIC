@@ -4,7 +4,7 @@ import os
 import numpy as np
 import pandas as pd
 import loompy as lp
-from sklearn.manifold.t_sne import TSNE
+from sklearn.manifold import TSNE
 from .aucell import aucell
 from .genesig import Regulon
 from typing import List, Mapping, Union, Sequence, Optional
@@ -95,9 +95,7 @@ def export2loom(ex_mtx: pd.DataFrame, regulons: List[Regulon], out_fname: str,
         embeddings_Y = pd.merge(embeddings_Y, embedding['_Y'].to_frame().rename(columns={'_Y': str(embedding_id)}), left_index=True, right_index=True)
 
     # Calculate the number of genes per cell.
-    binary_mtx = ex_mtx.copy()
-    binary_mtx[binary_mtx != 0] = 1.0
-    ngenes = binary_mtx.sum(axis=1).astype(int)
+    ngenes = np.count_nonzero(ex_mtx, axis=1)
 
     # Encode genes in regulons as "binary" membership matrix.
     genes = np.array(ex_mtx.columns)
@@ -127,7 +125,7 @@ def export2loom(ex_mtx: pd.DataFrame, regulons: List[Regulon], out_fname: str,
     default_embedding.columns=['_X', '_Y']
     column_attrs = {
         "CellID": ex_mtx.index.values.astype('str'),
-        "nGene": ngenes.values,
+        "nGene": ngenes,
         "Embedding": create_structure_array(default_embedding),
         "RegulonsAUC": create_structure_array(auc_mtx),
         "Clusterings": create_structure_array(clusterings),
