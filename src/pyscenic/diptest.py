@@ -38,8 +38,8 @@ def _gcm_(cdf, idxs):
 
 
 def _lcm_(cdf, idxs):
-    g, t = _gcm_(1-cdf[::-1], idxs.max() - idxs[::-1])
-    return 1-g[::-1], len(cdf) - 1 - t[::-1]
+    g, t = _gcm_(1 - cdf[::-1], idxs.max() - idxs[::-1])
+    return 1 - g[::-1], len(cdf) - 1 - t[::-1]
 
 
 def _touch_diffs_(part1, part2, touchpoints):
@@ -48,29 +48,24 @@ def _touch_diffs_(part1, part2, touchpoints):
 
 
 def diptst(dat, is_hist=False, numt=1000):
-    """ diptest with pval """
+    """diptest with pval"""
     # sample dip
     d, (_, idxs, left, _, right, _) = dip_fn(dat, is_hist)
 
     # simulate from null uniform
-    unifs = np.random.uniform(size=numt * idxs.shape[0]) \
-        .reshape([numt, idxs.shape[0]])
+    unifs = np.random.uniform(size=numt * idxs.shape[0]).reshape([numt, idxs.shape[0]])
     unif_dips = np.apply_along_axis(dip_fn, 1, unifs, is_hist, True)
 
     # count dips greater or equal to d, add 1/1 to prevent a pvalue of 0
-    pval = None \
-        if unif_dips.sum() == 0 else \
-        (np.less(d, unif_dips).sum() + 1) / (np.float(numt) + 1)
+    pval = None if unif_dips.sum() == 0 else (np.less(d, unif_dips).sum() + 1) / (np.float(numt) + 1)
 
-    return (d, pval, # dip, pvalue
-            (len(left)-1, len(idxs)-len(right)) # indices
-            )
+    return (d, pval, (len(left) - 1, len(idxs) - len(right)))  # dip, pvalue  # indices
 
 
 def dip_fn(dat, is_hist=False, just_dip=False):
     """
-        Compute the Hartigans' dip statistic either for a histogram of
-        samples (with equidistant bins) or for a set of samples.
+    Compute the Hartigans' dip statistic either for a histogram of
+    samples (with equidistant bins) or for a set of samples.
     """
     if is_hist:
         histogram = dat
@@ -99,13 +94,11 @@ def dip_fn(dat, is_hist=False, just_dip=False):
     right = [1]
 
     while True:
-        left_part, left_touchpoints = _gcm_(work_cdf-work_histogram, work_idxs)
+        left_part, left_touchpoints = _gcm_(work_cdf - work_histogram, work_idxs)
         right_part, right_touchpoints = _lcm_(work_cdf, work_idxs)
 
-        d_left, left_diffs = _touch_diffs_(left_part,
-                                           right_part, left_touchpoints)
-        d_right, right_diffs = _touch_diffs_(left_part,
-                                             right_part, right_touchpoints)
+        d_left, left_diffs = _touch_diffs_(left_part, right_part, left_touchpoints)
+        d_right, right_diffs = _touch_diffs_(left_part, right_part, right_touchpoints)
 
         if d_right > d_left:
             xr = right_touchpoints[d_right == right_diffs][-1]
@@ -116,24 +109,21 @@ def dip_fn(dat, is_hist=False, just_dip=False):
             xr = right_touchpoints[right_touchpoints >= xl][0]
             d = d_left
 
-        left_diff = np.abs(left_part[:xl+1] - work_cdf[:xl+1]).max()
-        right_diff = np.abs(right_part[xr:]
-                            - work_cdf[xr:]
-                            + work_histogram[xr:]).max()
+        left_diff = np.abs(left_part[: xl + 1] - work_cdf[: xl + 1]).max()
+        right_diff = np.abs(right_part[xr:] - work_cdf[xr:] + work_histogram[xr:]).max()
 
         if d <= D or xr == 0 or xl == len(work_cdf):
-            the_dip = max(np.abs(cdf[:len(left)] - left).max(),
-                          np.abs(cdf[-len(right)-1:-1] - right).max())
+            the_dip = max(np.abs(cdf[: len(left)] - left).max(), np.abs(cdf[-len(right) - 1 : -1] - right).max())
             if just_dip:
-                return the_dip/2
+                return the_dip / 2
             else:
-                return the_dip/2, (cdf, idxs, left, left_part, right, right_part)
+                return the_dip / 2, (cdf, idxs, left, left_part, right, right_part)
         else:
             D = max(D, left_diff, right_diff)
 
-        work_cdf = work_cdf[xl:xr+1]
-        work_idxs = work_idxs[xl:xr+1]
-        work_histogram = work_histogram[xl:xr+1]
+        work_cdf = work_cdf[xl : xr + 1]
+        work_idxs = work_idxs[xl : xr + 1]
+        work_histogram = work_histogram[xl : xr + 1]
 
-        left[len(left):] = left_part[1:xl+1]
+        left[len(left) :] = left_part[1 : xl + 1]
         right[:0] = right_part[xr:-1]

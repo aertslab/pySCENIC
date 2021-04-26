@@ -20,7 +20,9 @@ class Feature:
     def from_string(line, transform=lambda x: x):
         columns = re.split('[\t ]+', line.rstrip())
 
-        assert len(columns) >= 3, "Invalid BED file supplied: at least three columns are expected. Please, check carefully that the correct input type was selected."
+        assert (
+            len(columns) >= 3
+        ), "Invalid BED file supplied: at least three columns are expected. Please, check carefully that the correct input type was selected."
         assert re.match("[0-9]+", columns[1]), "Invalid BED file supplied: second column must contain integers."
         assert re.match("[0-9]+", columns[2]), "Invalid BED file supplied: third column must contain integers."
 
@@ -34,7 +36,11 @@ class Feature:
         strand = columns[5] if len(columns) >= 6 else None
 
         assert not strand or strand in (
-            '+', '-', '.', '?'), "Invalid BED file supplied: sixth column must contain strand (+/-/?)."
+            '+',
+            '-',
+            '.',
+            '?',
+        ), "Invalid BED file supplied: sixth column must contain strand (+/-/?)."
 
         return Feature(columns[0], int(columns[1]), int(columns[2]), name, score, strand)
 
@@ -72,18 +78,22 @@ class Feature:
         return r
 
     def __len__(self):
-        """ Length of feature in base pairs. """
+        """Length of feature in base pairs."""
         return self.interval[1] - self.interval[0]
 
     def has_overlap_with(self, other):
-        return (self.chromosome == other.chromosome
-                and self.interval[0] < other.interval[1]
-                and self.interval[1] > other.interval[0])
+        return (
+            self.chromosome == other.chromosome
+            and self.interval[0] < other.interval[1]
+            and self.interval[1] > other.interval[0]
+        )
 
     def __contains__(self, other):
-        return (self.chromosome == other.chromosome
-                and other.interval[0] >= self.interval[0]
-                and other.interval[1] <= self.interval[1])
+        return (
+            self.chromosome == other.chromosome
+            and other.interval[0] >= self.interval[0]
+            and other.interval[1] <= self.interval[1]
+        )
 
     def get_overlap_in_bp_with(self, other):
         if not self.has_overlap_with(other):
@@ -105,10 +115,13 @@ class FeatureSeq(object):
     @staticmethod
     def from_bed_file(file: Union[str, Type[io.IOBase]], transform=lambda x: x):
         if isinstance(file, io.IOBase):
+
             def _feature_iterator():
                 for line in file:
                     yield Feature.from_string(line, transform)
+
         else:
+
             def _feature_iterator():
                 with open(file, 'r') as f:
                     for line in f:
@@ -122,9 +135,12 @@ class FeatureSeq(object):
         self.name2features = defaultdict(list)
 
         for feature in features_iterator:
-            self.chromosome2tree[feature.chromosome].add((*feature.interval,
-                            {FeatureSeq.NAME_ATTRIBUTE: feature.name,
-                             FeatureSeq.SCORE_ATTRIBUTE: feature.score}))
+            self.chromosome2tree[feature.chromosome].add(
+                (
+                    *feature.interval,
+                    {FeatureSeq.NAME_ATTRIBUTE: feature.name, FeatureSeq.SCORE_ATTRIBUTE: feature.score},
+                )
+            )
             self.name2features[feature.name].append(feature)
 
     @memoize
@@ -158,18 +174,23 @@ class FeatureSeq(object):
             else:
                 overlap_fraction_relative_to_overlap_feature = overlap_in_bp / len(overlap_feature)
 
-            return max(overlap_fraction_relative_to_feature,
-                       overlap_fraction_relative_to_overlap_feature) >= fraction
+            return max(overlap_fraction_relative_to_feature, overlap_fraction_relative_to_overlap_feature) >= fraction
 
         def toFeature(interval):
-            return Feature(feature.chromosome,
-                       interval[0], interval[1],
-                       interval[2][FeatureSeq.NAME_ATTRIBUTE],
-                       interval[2][FeatureSeq.SCORE_ATTRIBUTE])
+            return Feature(
+                feature.chromosome,
+                interval[0],
+                interval[1],
+                interval[2][FeatureSeq.NAME_ATTRIBUTE],
+                interval[2][FeatureSeq.SCORE_ATTRIBUTE],
+            )
 
-        return list(filter(filter4Fraction,
-                      map(toFeature,
-                          self.chromosome2tree.get(feature.chromosome, InterLap()).find(feature.interval))))
+        return list(
+            filter(
+                filter4Fraction,
+                map(toFeature, self.chromosome2tree.get(feature.chromosome, InterLap()).find(feature.interval)),
+            )
+        )
 
     def intersection(self, other: 'FeatureSeq', fraction: Optional[float] = None) -> 'FeatureSeq':
         def _feature_iterator(self, other):

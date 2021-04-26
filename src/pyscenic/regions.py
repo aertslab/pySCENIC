@@ -30,9 +30,8 @@ def load(delineation: Delineation) -> FeatureSeq:
         return s.split('#')[0]
 
     return FeatureSeq.from_bed_file(
-                gzip.open(
-                    resource_stream('resources.delineations', delineation.value), "rt"),
-                        transform=strip_suffix)
+        gzip.open(resource_stream('resources.delineations', delineation.value), "rt"), transform=strip_suffix
+    )
 
 
 class RegionRankingDatabase(InvertedRankingDatabase):
@@ -64,7 +63,9 @@ class RegionRankingDatabase(InvertedRankingDatabase):
         return self.genes
 
 
-def convert(sig: Type[GeneSignature], db: RegionRankingDatabase, delineation: Delineation, fraction: float = 0.80) -> Type[GeneSignature]:
+def convert(
+    sig: Type[GeneSignature], db: RegionRankingDatabase, delineation: Delineation, fraction: float = 0.80
+) -> Type[GeneSignature]:
     """
     Convert a signature of gene symbols to a signature of region identifiers.
 
@@ -80,19 +81,28 @@ def convert(sig: Type[GeneSignature], db: RegionRankingDatabase, delineation: De
 
     # Every gene is transformed into a dictionary that maps the name of a feature to the weight of the corresponding gene.
     # These mappings are then combined taking the maximum of multiple values exists for a key.
-    identifier2weight = merge_with(max, (dict(zip(
-                                            map(attrgetter('name'), db.regions.intersection(load(delineation).get(gene),
-                                                                                            fraction=fraction)),
-                                            repeat(weight)))
-                                         for gene, weight in sig.gene2weight.items()))
+    identifier2weight = merge_with(
+        max,
+        (
+            dict(
+                zip(
+                    map(attrgetter('name'), db.regions.intersection(load(delineation).get(gene), fraction=fraction)),
+                    repeat(weight),
+                )
+            )
+            for gene, weight in sig.gene2weight.items()
+        ),
+    )
 
-    return sig.copy(gene2weight=identifier2weight,
-                    context=frozenset(chain(sig.context, [str(delineation)])))
+    return sig.copy(gene2weight=identifier2weight, context=frozenset(chain(sig.context, [str(delineation)])))
 
 
-def df2regulons(df: pd.DataFrame, gene_regulons: Sequence[Regulon],
-                db: RegionRankingDatabase,
-                delineations: Iterator[Delineation] = Delineation) -> Sequence[Regulon]:
+def df2regulons(
+    df: pd.DataFrame,
+    gene_regulons: Sequence[Regulon],
+    db: RegionRankingDatabase,
+    delineations: Iterator[Delineation] = Delineation,
+) -> Sequence[Regulon]:
     """
     Create gene-based regulons from a dataframe of enriched motifs.
     """
@@ -121,4 +131,3 @@ def df2regulons(df: pd.DataFrame, gene_regulons: Sequence[Regulon],
     #     less informational).
 
     raise NotImplemented
-

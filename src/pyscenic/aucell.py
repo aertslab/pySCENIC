@@ -44,7 +44,12 @@ def create_rankings(ex_mtx: pd.DataFrame, seed=None) -> pd.DataFrame:
     #    # Run below statement multiple times to see effect of shuffling in case of a tie.
     #    df.sample(frac=1.0, replace=False).rank(ascending=False, method='first', na_option='bottom').sort_index() - 1
     #
-    return ex_mtx.sample(frac=1.0, replace=False, axis=1, random_state=seed).rank(axis=1, ascending=False, method='first', na_option='bottom').astype(DTYPE) - 1
+    return (
+        ex_mtx.sample(frac=1.0, replace=False, axis=1, random_state=seed)
+        .rank(axis=1, ascending=False, method='first', na_option='bottom')
+        .astype(DTYPE)
+        - 1
+    )
 
 
 def derive_auc_threshold(ex_mtx: pd.DataFrame) -> pd.DataFrame:
@@ -60,7 +65,7 @@ def derive_auc_threshold(ex_mtx: pd.DataFrame) -> pd.DataFrame:
         that when using this value as the AUC threshold for 99% of the cells all ranked genes used for AUC calculation will
         have had a detected expression in the single-cell experiment.
     """
-    return pd.Series(np.count_nonzero(ex_mtx, axis=1)).quantile([.01, .05, .10, .50, 1])/ex_mtx.shape[1]
+    return pd.Series(np.count_nonzero(ex_mtx, axis=1)).quantile([0.01, 0.05, 0.10, 0.50, 1]) / ex_mtx.shape[1]
 
 
 enrichment = enrichment4cells
@@ -68,18 +73,28 @@ enrichment = enrichment4cells
 
 def _enrichment(shared_ro_memory_array, modules, genes, cells, auc_threshold, auc_mtx, offset):
     # The rankings dataframe is properly reconstructed (checked this).
-    df_rnk = pd.DataFrame(data=np.frombuffer(shared_ro_memory_array, dtype=DTYPE).reshape(len(cells), len(genes)),
-                          columns=genes, index=cells)
+    df_rnk = pd.DataFrame(
+        data=np.frombuffer(shared_ro_memory_array, dtype=DTYPE).reshape(len(cells), len(genes)),
+        columns=genes,
+        index=cells,
+    )
     # To avoid additional memory burden de resulting AUCs are immediately stored in the output sync. array.
     result_mtx = np.frombuffer(auc_mtx.get_obj(), dtype='d')
     inc = len(cells)
     for idx, module in enumerate(modules):
-        result_mtx[offset+(idx*inc):offset+((idx+1)*inc)] = enrichment4cells(df_rnk, module, auc_threshold).values.flatten(order="C")
+        result_mtx[offset + (idx * inc) : offset + ((idx + 1) * inc)] = enrichment4cells(
+            df_rnk, module, auc_threshold
+        ).values.flatten(order="C")
 
 
-def aucell4r(df_rnk: pd.DataFrame, signatures: Sequence[Type[GeneSignature]],
-             auc_threshold: float = 0.05, noweights: bool = False, normalize: bool = False,
-             num_workers: int = cpu_count()) -> pd.DataFrame:
+def aucell4r(
+    df_rnk: pd.DataFrame,
+    signatures: Sequence[Type[GeneSignature]],
+    auc_threshold: float = 0.05,
+    noweights: bool = False,
+    normalize: bool = False,
+    num_workers: int = cpu_count(),
+) -> pd.DataFrame:
     """
     Calculate enrichment of gene signatures for single cells.
 
@@ -94,9 +109,12 @@ def aucell4r(df_rnk: pd.DataFrame, signatures: Sequence[Type[GeneSignature]],
     """
     if num_workers == 1:
         # Show progress bar ...
-        aucs = pd.concat([enrichment4cells(df_rnk,
-                                     module.noweights() if noweights else module,
-                                     auc_threshold=auc_threshold) for module in tqdm(signatures)]).unstack("Regulon")
+        aucs = pd.concat(
+            [
+                enrichment4cells(df_rnk, module.noweights() if noweights else module, auc_threshold=auc_threshold)
+                for module in tqdm(signatures)
+            ]
+        ).unstack("Regulon")
         aucs.columns = aucs.columns.droplevel(0)
     else:
         # Decompose the rankings dataframe: the index and columns are shared with the child processes via pickling.
@@ -119,26 +137,44 @@ def aucell4r(df_rnk: pd.DataFrame, signatures: Sequence[Type[GeneSignature]],
 
         # Do the analysis in separate child processes.
         chunk_size = ceil(float(len(signatures)) / num_workers)
-        processes = [Process(target=_enrichment, args=(shared_ro_memory_array, chunk,
-                                                       genes, cells, auc_threshold,
-                                                       auc_mtx, (chunk_size*len(cells))*idx))
-                     for idx, chunk in enumerate(chunked(signatures, chunk_size))]
+        processes = [
+            Process(
+                target=_enrichment,
+                args=(
+                    shared_ro_memory_array,
+                    chunk,
+                    genes,
+                    cells,
+                    auc_threshold,
+                    auc_mtx,
+                    (chunk_size * len(cells)) * idx,
+                ),
+            )
+            for idx, chunk in enumerate(chunked(signatures, chunk_size))
+        ]
         for p in processes:
             p.start()
         for p in processes:
             p.join()
 
         # Reconstitute the results array. Using C or row-major ordering.
-        aucs = pd.DataFrame(data=np.ctypeslib.as_array(auc_mtx.get_obj()).reshape(len(signatures), len(cells)),
-                            columns=pd.Index(data=cells, name='Cell'),
-                            index=pd.Index(data=list(map(attrgetter("name"), signatures)), name='Regulon')).T
-    return aucs/aucs.max(axis=0) if normalize else aucs
+        aucs = pd.DataFrame(
+            data=np.ctypeslib.as_array(auc_mtx.get_obj()).reshape(len(signatures), len(cells)),
+            columns=pd.Index(data=cells, name='Cell'),
+            index=pd.Index(data=list(map(attrgetter("name"), signatures)), name='Regulon'),
+        ).T
+    return aucs / aucs.max(axis=0) if normalize else aucs
 
 
-def aucell(exp_mtx: pd.DataFrame, signatures: Sequence[Type[GeneSignature]],
-           auc_threshold: float = 0.05, noweights: bool = False, normalize: bool = False,
-           seed=None,
-           num_workers: int = cpu_count()) -> pd.DataFrame:
+def aucell(
+    exp_mtx: pd.DataFrame,
+    signatures: Sequence[Type[GeneSignature]],
+    auc_threshold: float = 0.05,
+    noweights: bool = False,
+    normalize: bool = False,
+    seed=None,
+    num_workers: int = cpu_count(),
+) -> pd.DataFrame:
     """
     Calculate enrichment of gene signatures for single cells.
 
@@ -152,4 +188,3 @@ def aucell(exp_mtx: pd.DataFrame, signatures: Sequence[Type[GeneSignature]],
     :return: A dataframe with the AUCs (n_cells x n_modules).
     """
     return aucell4r(create_rankings(exp_mtx, seed), signatures, auc_threshold, noweights, normalize, num_workers)
-

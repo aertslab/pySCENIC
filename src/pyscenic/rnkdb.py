@@ -26,6 +26,7 @@ class PyArrowThreads:
     By default the number of threads is set to 4.
     Overriding the number of threads is possible by using the environment variable "PYARROW_THREADS=nbr_threads".
     """
+
     pyarrow_threads = 4
 
     if os.environ.get("PYARROW_THREADS"):
@@ -126,9 +127,7 @@ class RankingDatabase(metaclass=ABCMeta):
         """
         Returns a unambiguous string representation.
         """
-        return "{}(name=\"{}\")".format(
-            self.__class__.__name__,
-            self._name)
+        return "{}(name=\"{}\")".format(self.__class__.__name__, self._name)
 
 
 # SQL query to get the total number of genes in the database.
@@ -172,13 +171,14 @@ class SQLiteRankingDatabase(RankingDatabase):
 
         # Because of problems on same architectures use of unsigned integers is avoided.
         def derive_dtype(n):
-            """ Derive datatype for storing 0-based rankings for a given set length. """
-            if n <= 2**15:
+            """Derive datatype for storing 0-based rankings for a given set length."""
+            if n <= 2 ** 15:
                 # Range int16: -2^15 (= -32768) to 2^15 - 1 (= 32767).
                 return np.int16
             else:
                 # Range int32: -2^31 (= -2147483648) to 2^31 - 1 (= 2147483647).
                 return np.int32
+
         self._dtype = derive_dtype(self._gene_count)
 
     @property
@@ -241,6 +241,7 @@ class SQLiteRankingDatabase(RankingDatabase):
             # Escape single quotes (') by using (''), because sometimes ID's contain a single quote.
             def quote(value):
                 return "'" + value.replace("'", "''") + "'"
+
             return ','.join(map(quote, values))
 
         # For some genes in the signature there might not be a rank available in the database.
@@ -288,7 +289,8 @@ class FeatherRankingDatabase(RankingDatabase):
         reader = FeatherReader(self._fname)
         # Get all gene names (exclude "features" column).
         return tuple(
-            reader.get_column_name(idx) for idx in range(reader.num_columns)
+            reader.get_column_name(idx)
+            for idx in range(reader.num_columns)
             if reader.get_column_name(idx) != INDEX_NAME
         )
 
@@ -342,8 +344,7 @@ class ParquetRankingDatabase(RankingDatabase):
     def genes(self) -> Tuple[str]:
         # noinspection PyTypeChecker
         metadata = pq.read_metadata(self._fname)
-        assert metadata.num_row_groups == 1, \
-            "Parquet database {0:s} has more than one row group.".format(self._fname)
+        assert metadata.num_row_groups == 1, "Parquet database {0:s} has more than one row group.".format(self._fname)
         metadata_row_group = metadata.row_group(0)
         # Get all gene names (exclude "features" column).
         return tuple(
@@ -369,8 +370,7 @@ class ParquetRankingDatabase(RankingDatabase):
         gene_set = self.geneset.intersection(set(gs.genes))
         # Read rankings columns for genes in order they appear in the Parquet file.
         df = pq.read_pandas(
-            self._fname,
-            columns=(INDEX_NAME,) + tuple(sorted(gene_set, key=lambda gene: self.genes2idx[gene]))
+            self._fname, columns=(INDEX_NAME,) + tuple(sorted(gene_set, key=lambda gene: self.genes2idx[gene]))
         ).to_pandas()
         # Avoid copying the whole dataframe by replacing the index in place.
         # This makes loading a database twice as fast in case the database file is already in the filesystem cache.
@@ -382,6 +382,7 @@ class MemoryDecorator(RankingDatabase):
     """
     A decorator for a ranking database which loads the entire database in memory.
     """
+
     def __init__(self, db: Type[RankingDatabase]):
         assert db, "Database should be supplied."
         self._db = db
@@ -407,6 +408,7 @@ class DataFrameRankingDatabase(RankingDatabase):
     """
     A ranking database from a dataframe.
     """
+
     def __init__(self, df: pd.DataFrame, name: str):
         self._df = df
         super().__init__(name)
@@ -434,7 +436,9 @@ class DataFrameRankingDatabase(RankingDatabase):
         assert not os.path.exists(fname)
         df = self._df.copy()
         df.index.name = INDEX_NAME
-        df.reset_index(inplace=True) # Index is not stored in feather format. https://github.com/wesm/feather/issues/200
+        df.reset_index(
+            inplace=True
+        )  # Index is not stored in feather format. https://github.com/wesm/feather/issues/200
         write_feather(df, fname)
 
 
@@ -473,11 +477,15 @@ class InvertedRankingDatabase(RankingDatabase):
         inverted_data = np.empty(shape=(n_features, top_n_identifiers), dtype=INVERTED_DB_DTYPE)
         df_original.columns = [identifier2idx[identifier] for identifier in df_original.columns]
         for idx, (_, row) in tqdm(enumerate(df_original.iterrows())):
-            inverted_data[idx, :] = np.array(row.sort_values(ascending=True).head(top_n_identifiers).index, dtype=INVERTED_DB_DTYPE)
+            inverted_data[idx, :] = np.array(
+                row.sort_values(ascending=True).head(top_n_identifiers).index, dtype=INVERTED_DB_DTYPE
+            )
         df = pd.DataFrame(data=inverted_data, index=df_original.index, columns=list(range(top_n_identifiers)))
 
         df.index.name = INDEX_NAME
-        df.reset_index(inplace=True) # Index is not stored in feather format. https://github.com/wesm/feather/issues/200
+        df.reset_index(
+            inplace=True
+        )  # Index is not stored in feather format. https://github.com/wesm/feather/issues/200
         write_feather(df, fname)
 
     @classmethod
@@ -495,7 +503,6 @@ class InvertedRankingDatabase(RankingDatabase):
         for ridx, row in df.iterrows():
             df[ridx, row == rank_unknown] = np.random.randint(low=0, high=n, size=n)
         DataFrameRankingDatabase(df=df, name=db.name).save(fname)
-
 
     def __init__(self, fname: str, name: str):
         """
@@ -536,7 +543,7 @@ class InvertedRankingDatabase(RankingDatabase):
         # noinspection PyTypeChecker
         return tuple(self.identifier2idx.keys())
 
-    def is_valid_rank_threshold(self, rank_threshold:int) -> bool:
+    def is_valid_rank_threshold(self, rank_threshold: int) -> bool:
         return rank_threshold <= self.max_rank
 
     def load_full(self) -> pd.DataFrame:
@@ -548,11 +555,16 @@ class InvertedRankingDatabase(RankingDatabase):
     def load(self, gs: Type[GeneSignature]) -> pd.DataFrame:
         rank_unknown = np.iinfo(INVERTED_DB_DTYPE).max
         reference_identifiers = np.array([self.identifier2idx[identifier] for identifier in gs.genes])
-        return pd.concat([col.reindex(index=reference_identifiers, fill_value=rank_unknown) for col in self.features],
-                         axis=1).T.astype(INVERTED_DB_DTYPE).rename(columns=self.idx2identifier)
+        return (
+            pd.concat(
+                [col.reindex(index=reference_identifiers, fill_value=rank_unknown) for col in self.features], axis=1
+            )
+            .T.astype(INVERTED_DB_DTYPE)
+            .rename(columns=self.idx2identifier)
+        )
 
 
-def convert_sqlitedb_to_featherdb(fname: str, out_folder: str, name: str, extension: str= "feather") -> str:
+def convert_sqlitedb_to_featherdb(fname: str, out_folder: str, name: str, extension: str = "feather") -> str:
     """
     Convert a whole genome SQLite rankings database to a feather format based database.
 
