@@ -37,10 +37,11 @@ __all__ = ['prune2df', 'find_features', 'df2regulons']
 
 # Taken from: https://www.regular-expressions.info/ip.html
 IP_PATTERN = re.compile(
-    r"""(25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[1-9]?[0-9])\.""" 
     r"""(25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[1-9]?[0-9])\."""
     r"""(25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[1-9]?[0-9])\."""
-    r"""(25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[1-9]?[0-9]):\d+""")
+    r"""(25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[1-9]?[0-9])\."""
+    r"""(25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[1-9]?[0-9]):\d+"""
+)
 
 LOGGER = logging.getLogger(__name__)
 
@@ -59,8 +60,7 @@ def _prepare_client(client_or_address, num_workers):
     # https://github.com/tmoerman/arboreto/blob/482ce8598da5385eb0e01a50362cb2b1e6f66a41/arboreto/algo.py#L145-L191
 
     if client_or_address is None or str(client_or_address).lower() == 'local':
-        local_cluster = LocalCluster(n_workers=num_workers,
-                                     threads_per_worker=1)
+        local_cluster = LocalCluster(n_workers=num_workers, threads_per_worker=1)
         client = Client(local_cluster)
 
         def close_client_and_local_cluster(verbose=False):
@@ -98,10 +98,17 @@ def _prepare_client(client_or_address, num_workers):
 
 
 class Worker(Process):
-    def __init__(self, name: str, db: Type[RankingDatabase], modules: Sequence[Regulon],
-                 motif_annotations_fname: str, sender,
-                 motif_similarity_fdr: float, orthologuous_identity_threshold: float,
-                 transformation_func):
+    def __init__(
+        self,
+        name: str,
+        db: Type[RankingDatabase],
+        modules: Sequence[Regulon],
+        motif_annotations_fname: str,
+        sender,
+        motif_similarity_fdr: float,
+        orthologuous_identity_threshold: float,
+        transformation_func,
+    ):
         super().__init__(name=name)
         self.database = db
         self.modules = modules
@@ -117,9 +124,11 @@ class Worker(Process):
         LOGGER.info("Worker {}: database loaded in memory.".format(self.name))
 
         # Load motif annotations in memory.
-        motif_annotations = load_motif_annotations(self.motif_annotations_fname,
-                                                   motif_similarity_fdr=self.motif_similarity_fdr,
-                                                   orthologous_identity_threshold=self.orthologuous_identity_threshold)
+        motif_annotations = load_motif_annotations(
+            self.motif_annotations_fname,
+            motif_similarity_fdr=self.motif_similarity_fdr,
+            orthologous_identity_threshold=self.orthologuous_identity_threshold,
+        )
         LOGGER.info("Worker {}: motif annotations loaded in memory.".format(self.name))
 
         # Apply transformation on all modules.
@@ -140,13 +149,18 @@ class Worker(Process):
 T = TypeVar('T')
 
 
-def _distributed_calc(rnkdbs: Sequence[Type[RankingDatabase]], modules: Sequence[Type[GeneSignature]],
-                      motif_annotations_fname: str,
-                      transform_func: Callable[[Type[RankingDatabase], Sequence[Type[GeneSignature]], str], T],
-                      aggregate_func: Callable[[Sequence[T]], T],
-                      motif_similarity_fdr: float = 0.001, orthologuous_identity_threshold: float = 0.0,
-                      client_or_address='dask_multiprocessing',
-                      num_workers=None, module_chunksize=100) -> T:
+def _distributed_calc(
+    rnkdbs: Sequence[Type[RankingDatabase]],
+    modules: Sequence[Type[GeneSignature]],
+    motif_annotations_fname: str,
+    transform_func: Callable[[Type[RankingDatabase], Sequence[Type[GeneSignature]], str], T],
+    aggregate_func: Callable[[Sequence[T]], T],
+    motif_similarity_fdr: float = 0.001,
+    orthologuous_identity_threshold: float = 0.0,
+    client_or_address='dask_multiprocessing',
+    num_workers=None,
+    module_chunksize=100,
+) -> T:
     """
     Perform a parallelized or distributed calculation, either pruning targets or finding enriched motifs.
 
@@ -169,14 +183,17 @@ def _distributed_calc(rnkdbs: Sequence[Type[RankingDatabase]], modules: Sequence
         multiprocessing scheduler.
     :return: A pandas dataframe or a sequence of regulons (depends on aggregate function supplied).
     """
+
     def is_valid(client_or_address):
-        if isinstance(client_or_address, str) and ((client_or_address in
-                                                    {"custom_multiprocessing", "dask_multiprocessing", "local"})
-                                                   or IP_PATTERN.fullmatch(client_or_address)):
+        if isinstance(client_or_address, str) and (
+            (client_or_address in {"custom_multiprocessing", "dask_multiprocessing", "local"})
+            or IP_PATTERN.fullmatch(client_or_address)
+        ):
             return True
         elif isinstance(client_or_address, Client):
             return True
         return False
+
     assert is_valid(client_or_address), "\"{}\"is not valid for parameter client_or_address.".format(client_or_address)
 
     if client_or_address not in {'custom_multiprocessing', 'dask_multiprocessing'}:
@@ -188,37 +205,50 @@ def _distributed_calc(rnkdbs: Sequence[Type[RankingDatabase]], modules: Sequence
         if LOGGER.getEffectiveLevel() > logging.INFO:
             LOGGER.setLevel(logging.INFO)
 
-    if client_or_address == 'custom_multiprocessing': # CUSTOM parallelized implementation.
+    if client_or_address == 'custom_multiprocessing':  # CUSTOM parallelized implementation.
         # This implementation overcomes the I/O-bounded performance. Each worker (subprocess) loads a dedicated ranking
         # database and motif annotation table into its own memory space before consuming module. The implementation of
         # each worker uses the AUC-first numba JIT based implementation of the algorithm.
-        assert len(rnkdbs) <= num_workers if num_workers else cpu_count(), "The number of databases is larger than the number of cores."
-        amplifier = int((num_workers if num_workers else cpu_count())/len(rnkdbs))
+        assert (
+            len(rnkdbs) <= num_workers if num_workers else cpu_count()
+        ), "The number of databases is larger than the number of cores."
+        amplifier = int((num_workers if num_workers else cpu_count()) / len(rnkdbs))
         LOGGER.info("Using {} workers.".format(len(rnkdbs) * amplifier))
         receivers = []
         for db in rnkdbs:
-            for idx, chunk in enumerate(chunked_iter(modules, ceil(len(modules)/float(amplifier)))):
+            for idx, chunk in enumerate(chunked_iter(modules, ceil(len(modules) / float(amplifier)))):
                 sender, receiver = Pipe()
                 receivers.append(receiver)
-                Worker("{}({})".format(db.name, idx+1), db, chunk, motif_annotations_fname, sender,
-                       motif_similarity_fdr, orthologuous_identity_threshold, transform_func).start()
+                Worker(
+                    "{}({})".format(db.name, idx + 1),
+                    db,
+                    chunk,
+                    motif_annotations_fname,
+                    sender,
+                    motif_similarity_fdr,
+                    orthologuous_identity_threshold,
+                    transform_func,
+                ).start()
         # Retrieve the name of the temporary file to which the data is stored. This is a blocking operation.
         fnames = [recv.recv() for recv in receivers]
         # Load all data from disk and concatenate.
         def load(fname):
             with open(fname, 'rb') as f:
                 return pickle.load(f)
+
         try:
             return aggregate_func(list(map(load, fnames)))
         finally:
             # Remove temporary files.
             for fname in fnames:
                 os.remove(fname)
-    else: # DASK framework.
+    else:  # DASK framework.
         # Load motif annotations.
-        motif_annotations = load_motif_annotations(motif_annotations_fname,
-                                                   motif_similarity_fdr=motif_similarity_fdr,
-                                                   orthologous_identity_threshold=orthologuous_identity_threshold)
+        motif_annotations = load_motif_annotations(
+            motif_annotations_fname,
+            motif_similarity_fdr=motif_similarity_fdr,
+            orthologous_identity_threshold=orthologuous_identity_threshold,
+        )
 
         # Create dask graph.
         def create_graph(client=None):
@@ -239,14 +269,15 @@ def _distributed_calc(rnkdbs: Sequence[Type[RankingDatabase]], modules: Sequence
             # unpicking between processes.
             def wrap(data):
                 return client.scatter(data, broadcast=True) if client else delayed(data, pure=True)
+
             delayed_or_future_annotations = wrap(motif_annotations)
             # 2. The databases: these database objects are typically proxies to the data on disk. They only have
             # the name and location on shared storage as fields. For consistency reason we do broadcast these database
             # objects to the workers. If we decide to have all information of a database loaded into memory we can still
             # safely use clusters.
-            #def memoize(db: Type[RankingDatabase]) -> Type[RankingDatabase]:
+            # def memoize(db: Type[RankingDatabase]) -> Type[RankingDatabase]:
             #    return MemoryDecorator(db)
-            #delayed_or_future_dbs = list(map(wrap, map(memoize, rnkdbs)))
+            # delayed_or_future_dbs = list(map(wrap, map(memoize, rnkdbs)))
             # Check also latest Stackoverflow message: https://stackoverflow.com/questions/50795901/dask-scatter-broadcast-a-list
             delayed_or_future_dbs = list(map(wrap, rnkdbs))
             # 3. The gene signatures: these signatures become large when chunking them, therefore chunking is overruled
@@ -289,30 +320,45 @@ def _distributed_calc(rnkdbs: Sequence[Type[RankingDatabase]], modules: Sequence
             # https://stackoverflow.com/questions/47776936/why-is-a-computation-much-slower-within-a-dask-distributed-worker
 
             return aggregate_func(
-                        (delayed(transform_func)
-                            (db, gs_chunk, delayed_or_future_annotations)
-                                for db in delayed_or_future_dbs
-                                    for gs_chunk in chunked_iter(modules, module_chunksize)))
+                (
+                    delayed(transform_func)(db, gs_chunk, delayed_or_future_annotations)
+                    for db in delayed_or_future_dbs
+                    for gs_chunk in chunked_iter(modules, module_chunksize)
+                )
+            )
 
         # Compute dask graph ...
         if client_or_address == "dask_multiprocessing":
             # ... via multiprocessing.
-            return create_graph().compute(scheduler='processes', num_workers=num_workers if num_workers else cpu_count())
+            return create_graph().compute(
+                scheduler='processes', num_workers=num_workers if num_workers else cpu_count()
+            )
         else:
             # ... via dask.distributed framework.
-            client, shutdown_callback = _prepare_client(client_or_address, num_workers=num_workers if num_workers else cpu_count())
+            client, shutdown_callback = _prepare_client(
+                client_or_address, num_workers=num_workers if num_workers else cpu_count()
+            )
             try:
                 return client.compute(create_graph(client), sync=True)
             finally:
                 shutdown_callback(False)
 
 
-def prune2df(rnkdbs: Sequence[Type[RankingDatabase]], modules: Sequence[Regulon],
-             motif_annotations_fname: str,
-             rank_threshold: int = 1500, auc_threshold: float = 0.05, nes_threshold=3.0,
-             motif_similarity_fdr: float = 0.001, orthologuous_identity_threshold: float = 0.0,
-             weighted_recovery=False, client_or_address='dask_multiprocessing',
-             num_workers=None, module_chunksize=100, filter_for_annotation=True) -> pd.DataFrame:
+def prune2df(
+    rnkdbs: Sequence[Type[RankingDatabase]],
+    modules: Sequence[Regulon],
+    motif_annotations_fname: str,
+    rank_threshold: int = 1500,
+    auc_threshold: float = 0.05,
+    nes_threshold=3.0,
+    motif_similarity_fdr: float = 0.001,
+    orthologuous_identity_threshold: float = 0.0,
+    weighted_recovery=False,
+    client_or_address='dask_multiprocessing',
+    num_workers=None,
+    module_chunksize=100,
+    filter_for_annotation=True,
+) -> pd.DataFrame:
     """
     Calculate all regulons for a given sequence of ranking databases and a sequence of co-expression modules.
     The number of regulons derived from the supplied modules is usually much lower. In addition, the targets of the
@@ -337,23 +383,41 @@ def prune2df(rnkdbs: Sequence[Type[RankingDatabase]], modules: Sequence[Regulon]
     :return: A dataframe.
     """
     # Always use module2features_auc1st_impl not only because of speed impact but also because of reduced memory footprint.
-    module2features_func = partial(module2features_auc1st_impl,
-                                   rank_threshold=rank_threshold,
-                                   auc_threshold=auc_threshold,
-                                   nes_threshold=nes_threshold,
-                                   filter_for_annotation=filter_for_annotation)
-    transformation_func = partial(modules2df,
-                                  module2features_func=module2features_func, weighted_recovery=weighted_recovery)
+    module2features_func = partial(
+        module2features_auc1st_impl,
+        rank_threshold=rank_threshold,
+        auc_threshold=auc_threshold,
+        nes_threshold=nes_threshold,
+        filter_for_annotation=filter_for_annotation,
+    )
+    transformation_func = partial(
+        modules2df, module2features_func=module2features_func, weighted_recovery=weighted_recovery
+    )
     # Create a distributed dataframe from individual delayed objects to avoid out of memory problems.
-    aggregation_func = partial(from_delayed, meta=DF_META_DATA) if client_or_address != 'custom_multiprocessing' else pd.concat
-    return _distributed_calc(rnkdbs, modules, motif_annotations_fname, transformation_func, aggregation_func,
-                             motif_similarity_fdr, orthologuous_identity_threshold, client_or_address,
-                             num_workers, module_chunksize)
+    aggregation_func = (
+        partial(from_delayed, meta=DF_META_DATA) if client_or_address != 'custom_multiprocessing' else pd.concat
+    )
+    return _distributed_calc(
+        rnkdbs,
+        modules,
+        motif_annotations_fname,
+        transformation_func,
+        aggregation_func,
+        motif_similarity_fdr,
+        orthologuous_identity_threshold,
+        client_or_address,
+        num_workers,
+        module_chunksize,
+    )
 
 
-def find_features(rnkdbs: Sequence[Type[RankingDatabase]], signatures: Sequence[Type[GeneSignature]],
-                  motif_annotations_fname: str,
-                  motif_base_url: str = "http://motifcollections.aertslab.org/v9/logos/", **kwargs) -> pd.DataFrame:
+def find_features(
+    rnkdbs: Sequence[Type[RankingDatabase]],
+    signatures: Sequence[Type[GeneSignature]],
+    motif_annotations_fname: str,
+    motif_base_url: str = "http://motifcollections.aertslab.org/v9/logos/",
+    **kwargs
+) -> pd.DataFrame:
     """
     Find enriched features for gene signatures.
 
@@ -376,6 +440,7 @@ def find_features(rnkdbs: Sequence[Type[RankingDatabase]], signatures: Sequence[
     :param motif_base_url:
     :return: A dataframe with the enriched features.
     """
-    return add_motif_url(prune2df(rnkdbs, signatures, motif_annotations_fname,
-                                  filter_for_annotation=False, **kwargs), base_url=motif_base_url)
-
+    return add_motif_url(
+        prune2df(rnkdbs, signatures, motif_annotations_fname, filter_for_annotation=False, **kwargs),
+        base_url=motif_base_url,
+    )

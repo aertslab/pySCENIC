@@ -17,8 +17,15 @@ from pyscenic.binarization import binarize
 from pathlib import Path, PurePath
 
 
-__all__ = ['save_matrix', 'load_exp_matrix', 'load_signatures', 'save_enriched_motifs', 'load_adjacencies',
-           'load_modules', 'append_auc_mtx']
+__all__ = [
+    'save_matrix',
+    'load_exp_matrix',
+    'load_signatures',
+    'save_enriched_motifs',
+    'load_adjacencies',
+    'load_modules',
+    'append_auc_mtx',
+]
 
 
 ATTRIBUTE_NAME_CELL_IDENTIFIER = "CellID"
@@ -40,18 +47,21 @@ def save_df_as_loom(df: pd.DataFrame, fname: str) -> None:
     # The orientation of the loom file is always:
     #   - Columns represent cells or aggregates of cells
     # 	- Rows represent genes
-    column_attrs = { ATTRIBUTE_NAME_CELL_IDENTIFIER: df.index.values.astype('str'), }
-    row_attrs = { ATTRIBUTE_NAME_GENE: df.columns.values.astype('str'), }
-    lp.create(filename=fname,
-              layers=df.T.values,
-              row_attrs=row_attrs,
-              col_attrs=column_attrs)
+    column_attrs = {
+        ATTRIBUTE_NAME_CELL_IDENTIFIER: df.index.values.astype('str'),
+    }
+    row_attrs = {
+        ATTRIBUTE_NAME_GENE: df.columns.values.astype('str'),
+    }
+    lp.create(filename=fname, layers=df.T.values, row_attrs=row_attrs, col_attrs=column_attrs)
 
 
-def load_exp_matrix_as_loom(fname,
-                            return_sparse=False,
-                            attribute_name_cell_id: str = ATTRIBUTE_NAME_CELL_IDENTIFIER,
-                            attribute_name_gene: str = ATTRIBUTE_NAME_GENE) -> pd.DataFrame:
+def load_exp_matrix_as_loom(
+    fname,
+    return_sparse=False,
+    attribute_name_cell_id: str = ATTRIBUTE_NAME_CELL_IDENTIFIER,
+    attribute_name_gene: str = ATTRIBUTE_NAME_GENE,
+) -> pd.DataFrame:
     """
     Load expression matrix from loom file.
 
@@ -59,20 +69,20 @@ def load_exp_matrix_as_loom(fname,
     :return: A 2-dimensional dataframe (rows = cells x columns = genes).
     """
     if return_sparse:
-        with lp.connect(fname,mode='r',validate=False) as ds:
+        with lp.connect(fname, mode='r', validate=False) as ds:
             ex_mtx = ds.layers[''].sparse().T.tocsc()
             genes = pd.Series(ds.ra[attribute_name_gene])
             cells = ds.ca[attribute_name_cell_id]
         return ex_mtx, genes, cells
 
     else:
-        with lp.connect(fname,mode='r',validate=False) as ds:
+        with lp.connect(fname, mode='r', validate=False) as ds:
             # The orientation of the loom file is always:
             #   - Columns represent cells or aggregates of cells
             # 	- Rows represent genes
-            return pd.DataFrame(data=ds[:, :],
-                                index=ds.ra[attribute_name_gene],
-                                columns=ds.ca[attribute_name_cell_id]).T
+            return pd.DataFrame(
+                data=ds[:, :], index=ds.ra[attribute_name_gene], columns=ds.ca[attribute_name_cell_id]
+            ).T
 
 
 def suffixes_to_separator(extension):
@@ -83,7 +93,7 @@ def suffixes_to_separator(extension):
 
 
 def is_valid_suffix(extension, method):
-    assert(isinstance(extension,list)), 'extension should be of type "list"'
+    assert isinstance(extension, list), 'extension should be of type "list"'
     if method in ['grn', 'aucell']:
         valid_extensions = ['.csv', '.tsv', '.loom', '.h5ad']
     elif method == 'ctx':
@@ -96,10 +106,13 @@ def is_valid_suffix(extension, method):
         return False
 
 
-def load_exp_matrix(fname: str, transpose: bool = False,
-                    return_sparse: bool = False,
-                    attribute_name_cell_id: str = ATTRIBUTE_NAME_CELL_IDENTIFIER,
-                    attribute_name_gene: str = ATTRIBUTE_NAME_GENE) -> pd.DataFrame:
+def load_exp_matrix(
+    fname: str,
+    transpose: bool = False,
+    return_sparse: bool = False,
+    attribute_name_cell_id: str = ATTRIBUTE_NAME_CELL_IDENTIFIER,
+    attribute_name_gene: str = ATTRIBUTE_NAME_GENE,
+) -> pd.DataFrame:
     """
     Load expression matrix from disk.
 
@@ -116,12 +129,15 @@ def load_exp_matrix(fname: str, transpose: bool = False,
             return load_exp_matrix_as_loom(fname, return_sparse, attribute_name_cell_id, attribute_name_gene)
         elif '.h5ad' in extension:
             from anndata import read_h5ad
+
             adata = read_h5ad(filename=fname, backed='r')
             if return_sparse:
                 # expr, gene, cell:
                 return adata.X.value, adata.var_names.values, adata.obs_names.values
             else:
-                return pd.DataFrame(adata.X.value.todense(), index=adata.obs_names.values, columns=adata.var_names.values)
+                return pd.DataFrame(
+                    adata.X.value.todense(), index=adata.obs_names.values, columns=adata.var_names.values
+                )
 
         else:
             df = pd.read_csv(fname, sep=suffixes_to_separator(extension), header=0, index_col=0)
@@ -155,7 +171,7 @@ def guess_separator(fname: str) -> str:
         lines = f.readlines()
 
     # decode if gzipped file:
-    for i,x in enumerate(lines):
+    for i, x in enumerate(lines):
         if isinstance(x, (bytes, bytearray)):
             lines[i] = x.decode()
 
@@ -186,9 +202,7 @@ def load_signatures(fname: str) -> Sequence[Type[GeneSignature]]:
         return load_from_yaml(fname)
     elif '.gmt' in extension:
         sep = guess_separator(fname)
-        return GeneSignature.from_gmt(fname,
-                                  field_separator=sep,
-                                  gene_separator=sep)
+        return GeneSignature.from_gmt(fname, field_separator=sep, gene_separator=sep)
     elif '.dat' in extension:
         with openfile(fname, 'rb') as f:
             return pickle.load(f)
@@ -196,7 +210,7 @@ def load_signatures(fname: str) -> Sequence[Type[GeneSignature]]:
         raise ValueError("Unknown file format \"{}\".".format(fname))
 
 
-def save_enriched_motifs(df, fname:str) -> None:
+def save_enriched_motifs(df, fname: str) -> None:
     """
     Save enriched motifs.
 
@@ -228,7 +242,9 @@ def save_enriched_motifs(df, fname:str) -> None:
 
 def load_adjacencies(fname: str) -> pd.DataFrame:
     extension = PurePath(fname).suffixes
-    return pd.read_csv(fname, sep=suffixes_to_separator(extension), dtype={0:str,1:str,2:np.float64}, keep_default_na=False )
+    return pd.read_csv(
+        fname, sep=suffixes_to_separator(extension), dtype={0: str, 1: str, 2: np.float64}, keep_default_na=False
+    )
 
 
 def load_modules(fname: str) -> Sequence[Type[GeneSignature]]:
@@ -260,7 +276,14 @@ def compress_meta(meta):
     return base64.b64encode(zlib.compress(json.dumps(meta).encode('ascii'))).decode('ascii')
 
 
-def append_auc_mtx(fname: str, ex_mtx: pd.DataFrame, auc_mtx: pd.DataFrame, regulons: Sequence[Type[GeneSignature]], seed=None, num_workers=1) -> None:
+def append_auc_mtx(
+    fname: str,
+    ex_mtx: pd.DataFrame,
+    auc_mtx: pd.DataFrame,
+    regulons: Sequence[Type[GeneSignature]],
+    seed=None,
+    num_workers=1,
+) -> None:
     """
 
     Append AUC matrix to loom file.
@@ -275,6 +298,7 @@ def append_auc_mtx(fname: str, ex_mtx: pd.DataFrame, auc_mtx: pd.DataFrame, regu
             if elem.endswith('.png'):
                 return elem
         return ""
+
     try:
         name2logo = {reg.name: fetch_logo(reg.context) for reg in regulons}
     except AttributeError:
@@ -282,11 +306,16 @@ def append_auc_mtx(fname: str, ex_mtx: pd.DataFrame, auc_mtx: pd.DataFrame, regu
 
     # Binarize matrix for AUC thresholds.
     _, auc_thresholds = binarize(auc_mtx, seed=seed, num_workers=num_workers)
-    regulon_thresholds = [{"regulon": name,
-                           "defaultThresholdValue":(threshold if isinstance(threshold, float) else threshold[0]),
-                           "defaultThresholdName": "gaussian_mixture_split",
-                           "allThresholds": {"gaussian_mixture_split": (threshold if isinstance(threshold, float) else threshold[0])},
-                           "motifData": name2logo.get(name, "")} for name, threshold in auc_thresholds.iteritems()]
+    regulon_thresholds = [
+        {
+            "regulon": name,
+            "defaultThresholdValue": (threshold if isinstance(threshold, float) else threshold[0]),
+            "defaultThresholdName": "gaussian_mixture_split",
+            "allThresholds": {"gaussian_mixture_split": (threshold if isinstance(threshold, float) else threshold[0])},
+            "motifData": name2logo.get(name, ""),
+        }
+        for name, threshold in auc_thresholds.iteritems()
+    ]
 
     # Calculate the number of genes per cell.
     binary_mtx = ex_mtx.copy()
@@ -300,15 +329,12 @@ def append_auc_mtx(fname: str, ex_mtx: pd.DataFrame, auc_mtx: pd.DataFrame, regu
     data = np.zeros(shape=(n_genes, n_regulons), dtype=int)
     for idx, regulon in enumerate(regulons):
         data[:, idx] = np.isin(genes, regulon.genes).astype(int)
-    regulon_assignment = pd.DataFrame(data=data,
-                                      index=ex_mtx.columns,
-                                      columns=list(map(attrgetter('name'), regulons)))
+    regulon_assignment = pd.DataFrame(data=data, index=ex_mtx.columns, columns=list(map(attrgetter('name'), regulons)))
 
     # Create meta-data structure.
     def create_structure_array(df):
         # Create a numpy structured array
-        return np.array([tuple(row) for row in df.values],
-                        dtype=np.dtype(list(zip(df.columns, df.dtypes))))
+        return np.array([tuple(row) for row in df.values], dtype=np.dtype(list(zip(df.columns, df.dtypes))))
 
     with lp.connect(fname, validate=False) as ds:
         # The orientation of the loom file is always:
@@ -325,4 +351,3 @@ def append_auc_mtx(fname: str, ex_mtx: pd.DataFrame, auc_mtx: pd.DataFrame, regu
             meta_data = {}
         meta_data["regulonThresholds"] = regulon_thresholds
         ds.attrs[ATTRIBUTE_NAME_METADATA] = compress_meta(meta_data)
-

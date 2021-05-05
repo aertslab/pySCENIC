@@ -11,21 +11,35 @@ CODE2DELINEATION = {name.lower(): member for name, member in Delineation.__membe
 
 
 def create_argument_parser():
-    parser = argparse.ArgumentParser(prog=os.path.splitext(os.path.basename(__file__))[0],
-                                     description="Convert a signature of gene symbols to a signature of region identifiers.",
-                                     fromfile_prefix_chars='@', add_help=True)
-    parser.add_argument('gmt_fname', nargs=1,
-                        type=argparse.FileType('rt'),
-                        help='The name of the GMT file that contains the signatures.')
-    parser.add_argument('db_fname', nargs=1,
-                        type=argparse.FileType('rb'),
-                        help='The region-based ranking database.')
-    parser.add_argument('-d', 'delineation',
-                        choices=CODE2DELINEATION.keys(), default=Delineation.HG19_500BP_UP.name.lower(),
-                        help='The candidate regulatory region delineation to use (default: {}).'.format(Delineation.HG19_500BP_UP.name.lower()))
-    parser.add_argument('-f', '--fraction',
-                        type=float, default=0.8,
-                        help='The number of top genes/regions to keep in database (default: 0.8).')
+    parser = argparse.ArgumentParser(
+        prog=os.path.splitext(os.path.basename(__file__))[0],
+        description="Convert a signature of gene symbols to a signature of region identifiers.",
+        fromfile_prefix_chars='@',
+        add_help=True,
+    )
+    parser.add_argument(
+        'gmt_fname',
+        nargs=1,
+        type=argparse.FileType('rt'),
+        help='The name of the GMT file that contains the signatures.',
+    )
+    parser.add_argument('db_fname', nargs=1, type=argparse.FileType('rb'), help='The region-based ranking database.')
+    parser.add_argument(
+        '-d',
+        'delineation',
+        choices=CODE2DELINEATION.keys(),
+        default=Delineation.HG19_500BP_UP.name.lower(),
+        help='The candidate regulatory region delineation to use (default: {}).'.format(
+            Delineation.HG19_500BP_UP.name.lower()
+        ),
+    )
+    parser.add_argument(
+        '-f',
+        '--fraction',
+        type=float,
+        default=0.8,
+        help='The number of top genes/regions to keep in database (default: 0.8).',
+    )
     return parser
 
 

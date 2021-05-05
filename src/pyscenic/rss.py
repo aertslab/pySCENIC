@@ -22,7 +22,7 @@ def regulon_specificity_scores(auc_mtx, cell_type_series):
 
     def rss(aucs, labels):
         # jensenshannon function provides distance which is the sqrt of the JS divergence.
-        return 1.0 - jensenshannon(aucs/aucs.sum(), labels/labels.sum())
+        return 1.0 - jensenshannon(aucs / aucs.sum(), labels / labels.sum())
 
     for cidx, regulon_name in enumerate(regulons):
         for ridx, cell_type in enumerate(cell_types):
