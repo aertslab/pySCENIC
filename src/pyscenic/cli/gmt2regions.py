@@ -3,7 +3,7 @@
 import os
 import argparse
 import sys
-from pyscenic.genesig import GeneSignature
+from ctxcore.genesig import GeneSignature
 from pyscenic.regions import RegionRankingDatabase, Delineation, convert
 
 

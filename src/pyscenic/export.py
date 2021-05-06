@@ -6,7 +6,7 @@ import pandas as pd
 import loompy as lp
 from sklearn.manifold import TSNE
 from .aucell import aucell
-from .genesig import Regulon
+from ctxcore.genesig import Regulon
 from typing import List, Mapping, Union, Sequence, Optional
 from operator import attrgetter
 from multiprocessing import cpu_count

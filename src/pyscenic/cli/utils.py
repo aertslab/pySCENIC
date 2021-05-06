@@ -10,7 +10,7 @@ import pandas as pd
 import loompy as lp
 from operator import attrgetter
 from typing import Type, Sequence
-from pyscenic.genesig import GeneSignature, openfile
+from ctxcore.genesig import GeneSignature, openfile
 from pyscenic.transform import df2regulons
 from pyscenic.utils import load_motifs, load_from_yaml, save_to_yaml
 from pyscenic.binarization import binarize

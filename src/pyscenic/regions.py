@@ -6,9 +6,9 @@ from operator import attrgetter
 from enum import Enum
 from pkg_resources import resource_stream
 from typing import Tuple, Type, Iterator, Sequence
-from .rnkdb import InvertedRankingDatabase
+from ctxcore.rnkdb import InvertedRankingDatabase
 from .featureseq import FeatureSeq
-from .genesig import GeneSignature, Regulon
+from ctxcore.genesig import GeneSignature, Regulon
 from cytoolz import merge_with, memoize
 from itertools import repeat, chain
 import pandas as pd

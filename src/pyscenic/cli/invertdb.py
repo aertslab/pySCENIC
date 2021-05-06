@@ -2,7 +2,7 @@
 
 import os
 import argparse
-from pyscenic.rnkdb import opendb, InvertedRankingDatabase
+from ctxcore.rnkdb import opendb, InvertedRankingDatabase
 
 
 def derive_db_name(fname: str) -> str:

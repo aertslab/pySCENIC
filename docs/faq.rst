@@ -101,7 +101,7 @@ Yes you can. The code snippet below shows you how to create your own databases:
 
 .. code-block:: python
 
-    from pyscenic.rnkdb import DataFrameRankingDatabase as RankingDatabase
+    from ctxcore.rnkdb import DataFrameRankingDatabase as RankingDatabase
     import numpy as np
     import pandas as pd
 

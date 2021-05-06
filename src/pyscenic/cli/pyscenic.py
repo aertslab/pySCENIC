@@ -17,7 +17,7 @@ from arboreto.algo import grnboost2, genie3
 from arboreto.utils import load_tf_names
 
 from pyscenic.utils import modules_from_adjacencies, add_correlation
-from pyscenic.rnkdb import opendb, RankingDatabase
+from ctxcore.rnkdb import opendb, RankingDatabase
 from pyscenic.prune import prune2df, find_features, _prepare_client
 from pyscenic.aucell import aucell
 from pyscenic.log import create_logging_handler
