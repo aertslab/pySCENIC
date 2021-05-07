@@ -1,5 +1,5 @@
-cytoolz
 ctxcore
+cytoolz
 multiprocessing_on_dill
 llvmlite
 numba>=0.51.2
@@ -10,7 +10,6 @@ pandas>=0.20.1
 cloudpickle
 dask
 distributed
-pyarrow>=0.11.1,<0.17.0
 arboreto>=0.1.6
 boltons
 setuptools
