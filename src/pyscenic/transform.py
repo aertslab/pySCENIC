@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-from .recovery import recovery, aucs as calc_aucs
+from ctxcore.recovery import recovery, aucs as calc_aucs
 import logging
 import traceback
 import pandas as pd
@@ -15,11 +15,11 @@ from .utils import (
     REPRESSING_MODULE,
 )
 from itertools import repeat
-from .rnkdb import RankingDatabase
+from ctxcore.rnkdb import RankingDatabase
 from functools import reduce
 from typing import Type, Sequence, Optional
-from .genesig import Regulon
-from .recovery import leading_edge4row
+from ctxcore.genesig import Regulon
+from ctxcore.recovery import leading_edge4row
 import math
 from itertools import chain
 from functools import partial

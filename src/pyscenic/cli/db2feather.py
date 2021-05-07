@@ -2,7 +2,7 @@
 
 import os
 import argparse
-from pyscenic.rnkdb import convert_sqlitedb_to_featherdb
+from ctxcore.rnkdb import convert_sqlitedb_to_featherdb
 
 
 def derive_db_name(fname: str) -> str:

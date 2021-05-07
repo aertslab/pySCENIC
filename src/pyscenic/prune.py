@@ -25,9 +25,9 @@ from dask.dataframe import from_delayed
 from dask.distributed import LocalCluster, Client
 
 from .log import create_logging_handler
-from .genesig import Regulon, GeneSignature
+from ctxcore.genesig import Regulon, GeneSignature
 from .utils import load_motif_annotations
-from .rnkdb import RankingDatabase, MemoryDecorator
+from ctxcore.rnkdb import RankingDatabase, MemoryDecorator
 from .utils import add_motif_url
 from .transform import module2features_auc1st_impl, modules2regulons, modules2df, df2regulons, DF_META_DATA
 

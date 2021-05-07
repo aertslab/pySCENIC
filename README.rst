@@ -3,20 +3,34 @@ pySCENIC
 
 |buildstatus|_ |pypipackage|_ |docstatus|_
 
+
 pySCENIC is a lightning-fast python implementation of the SCENIC_ pipeline (Single-Cell rEgulatory Network Inference and
 Clustering) which enables biologists to infer transcription factors, gene regulatory networks and cell types from
 single-cell RNA-seq data.
 
 The pioneering work was done in R and results were published in Nature Methods [1]_.
-A new and comprehensive description of this Python implementation of the SCENIC pipeline is available in Nature Protocols [5]_ (`see here <https://doi.org/10.1038/s41596-020-0336-2>`_).
+A new and comprehensive description of this Python implementation of the SCENIC pipeline is available in Nature Protocols [4]_.
 
 pySCENIC can be run on a single desktop machine but easily scales to multi-core clusters to analyze thousands of cells
 in no time. The latter is achieved via the dask_ framework for distributed computing [2]_.
 
-**Full documentation** is available on `Read the Docs <https://pyscenic.readthedocs.io/en/latest/>`_
+**Full documentation** for pySCENIC is available on `Read the Docs <https://pyscenic.readthedocs.io/en/latest/>`_
+
+----
+
+pySCENIC is part of the SCENIC Suite of tools! 
+See the main `SCENIC website <https://scenic.aertslab.org/>`_ for additional information and a full list of tools available.
+
+----
+
 
 News and releases
 -----------------
+
+0.11.2 | 2021-05-07
+^^^^^^^^^^^^^^^^^^^
+
+* Split some core cisTarget functions out into a separate repository, `ctxcore <https://github.com/aertslab/ctxcore>`_. This is now a required package for pySCENIC.
 
 0.11.1 | 2021-02-11
 ^^^^^^^^^^^^^^^^^^^
@@ -96,7 +110,9 @@ All the functionality of the original R implementation is available and in addit
 Additional resources
 --------------------
 
-For more information, please visit the main SCENIC_ website.
+For more information, please visit LCB_, 
+the main `SCENIC website <https://scenic.aertslab.org/>`_,
+or `SCENIC (R version) <https://github.com/aertslab/SCENIC>`_.
 There is a tutorial to `create new cisTarget databases <https://github.com/aertslab/create_cisTarget_databases>`_.
 The CLI to pySCENIC has also been streamlined into a pipeline that can be run with a single command, using the Nextflow workflow manager.
 There are two Nextflow implementations available:
@@ -114,11 +130,10 @@ We are grateful to all providers of TF-annotated position weight matrices, in pa
 References
 ----------
 
-.. [1] Aibar, S. et al. SCENIC: single-cell regulatory network inference and clustering. Nat Meth 14, 1083–1086 (2017).
+.. [1] Aibar, S. et al. SCENIC: single-cell regulatory network inference and clustering. Nat Meth 14, 1083–1086 (2017). `doi:10.1038/nmeth.4463 <https://doi.org/10.1038/nmeth.4463>`_
 .. [2] Rocklin, M. Dask: parallel computation with blocked algorithms and task scheduling. conference.scipy.org
-.. [3] Huynh-Thu, V. A. et al. Inferring regulatory networks from expression data using tree-based methods. PLoS ONE 5, (2010).
-.. [4] Zeisel, A. et al. Cell types in the mouse cortex and hippocampus revealed by single-cell RNA-seq. Science 347, 1138–1142 (2015).
-.. [5] Van de Sande B., Flerin C., et al. A scalable SCENIC workflow for single-cell gene regulatory network analysis. Nat Protoc. June 2020:1-30. doi:10.1038/s41596-020-0336-2
+.. [3] Huynh-Thu, V. A. et al. Inferring regulatory networks from expression data using tree-based methods. PLoS ONE 5, (2010). `doi:10.1371/journal.pone.0012776 <https://doi.org/10.1371/journal.pone.0012776>`_
+.. [4] Van de Sande B., Flerin C., et al. A scalable SCENIC workflow for single-cell gene regulatory network analysis. Nat Protoc. June 2020:1-30. `doi:10.1038/s41596-020-0336-2 <https://doi.org/10.1038/s41596-020-0336-2>`_
 
 .. |buildstatus| image:: https://travis-ci.org/aertslab/pySCENIC.svg?branch=master
 .. _buildstatus: https://travis-ci.org/aertslab/pySCENIC

@@ -2,7 +2,7 @@
 
 import pandas as pd
 from urllib.parse import urljoin
-from .genesig import Regulon, GeneSignature, openfile
+from ctxcore.genesig import Regulon, GeneSignature, openfile
 from .math import masked_rho4pairs
 from itertools import chain
 import numpy as np

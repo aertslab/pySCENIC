@@ -4,17 +4,8 @@ Frequently Asked Questions
 I am having problems with Dask
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-The Arboreto package :code:`v0.1.5`, and some steps of the cisTarget step within pySCENIC, seem to depend on an older version of Dask/Distributed.
-Using a more recent version of Dask/Distributed can result in some cryptic errors.
-It is recommended to use the older version of Dask and Distributed for stability here:
-
-.. code-block:: bash
-
-    pip install dask==1.0.0 distributed'>=1.21.6,<2.0.0'
-
-
-But in many cases this still results in issues with the GRN step.
-An alternative is to use the multiprocessing implementation of Arboreto recently included in pySCENIC (`arboreto_with_multiprocessing.py <https://github.com/aertslab/pySCENIC/blob/master/src/pyscenic/cli/arboreto_with_multiprocessing.py>`_).
+An alternative is to use the multiprocessing implementation of Arboreto included in pySCENIC (`arboreto_with_multiprocessing.py <https://github.com/aertslab/pySCENIC/blob/master/src/pyscenic/cli/arboreto_with_multiprocessing.py>`_).
+This scrips is also available on the path once pySCENIC is installed.
 This script uses the Arboreto and pySCENIC codebase to run GRNBoost2 (or GENIE3) without Dask.
 The eliminates the possibility of running the GRN step across multiple nodes, but brings provides additional stability.
 The run time is generally equivalent to the Dask implementation using the same number of workers.
@@ -101,7 +92,7 @@ Yes you can. The code snippet below shows you how to create your own databases:
 
 .. code-block:: python
 
-    from pyscenic.rnkdb import DataFrameRankingDatabase as RankingDatabase
+    from ctxcore.rnkdb import DataFrameRankingDatabase as RankingDatabase
     import numpy as np
     import pandas as pd
 
@@ -113,6 +104,10 @@ Yes you can. The code snippet below shows you how to create your own databases:
             columns=['Symbol1', 'Symbol2'],
             dtype=np.int32)
     RankingDatabase(df, 'custom').save('custom.db')
+
+Please also see
+`create_cisTarget_databases <https://github.com/aertslab/create_cisTarget_databases>`_
+for more detailed and flexible methods to create custom cisTarget databases.
 
 
 Can I draw the distribution of AUC values for a regulon across cells?

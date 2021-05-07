@@ -4,7 +4,7 @@ import pytest
 
 import pandas as pd
 
-from pyscenic.genesig import GeneSignature
+from ctxcore.genesig import GeneSignature
 from pyscenic.aucell import derive_auc_threshold, aucell, create_rankings
 from pkg_resources import resource_filename
 

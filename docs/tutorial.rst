@@ -56,7 +56,7 @@ First we import the necessary modules and declare some constants:
     from arboreto.utils import load_tf_names
     from arboreto.algo import grnboost2
 
-    from pyscenic.rnkdb import FeatherRankingDatabase as RankingDatabase
+    from ctxcore.rnkdb import FeatherRankingDatabase as RankingDatabase
     from pyscenic.utils import modules_from_adjacencies, load_motifs
     from pyscenic.prune import prune2df, df2regulons
     from pyscenic.aucell import aucell

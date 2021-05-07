@@ -1,10 +1,10 @@
 # -*- coding: utf-8 -*-
 
 import pandas as pd
-from .recovery import enrichment4cells
+from ctxcore.recovery import enrichment4cells
 from tqdm import tqdm
 from typing import Sequence, Type
-from .genesig import GeneSignature
+from ctxcore.genesig import GeneSignature
 from multiprocessing import cpu_count, Process, Array
 from boltons.iterutils import chunked
 from multiprocessing.sharedctypes import RawArray
