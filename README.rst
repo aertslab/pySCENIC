@@ -148,6 +148,7 @@ References
 .. _dask: https://dask.pydata.org/en/latest/
 .. _distributed: https://distributed.readthedocs.io/en/latest/
 .. _arboreto: https://arboreto.readthedocs.io
+.. _LCB: https://aertslab.org
 .. _`SCENICprotocol`: https://github.com/aertslab/SCENICprotocol
 .. _`VSNPipelines`: https://github.com/vib-singlecell-nf/vsn-pipelines
 .. _notebooks: https://github.com/aertslab/pySCENIC/tree/master/notebooks
