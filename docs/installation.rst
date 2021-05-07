@@ -44,7 +44,7 @@ You can also install the bleeding edge (i.e. less stable) version of the package
 
 
 Containers
-~~~~~~~~~
+~~~~~~~~~~
 
 **pySCENIC containers** are also available for download and immediate use. In this case, no compiling or installation is required, provided either Docker or Singularity software is installed on the user's system.  Images are available from `Docker Hub`_. Usage of the containers is shown below (`Docker and Singularity Images`_).
 To pull the docker images, for example:
@@ -194,7 +194,60 @@ Note that in this case, a bind needs to be specified.
 
 .. code-block:: bash
 
-    singularity exec -B /data:/data aertslab-pyscenic-0.10.0.sif ipython kernel -f {connection_file}
+    singularity exec -B /data:/data aertslab-pyscenic-latest.sif ipython kernel -f {connection_file}
+
+More generally, a local or remote kernel can be set up by using the following examples.
+These would go in a kernel file in ``~/.local/share/jupyter/kernels/pyscenic-latest/kernel.json`` (for example).
+
+**Remote singularity kernel:**
+
+.. code-block:: bash
+
+    {
+      "argv": [
+        "/software/jupyter/bin/python",
+        "-m",
+        "remote_ikernel",
+        "--interface",
+        "ssh",
+        "--host",
+        "r23i27n14",
+        "--workdir",
+        "~/",
+        "--kernel_cmd",
+        "singularity",
+        "exec",
+        "-B",
+        "/path/to/mounts",
+        "/path/to/aertslab-pyscenic-latest.sif",
+        "ipython",
+        "kernel",
+        "-f",
+        "{connection_file}"
+      ],
+      "display_name": "pySCENIC singularity remote",
+      "language": "Python"
+    }
+
+**Local singularity kernel:**
+
+.. code-block:: bash
+
+    {
+        "argv": [
+         "singularity",
+         "exec",
+         "-B",
+         "/path/to/mounts",
+         "/path/to/aertslab-pyscenic-latest.sif",
+         "ipython",
+         "kernel",
+         "-f",
+         "{connection_file}"
+        ],
+        "display_name": "pySCENIC singularity local",
+        "language": "python"
+    }
 
 
 Nextflow
