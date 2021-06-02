@@ -123,7 +123,7 @@ traitlets==5.0.5
 typed-ast==1.4.2
 typing-extensions==3.7.4.3
 umap-learn==0.5.1
-urllib3==1.26.4
+urllib3==1.26.5
 wcwidth==0.2.5
 webencodings==0.5.1
 yarl==1.6.3
