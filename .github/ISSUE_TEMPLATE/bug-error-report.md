@@ -10,6 +10,8 @@ assignees: ''
 **Describe the bug**
 A clear and concise description of what the bug is.
 
+> Mote that most *errors* are due to the input from the user, and therefore should be treated as questions in the Discussions. Please, only report them as bugs if you are quite certain that they are not behaving as expected.
+
 **Steps to reproduce the behavior**
 1. Command run when the error occurred:
 <!-- Please specify the command used (if applicable, otherwise delete this block): -->
