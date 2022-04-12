@@ -228,6 +228,7 @@ def prune_targets_command(args):
             client_or_address=args.mode,
             module_chunksize=args.chunk_size,
             num_workers=args.num_workers,
+            frac_mapping_module=args.frac_mapping_module
         )
 
     LOGGER.info("Writing results to file.")
@@ -371,6 +372,9 @@ def add_module_parameters(parser):
     )
     group.add_argument(
         '--min_genes', type=int, default=20, help='The minimum number of genes in a module (default: 20).'
+    )
+    group.add_argument(
+        '--frac_mapping_module', type=float, default=0.2, help='Minimum fraction of genes per module needed to be annotated in the database (default: 0.2)'
     )
     group.add_argument(
         '--expression_mtx_fname',

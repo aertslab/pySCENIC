@@ -223,6 +223,7 @@ def module2df(
     weighted_recovery=False,
     return_recovery_curves=False,
     module2features_func=module2features,
+    frac_mapping_module=0.2,
 ) -> pd.DataFrame:
     """ """
     # Derive enriched and TF-annotated features for module.
@@ -241,7 +242,10 @@ def module2df(
     # If less than 80% of the genes are mapped to the ranking database, the module is skipped.
     n_missing = len(module) - len(genes)
     frac_missing = float(n_missing) / len(module)
-    if frac_missing >= 0.20:
+    if frac_missing >= frac_mapping_module:
+        LOGGER.warning(
+            "Mapping fraction set to {}".format(frac_mapping_module)
+        )
         LOGGER.warning(
             "Less than 80% of the genes in {} could be mapped to {}. Skipping this module.".format(module.name, db.name)
         )
@@ -293,12 +297,13 @@ def modules2df(
     weighted_recovery=False,
     return_recovery_curves=False,
     module2features_func=module2features,
+    frac_mapping_module=0.2,
 ) -> pd.DataFrame:
     # Make sure return recovery curves is always set to false because the metadata for the distributed dataframe needs
     # to be fixed for the dask framework.
     # TODO: Remove this restriction.
     return pd.concat(
-        [module2df(db, module, motif_annotations, weighted_recovery, False, module2features_func) for module in modules]
+        [module2df(db, module, motif_annotations, weighted_recovery, False, module2features_func, frac_mapping_module) for module in modules]
     )
 
 
@@ -443,6 +448,7 @@ def module2regulon(
         weighted_recovery=weighted_recovery,
         return_recovery_curves=return_recovery_curves,
         module2features_func=module2features_func,
+        frac_mapping_module=0.2,
     )
     if len(df) == 0:
         return None
@@ -467,5 +473,6 @@ def modules2regulons(
         weighted_recovery=weighted_recovery,
         return_recovery_curves=return_recovery_curves,
         module2features_func=module2features_func,
+        frac_mapping_module=0.2,
     )
     return [] if len(df) == 0 else df2regulons(df)
