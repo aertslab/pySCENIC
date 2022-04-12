@@ -358,6 +358,7 @@ def prune2df(
     num_workers=None,
     module_chunksize=100,
     filter_for_annotation=True,
+    frac_mapping_module=0.8
 ) -> pd.DataFrame:
     """
     Calculate all regulons for a given sequence of ranking databases and a sequence of co-expression modules.
@@ -391,7 +392,7 @@ def prune2df(
         filter_for_annotation=filter_for_annotation,
     )
     transformation_func = partial(
-        modules2df, module2features_func=module2features_func, weighted_recovery=weighted_recovery
+        modules2df, module2features_func=module2features_func, weighted_recovery=weighted_recovery, frac_mapping_module=frac_mapping_module
     )
     # Create a distributed dataframe from individual delayed objects to avoid out of memory problems.
     aggregation_func = (

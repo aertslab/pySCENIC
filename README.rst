@@ -113,6 +113,7 @@ Additional resources
 For more information, please visit LCB_, 
 the main `SCENIC website <https://scenic.aertslab.org/>`_,
 or `SCENIC (R version) <https://github.com/aertslab/SCENIC>`_.
+There is a tutorial to `create new cisTarget databases <https://github.com/aertslab/create_cisTarget_databases>`_.
 The CLI to pySCENIC has also been streamlined into a pipeline that can be run with a single command, using the Nextflow workflow manager.
 There are two Nextflow implementations available:
 
