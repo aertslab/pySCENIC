@@ -244,7 +244,7 @@ def module2df(
     frac_missing = float(n_missing) / len(module)
     if frac_missing >= (1-frac_mapping_module):
         LOGGER.warning(
-            "Less than {}% of the genes in {} could be mapped to {}. Skipping this module.".format((1-frac_mapping_module)*10,module.name, db.name)
+            "Less than {}% of the genes in {} could be mapped to {}. Skipping this module.".format(frac_mapping_module*100,module.name, db.name)
         )
         return DF_META_DATA
 
