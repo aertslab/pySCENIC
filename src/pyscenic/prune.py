@@ -358,7 +358,7 @@ def prune2df(
     num_workers=None,
     module_chunksize=100,
     filter_for_annotation=True,
-    frac_mapping_module=0.2
+    frac_mapping_module=0.8
 ) -> pd.DataFrame:
     """
     Calculate all regulons for a given sequence of ranking databases and a sequence of co-expression modules.
