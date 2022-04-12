@@ -374,7 +374,7 @@ def add_module_parameters(parser):
         '--min_genes', type=int, default=20, help='The minimum number of genes in a module (default: 20).'
     )
     group.add_argument(
-        '--frac_mapping_module', type=float, default=0.2, help='Minimum fraction of genes per module needed to be annotated in the database (default: 0.2)'
+        '--frac_mapping_module', type=float, default=0.8, help='Minimum fraction of genes per module needed to be annotated in the database (default: 0.2)'
     )
     group.add_argument(
         '--expression_mtx_fname',
