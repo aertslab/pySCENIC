@@ -88,26 +88,9 @@ This can also be easily run using the Docker image, which already contains all o
 Can I create my own ranking databases?
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-Yes you can. The code snippet below shows you how to create your own databases:
-
-.. code-block:: python
-
-    from ctxcore.rnkdb import DataFrameRankingDatabase as RankingDatabase
-    import numpy as np
-    import pandas as pd
-
-    # Every model in a database is represented by a whole genome ranking. The rankings of the genes must be 0-based.
-    df = pd.DataFrame(
-            data=[[0, 1],
-                  [1, 0]],
-            index=['Model1', 'Model2'],
-            columns=['Symbol1', 'Symbol2'],
-            dtype=np.int32)
-    RankingDatabase(df, 'custom').save('custom.db')
-
-Please also see
+Yes you can. See
 `create_cisTarget_databases <https://github.com/aertslab/create_cisTarget_databases>`_
-for more detailed and flexible methods to create custom cisTarget databases.
+for more detailed instructions to create custom cisTarget databases.
 
 
 Can I draw the distribution of AUC values for a regulon across cells?
