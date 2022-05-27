@@ -472,4 +472,3 @@ def modules2regulons(
         module2features_func=module2features_func,
     )
     return [] if len(df) == 0 else df2regulons(df)
-   
