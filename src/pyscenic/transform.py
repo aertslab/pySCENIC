@@ -179,6 +179,9 @@ def module2features_auc1st_impl(
 
     # Find motif annotations for enriched features.
     annotated_features = pd.merge(enriched_features, motif_annotations, how="left", left_index=True, right_index=True)
+    # When using cluster db annotations, keep direct if available otherwise use other (extended)
+    annotated_features = annotated_features.sort_values(["MotifSimilarityQvalue", "OrthologousIdentity"], ascending = [False, True])
+    annotated_features = annotated_features[~annotated_features.index.duplicated(keep='last')]
     annotated_features_idx = (
         pd.notnull(annotated_features[COLUMN_NAME_ANNOTATION])
         if filter_for_annotation
