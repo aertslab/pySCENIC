@@ -228,6 +228,8 @@ def prune_targets_command(args):
             client_or_address=args.mode,
             module_chunksize=args.chunk_size,
             num_workers=args.num_workers,
+            motif_similarity_fdr=args.max_similarity_fdr,
+            orthologuous_identity_threshold=args.min_orthologous_identity
         )
 
     LOGGER.info("Writing results to file.")
