@@ -1,4 +1,4 @@
-ctxcore
+ctxcore>=0.2.0
 cytoolz
 multiprocessing_on_dill
 llvmlite
