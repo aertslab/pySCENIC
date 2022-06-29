@@ -70,7 +70,7 @@ nest-asyncio==1.5.1
 networkx==2.5
 numba==0.52.0
 numexpr==2.7.2
-numpy==1.20.1
+numpy==1.22.0
 numpy-groupies==0.9.13
 packaging==20.9
 pandas==1.2.2
