@@ -3,7 +3,7 @@ FROM python:3.7.9-slim AS compile-image
 ENV DEBIAN_FRONTEND=noninteractive
 RUN BUILDPKGS="build-essential \
         python3-dev libhdf5-dev libfreetype6-dev libtool \
-        m4 autoconf automake patch bison flex libpng-dev libopenblas-dev \
+        m4 autoconf automake patch bison flex libpng-dev libopenblas-dev git \
         tcl-dev tk-dev libxml2-dev zlib1g-dev libffi-dev cmake" && \
     apt-get update && \
     apt-get install -y --no-install-recommends apt-utils debconf locales && dpkg-reconfigure locales && \
@@ -19,10 +19,13 @@ RUN pip install --no-cache-dir --upgrade pip wheel && \
     pip install --no-cache-dir -r /tmp/requirements_docker.txt
 
 # use version from argument (--build-arg version=0.11.0), or a default:
-ARG version="0.11.0"
-RUN pip install --no-cache-dir pyscenic==$version && \
-    pip install --no-cache-dir scanpy==1.7.2
+RUN pip install --no-cache-dir scanpy==1.7.2
 
+# install ctxcore from local copy:
+COPY pySCENIC /tmp/pySCENIC
+RUN  cd /tmp/pySCENIC && \
+     pip install . && \
+     cd .. && rm -rf pySCENIC
 
 FROM python:3.7.9-slim AS build-image
 
