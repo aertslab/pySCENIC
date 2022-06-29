@@ -1,4 +1,4 @@
-ctxcore
+ctxcore>=0.2.0
 cytoolz
 multiprocessing_on_dill
 llvmlite
@@ -6,7 +6,7 @@ numba>=0.51.2
 attrs
 frozendict
 numpy
-pandas>=0.20.1
+pandas>=0.24
 cloudpickle
 dask
 distributed
