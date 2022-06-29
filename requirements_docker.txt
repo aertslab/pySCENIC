@@ -22,7 +22,7 @@ ctxcore==0.2.0
 cycler==0.10.0
 Cython==0.29.21
 cytoolz==0.11.0
-dask==2021.2.0
+dask==2021.10.0
 decorator==4.4.2
 defusedxml==0.6.0
 dill==0.3.3
