@@ -21,7 +21,7 @@ RUN pip install --no-cache-dir --upgrade pip wheel && \
 # use version from argument (--build-arg version=0.11.0), or a default:
 RUN pip install --no-cache-dir scanpy==1.7.2
 
-# install ctxcore from local copy:
+# install pySCENIC from local copy:
 COPY pySCENIC /tmp/pySCENIC
 RUN  cd /tmp/pySCENIC && \
      pip install . && \
