@@ -6,7 +6,7 @@ numba>=0.51.2
 attrs
 frozendict
 numpy
-pandas>=0.20.1
+pandas>=1.4.3
 cloudpickle
 dask
 distributed
