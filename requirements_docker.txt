@@ -55,7 +55,7 @@ loompy==3.0.6
 louvain==0.7.0
 MarkupSafe==1.1.1
 matplotlib==3.3.4
-mistune==0.8.4
+mistune==2.0.3
 msgpack==1.0.2
 MulticoreTSNE==0.1
 multidict==5.1.0
