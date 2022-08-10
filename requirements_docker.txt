@@ -63,7 +63,7 @@ multiprocessing-on-dill==3.5.0a4
 mypy-extensions==0.4.3
 natsort==7.1.1
 nbclient==0.5.2
-nbconvert==6.0.7
+nbconvert==6.3.0
 nbformat==5.1.2
 nbmerge==0.0.4
 nest-asyncio==1.5.1
