@@ -19,16 +19,14 @@ For example:
 
 .. code-block:: bash
 
-    conda create -y -n pyscenic python=3.7
+    conda create -y -n pyscenic python=3.10
     conda activate pyscenic
-    conda install -y numpy
-    conda install -y -c anaconda cytoolz
 
     pip install pyscenic
 
 
 .. caution::
-    pySCENIC needs a python 3.6 or greater interpreter.
+    pySCENIC needs a python 3.7 or greater interpreter.
 
 
 Development
@@ -51,7 +49,7 @@ To pull the docker images, for example:
 
 .. code-block:: bash
 
-    docker pull aertslab/pyscenic:0.10.0
+    docker pull aertslab/pyscenic:0.12.0
 
 Auxiliary datasets
 ------------------
@@ -70,13 +68,14 @@ To successfully use this pipeline you also need **auxilliary datasets**:
 
 .. _`HGNC annotations`: https://resources.aertslab.org/cistarget/motif2tf/motifs-v9-nr.hgnc-m0.001-o0.0.tbl
 .. _`MGI annotations`: https://resources.aertslab.org/cistarget/motif2tf/motifs-v9-nr.mgi-m0.001-o0.0.tbl
-.. _`Flybase annotations`: https://resources.aertslab.org/cistarget/motif2tf/motifs-v8-nr.flybase-m0.001-o0.0.tbl
+.. _`Flybase annotations`: https://resources.aertslab.org/cistarget/motif2tf/motifs-v9-nr.flybase-m0.001-o0.0.tbl
 
 
 .. caution::
     These ranking databases are 1.1 Gb each so downloading them might take a while. An annotations file is typically 100Mb in size.
 
-A list of transcription factors is required for the network inference step (GENIE3/GRNBoost2). These lists can be downloaded from `resources section on GitHub <https://github.com/aertslab/pySCENIC/tree/master/resources>`_.
+A list of transcription factors is required for the network inference step (GENIE3/GRNBoost2).
+These lists can be downloaded from `resources section on GitHub <https://github.com/aertslab/pySCENIC/tree/master/resources>`_.
 
 
 Command Line Interface
@@ -89,7 +88,7 @@ A command line version of the tool is included. This tool is available after pro
     $ pyscenic -h
     usage: pyscenic [-h] {grn,add_cor,ctx,aucell} ...
 
-    Single-CEll regulatory Network Inference and Clustering (0.11.0)
+    Single-CEll regulatory Network Inference and Clustering (0.12.0)
 
     positional arguments:
       {grn,add_cor,ctx,aucell}
@@ -135,7 +134,7 @@ A mount point (or more than one) needs to be specified, which contains the input
 
     docker run -it --rm \
         -v /data:/data \
-        aertslab/pyscenic:0.10.0 pyscenic grn \
+        aertslab/pyscenic:0.12.0 pyscenic grn \
             --num_workers 6 \
             -o /data/expr_mat.adjacencies.tsv \
             /data/expr_mat.tsv \
@@ -143,10 +142,10 @@ A mount point (or more than one) needs to be specified, which contains the input
 
     docker run -it --rm \
         -v /data:/data \
-        aertslab/pyscenic:0.10.0 pyscenic ctx \
+        aertslab/pyscenic:0.12.0 pyscenic ctx \
             /data/expr_mat.adjacencies.tsv \
-            /data/hg19-tss-centered-5kb-7species.mc9nr.feather \
-            /data/hg19-tss-centered-10kb-7species.mc9nr.feather \
+            /data/hg19-tss-centered-5kb-7species.mc9nr.genes_vs_motifs.rankings.feather \
+            /data/hg19-tss-centered-10kb-7species.mc9nr.genes_vs_motifs.rankings.feather \
             --annotations_fname /data/motifs-v9-nr.hgnc-m0.001-o0.0.tbl \
             --expression_mtx_fname /data/expr_mat.tsv \
             --mode "dask_multiprocessing" \
@@ -155,7 +154,7 @@ A mount point (or more than one) needs to be specified, which contains the input
 
     docker run -it --rm \
         -v /data:/data \
-        aertslab/pyscenic:0.10.0 pyscenic aucell \
+        aertslab/pyscenic:0.12.0 pyscenic aucell \
             /data/expr_mat.tsv \
             /data/regulons.csv \
             -o /data/auc_mtx.csv \
