@@ -577,8 +577,8 @@ def create_argument_parser():
     parser_ctx.add_argument(
         '--mode',
         choices=['custom_multiprocessing', 'dask_multiprocessing', 'dask_cluster'],
-        default='dask_multiprocessing',
-        help='The mode to be used for computing (default: dask_multiprocessing).',
+        default='custom_multiprocessing',
+        help='The mode to be used for computing (default: custom_multiprocessing).',
     )
     parser_ctx.add_argument(
         '-a',
