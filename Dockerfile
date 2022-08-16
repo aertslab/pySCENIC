@@ -15,7 +15,7 @@ RUN python -m venv /opt/venv
 ENV PATH="/opt/venv/bin:$PATH"
 
 # Install pySCENIC dependencies with pip.
-COPY requirements_docker.txt /tmp/
+COPY requirements.txt /tmp/
 RUN pip install --no-cache-dir -r /tmp/requirements.txt
 
 # Install scanpy, MulticoreTSNE and ipykernel.
