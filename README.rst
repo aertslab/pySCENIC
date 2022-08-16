@@ -27,6 +27,18 @@ See the main `SCENIC website <https://scenic.aertslab.org/>`_ for additional inf
 News and releases
 -----------------
 
+0.12.0 | 2022-08-16
+^^^^^^^^^^^^^^^^^^^
+
+* Only databases in Feather v2 format are supported now (ctxcore >= 0.2),
+  which allow uses recent versions of pyarrow (>=8.0.0) instead of very old ones (<0.17).
+  Databases in the new format can be downloaded from https://resources.aertslab.org/cistarget/databases/
+  and end with `*.genes_vs_motifs.rankings.feather` or `*.genes_vs_tracks.rankings.feather`.
+* Support clustered motif databases.
+* Use custom multiprocessing instead of dask, by default.
+* Docker image uses python 3.10 and contains only needed pySCENIC dependencies for CLI usage.
+* Remove unneeded scripts and notebooks for unused/deprecated database formats.
+
 0.11.2 | 2021-05-07
 ^^^^^^^^^^^^^^^^^^^
 
