@@ -7,7 +7,6 @@ from configparser import ConfigParser
 from arboreto.algo import grnboost2
 from arboreto.utils import load_tf_names
 from dask.distributed import LocalCluster, Client
-#from cytoolz import mapcat
 import logging
 import traceback
 from functools import partial
@@ -25,9 +24,9 @@ def create_logging_handler(debug: bool) -> logging.Handler:
     :param debug: Does debug information need to be logged?
     :return: The logging handler.
     """
-    # By default stderr is used as the stream for logging.
+    # By default, stderr is used as the stream for logging.
     ch = logging.StreamHandler(stream=sys.stderr)
-    # Logging level DEBUG is less severe than INFO. Therefore when the logging level is set
+    # Logging level DEBUG is less severe than INFO. Therefore, when the logging level is set
     # to DEBUG, information will still be outputted. In addition, errors and warnings are more
     # severe than info and therefore will always be outputted to the log.
     ch.setLevel(logging.DEBUG if debug else logging.INFO)

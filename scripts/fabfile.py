@@ -4,7 +4,7 @@ from fabric.api import run, env, local, task, put
 from fabric.context_managers import lcd, cd
 
 
-# Use servernames from ~/.ssh/config file.
+# Use server names from ~/.ssh/config file.
 env.use_ssh_config = True
 # List of remote serves.
 env.hosts = ['hpc2-big7']
