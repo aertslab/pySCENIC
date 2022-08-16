@@ -22,8 +22,8 @@ pyscenic grn --num_workers ${CORES} "${DATA_FOLDER}/GSE60361.em.mgi.sample.loom"
 ##############
 
 pyscenic ctx "${DATA_FOLDER}/GSE103322.modules.sample.dat" \
-       "${DB_FOLDER}/hg19-500bp-upstream-10species.mc9nr.feather" \
-       "${DB_FOLDER}/hg19-500bp-upstream-7species.mc9nr.feather" \
+       "${DB_FOLDER}/hg19-500bp-upstream-10species.mc9nr.genes_vs_motifs.rankings.feather" \
+       "${DB_FOLDER}/hg19-500bp-upstream-7species.mc9nr.genes_vs_motifs.rankings.feather" \
        --annotations_fname "${RESOURCES_FOLDER}/motifs-v9-nr.hgnc-m0.001-o0.0.tbl" \
        --mode "dask_multiprocessing" \
        --chunk_size 1 \
@@ -31,8 +31,8 @@ pyscenic ctx "${DATA_FOLDER}/GSE103322.modules.sample.dat" \
        --num_workers ${CORES}
 
 pyscenic ctx "${DATA_FOLDER}/GSE103322.sample.net.csv" \
-       "${DB_FOLDER}/hg19-500bp-upstream-10species.mc9nr.feather" \
-       "${DB_FOLDER}/hg19-500bp-upstream-7species.mc9nr.feather" \
+       "${DB_FOLDER}/hg19-500bp-upstream-10species.mc9nr.genes_vs_motifs.rankings.feather" \
+       "${DB_FOLDER}/hg19-500bp-upstream-7species.mc9nr.genes_vs_motifs.rankings.feather" \
        --annotations_fname "${RESOURCES_FOLDER}/motifs-v9-nr.hgnc-m0.001-o0.0.tbl" \
        --expression_mtx_fname "${DATA_FOLDER}/GSE103322.em.hgnc.sample.loom" \
        --mode "dask_multiprocessing" \
@@ -41,16 +41,16 @@ pyscenic ctx "${DATA_FOLDER}/GSE103322.sample.net.csv" \
        --num_workers ${CORES}
 
 pyscenic ctx "${DATA_FOLDER}/GSE103322.modules.sample.dat" \
-       "${DB_FOLDER}/hg19-500bp-upstream-10species.mc9nr.feather" \
-       "${DB_FOLDER}/hg19-500bp-upstream-7species.mc9nr.feather" \
+       "${DB_FOLDER}/hg19-500bp-upstream-10species.mc9nr.genes_vs_motifs.rankings.feather" \
+       "${DB_FOLDER}/hg19-500bp-upstream-7species.mc9nr.genes_vs_motifs.rankings.feather" \
        --annotations_fname "${RESOURCES_FOLDER}/motifs-v9-nr.hgnc-m0.001-o0.0.tbl" \
        --mode "custom_multiprocessing" \
        --output "${DATA_FOLDER}/motifs.csv" \
        --num_workers ${CORES}
 
 pyscenic ctx "${DATA_FOLDER}/GSE103322.modules.sample.dat" \
-       "${DB_FOLDER}/hg19-500bp-upstream-10species.mc9nr.feather" \
-       "${DB_FOLDER}/hg19-500bp-upstream-7species.mc9nr.feather" \
+       "${DB_FOLDER}/hg19-500bp-upstream-10species.mc9nr.genes_vs_motifs.rankings.feather" \
+       "${DB_FOLDER}/hg19-500bp-upstream-7species.mc9nr.genes_vs_motifs.rankings.feather" \
        --annotations_fname "${RESOURCES_FOLDER}/motifs-v9-nr.hgnc-m0.001-o0.0.tbl" \
        --mode "dask_multiprocessing" \
        --chunk_size 1 \
@@ -58,7 +58,7 @@ pyscenic ctx "${DATA_FOLDER}/GSE103322.modules.sample.dat" \
        --num_workers ${CORES}
 
 pyscenic ctx "${DATA_FOLDER}/GSE103322.modules.sample.dat" \
-       "${DB_FOLDER}/hg19-500bp-upstream-10species.mc9nr.feather" \
+       "${DB_FOLDER}/hg19-500bp-upstream-10species.mc9nr.genes_vs_motifs.rankings.feather" \
        --annotations_fname "${RESOURCES_FOLDER}/motifs-v9-nr.hgnc-m0.001-o0.0.tbl" \
        --mode "dask_multiprocessing" \
        --chunk_size 1 \
