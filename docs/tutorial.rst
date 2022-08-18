@@ -109,12 +109,12 @@ Finally the ranking databases are loaded:
 
 ::
 
-        [FeatherRankingDatabase(name="mm9-tss-centered-10kb-10species.mc9nr"),
-         FeatherRankingDatabase(name="mm9-500bp-upstream-7species.mc9nr"),
-         FeatherRankingDatabase(name="mm9-500bp-upstream-10species.mc9nr"),
-         FeatherRankingDatabase(name="mm9-tss-centered-5kb-10species.mc9nr"),
-         FeatherRankingDatabase(name="mm9-tss-centered-10kb-7species.mc9nr"),
-         FeatherRankingDatabase(name="mm9-tss-centered-5kb-7species.mc9nr")]
+        [FeatherRankingDatabase(name="mm9-tss-centered-10kb-10species.mc9nr.genes_vs_motifs.rankings"),
+         FeatherRankingDatabase(name="mm9-500bp-upstream-7species.mc9nr.genes_vs_motifs.rankings"),
+         FeatherRankingDatabase(name="mm9-500bp-upstream-10species.mc9nr.genes_vs_motifs.rankings"),
+         FeatherRankingDatabase(name="mm9-tss-centered-5kb-10species.mc9nr.genes_vs_motifs.rankings"),
+         FeatherRankingDatabase(name="mm9-tss-centered-10kb-7species.mc9nr.genes_vs_motifs.rankings"),
+         FeatherRankingDatabase(name="mm9-tss-centered-5kb-7species.mc9nr.genes_vs_motifs.rankings")]
 
 Phase I: Inference of co-expression modules
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
