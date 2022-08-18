@@ -1,7 +1,7 @@
 # scanpy
 scanpy[leiden]==1.9.1
 louvain==0.7.1
-# Fastq TSNE implementation.
+# Fast TSNE implementation.
 MulticoreTSNE==0.1
 # Parameterizing, executing, and analyzing Jupyter Notebooks.
 papermill==2.3.4

@@ -2,11 +2,9 @@ FROM python:3.10.6-slim-bullseye AS compile-image
 
 ENV DEBIAN_FRONTEND=noninteractive
 
-# Install some dependencies:
-#   - MulticoreTSNE: build-essential cmake
-#   - git: to set the pySCENIC version
+# Install git to be able to set the pySCENIC version.
 RUN apt-get update && \
-    apt-get install -y --no-install-recommends build-essential cmake git
+    apt-get -y --no-install-recommends install git
 
 # Create virtual environment.
 RUN python -m venv /opt/venv
@@ -31,13 +29,12 @@ RUN  cd /tmp/pySCENIC && \
 FROM python:3.10.6-slim-bullseye AS build-image
 
 RUN apt-get -y update && \
+    apt-get -y upgrade && \
     apt-get -y --no-install-recommends install \
         # Need to run ps
         procps \
         libxml2 \
-        less \
-        # Need to run MulticoreTSNE
-        libgomp1 && \
+        less && \
     rm -rf /var/cache/apt/* && \
     rm -rf /var/lib/apt/lists/*
 
