@@ -88,7 +88,7 @@ A command line version of the tool is included. This tool is available after pro
     $ pyscenic -h
     usage: pyscenic [-h] {grn,add_cor,ctx,aucell} ...
 
-    Single-CEll regulatory Network Inference and Clustering (0.12.0)
+    Single-Cell rEgulatory Network Inference and Clustering (0.12.0)
 
     positional arguments:
       {grn,add_cor,ctx,aucell}

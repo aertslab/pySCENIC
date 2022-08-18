@@ -440,7 +440,7 @@ def add_loom_parameters(parser):
 def create_argument_parser():
     parser = argparse.ArgumentParser(
         prog=os.path.splitext(os.path.basename(__file__))[0],
-        description='Single-CEll regulatory Network Inference and Clustering ({})'.format(VERSION),
+        description='Single-Cell rEgulatory Network Inference and Clustering ({})'.format(VERSION),
         fromfile_prefix_chars='@',
         add_help=True,
         epilog="Arguments can be read from file using a @args.txt construct. "
