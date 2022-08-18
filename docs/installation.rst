@@ -44,38 +44,22 @@ You can also install the bleeding edge (i.e. less stable) version of the package
 Containers
 ~~~~~~~~~~
 
-**pySCENIC containers** are also available for download and immediate use. In this case, no compiling or installation is required, provided either Docker or Singularity software is installed on the user's system.  Images are available from `Docker Hub`_. Usage of the containers is shown below (`Docker and Singularity Images`_).
-To pull the docker images, for example:
-
-.. code-block:: bash
-
-    docker pull aertslab/pyscenic:0.12.0
+**pySCENIC containers** are also available for download and immediate use.
+In this case, no compiling or installation is required, provided either Docker/Podman or Singularity/Apptainer software is installed on the user's system.
+See (`Docker/Podman and Singularity/Apptainer Images`_).
 
 Auxiliary datasets
 ------------------
-To successfully use this pipeline you also need **auxilliary datasets**:
 
-1. *Databases ranking the whole genome* of your species of interest based on regulatory features (i.e. transcription factors). Ranking databases are typically stored in the feather_ format and can be downloaded from cisTargetDBs_.
-2. *Motif annotation* database providing the missing link between an enriched motif and the transcription factor that binds this motif. This pipeline needs a TSV text file where every line represents a particular annotation.
+To successfully use this pipeline you also need **auxilliary datasets** available at `cistargetDBs website`_:
 
-=======================  ==========================
-  Annotations             Species
-=======================  ==========================
-`HGNC annotations`_       Homo sapiens
-`MGI annotations`_        Mus musculus
-`Flybase annotations`_    Drosophila melanogaster
-=======================  ==========================
-
-.. _`HGNC annotations`: https://resources.aertslab.org/cistarget/motif2tf/motifs-v9-nr.hgnc-m0.001-o0.0.tbl
-.. _`MGI annotations`: https://resources.aertslab.org/cistarget/motif2tf/motifs-v9-nr.mgi-m0.001-o0.0.tbl
-.. _`Flybase annotations`: https://resources.aertslab.org/cistarget/motif2tf/motifs-v9-nr.flybase-m0.001-o0.0.tbl
-
+1. `Databases ranking the whole genome`_ of your species of interest based on regulatory features (i.e. transcription factors) in `feather`_ format.
+2. `Motif to TF annotations`_ database providing the missing link between an enriched motif and the transcription factor that binds this motif. This pipeline needs a TSV text file where every line represents a particular annotation.
 
 .. caution::
     These ranking databases are 1.1 Gb each so downloading them might take a while. An annotations file is typically 100Mb in size.
 
-A list of transcription factors is required for the network inference step (GENIE3/GRNBoost2).
-These lists can be downloaded from `resources section on GitHub <https://github.com/aertslab/pySCENIC/tree/master/resources>`_.
+3. A `list of transcription factors`_ is required for the network inference step (GENIE3/GRNBoost2).
 
 
 Command Line Interface
@@ -113,21 +97,31 @@ A command line version of the tool is included. This tool is available after pro
     a/wiki/index.php/Data_formats .
 
 
-Docker and Singularity Images
------------------------------
+Docker/Podman and Singularity/Apptainer Images
+----------------------------------------------
 
-pySCENIC is available to use with both Docker and Singularity, and tool usage from a container is similar to that of the command line interface.
-Note that the feather databases, transcription factors, and motif annotation databases need to be accessible to the container via a mounted volume.
+pySCENIC is available to use with both Docker/Podman and Singularity/Apptainer, and tool usage from a container is similar to that of the command line interface.
+Note that the `feather`_ databases, transcription factors, and motif annotation databases need to be accessible to the container via a mounted volume.
 In the below examples, a single volume mount is used for simplicity, which will contains the input, output, and databases files.
 
 For additional usage examples, see the documentation associated with the `SCENIC protocol <https://github.com/aertslab/SCENICprotocol/blob/master/docs/installation.md>`_ Nextflow implementation.
 
-Docker
-~~~~~~
+Docker/Podman
+~~~~~~~~~~~~~
 
-Docker images are available from `Docker Hub`_, and can be obtained by running :code:`docker pull aertslab/pyscenic:[version]`, with the version tag as the latest release.
+Docker/Podman images are available at `Docker Hub pySCENIC`_ and `Docker Hub pySCENIC with scanpy`_ , and can be obtained by running:
 
-To run pySCENIC using Docker, use the following three steps.
+.. :code-block:: bash
+
+    # pySCENIC CLI version (recommended).
+    docker pull aertslab/pyscenic:0.12.0
+    podman pull aertslab/pyscenic:0.12.0
+
+    # pySCENIC CLI version + ipython kernel + scanpy.
+    docker pull aertslab/pyscenic_scanpy:0.12.0-1.9.1
+    podman pull aertslab/pyscenic_scanpy:0.12.0-1.9.1
+
+To run pySCENIC using Docker/Podman, use the following three steps.
 A mount point (or more than one) needs to be specified, which contains the input data and necessary resources).
 
 .. code-block:: bash
@@ -148,7 +142,7 @@ A mount point (or more than one) needs to be specified, which contains the input
             /data/hg19-tss-centered-10kb-7species.mc9nr.genes_vs_motifs.rankings.feather \
             --annotations_fname /data/motifs-v9-nr.hgnc-m0.001-o0.0.tbl \
             --expression_mtx_fname /data/expr_mat.tsv \
-            --mode "dask_multiprocessing" \
+            --mode "custom_multiprocessing" \
             --output /data/regulons.csv \
             --num_workers 6
 
@@ -160,40 +154,45 @@ A mount point (or more than one) needs to be specified, which contains the input
             -o /data/auc_mtx.csv \
             --num_workers 6
 
-Singularity
-~~~~~~~~~~~
+Singularity/Apptainer
+~~~~~~~~~~~~~~~~~~~~~
 
-As of release :code:`0.9.19`, pySCENIC Singularity images are no longer being built on `Singularity Hub`_, however images can easily be built using Docker Hub as a source:
-
-.. code-block:: bash
-
-    singularity build aertslab-pyscenic-0.10.0.sif docker://aertslab/pyscenic:0.10.0
-
-
-To run pySCENIC with Singularity, the usage is very similar to that of Docker.
-Note that in Singularity 3.0+, the mount points are automatically overlaid, but bind points can be specified similarly to Docker with :code:`--bind`/:code:`-B`.
-The first step (GRN inference) is shown as an example:
+Singularity/Apptainer images can be build from the Docker Hub image as source:
 
 .. code-block:: bash
 
-    singularity run aertslab-pyscenic-0.10.0.sif \
+    # pySCENIC CLI version.
+    singularity build aertslab-pyscenic-0.12.0.sif docker://aertslab/pyscenic:0.12.0
+    apptainer build aertslab-pyscenic-0.12.0.sif docker://aertslab/pyscenic:0.12.0
+
+    # pySCENIC CLI version + ipython kernel + scanpy.
+    singularity build aertslab-pyscenic-scanpy-0.12.0-1.9.1.sif docker://aertslab/pyscenic_scanpy:0.12.0-1.9.1
+    apptainer build aertslab-pyscenic-0.12.0-1.9.1.sif docker://aertslab/pyscenic_scanpy:0.12.0-1.9.1
+
+
+To run pySCENIC with Singularity/Apptainer, the usage is very similar to that of Docker/Podman.
+
+.. code-block:: bash
+
+    singularity run aertslab-pyscenic-0.12.0.sif \
         pyscenic grn \
+            -B /data:/data
             --num_workers 6 \
-            -o expr_mat.adjacencies.tsv \
-            expr_mat.tsv \
-            allTFs_hg38.txt
+            -o /data/expr_mat.adjacencies.tsv \
+            /data/expr_mat.tsv \
+            /data/allTFs_hg38.txt
 
 
-Using the Docker or Singularity images with Jupyter notebook
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Using the Docker/Podman or Singularity/Apptainer images with Jupyter notebook
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-As of version 0.9.7, the pySCENIC containers have the ``ipykernel`` package installed, and can also be used interactively in a notebook.
+The pySCENIC containers with scanpy have the ``ipykernel`` package installed, and can also be used interactively in a notebook.
 This can be achieved using a kernel command similar to the following (for singularity).
 Note that in this case, a bind needs to be specified.
 
 .. code-block:: bash
 
-    singularity exec -B /data:/data aertslab-pyscenic-latest.sif ipython kernel -f {connection_file}
+    singularity exec -B /data:/data aertslab-pyscenic-scanpy-latest.sif ipython kernel -f {connection_file}
 
 More generally, a local or remote kernel can be set up by using the following examples.
 These would go in a kernel file in ``~/.local/share/jupyter/kernels/pyscenic-latest/kernel.json`` (for example).
@@ -218,7 +217,7 @@ These would go in a kernel file in ``~/.local/share/jupyter/kernels/pyscenic-lat
         "exec",
         "-B",
         "/path/to/mounts",
-        "/path/to/aertslab-pyscenic-latest.sif",
+        "/path/to/aertslab-pyscenic-scanpy-latest.sif",
         "ipython",
         "kernel",
         "-f",
@@ -238,7 +237,7 @@ These would go in a kernel file in ``~/.local/share/jupyter/kernels/pyscenic-lat
          "exec",
          "-B",
          "/path/to/mounts",
-         "/path/to/aertslab-pyscenic-latest.sif",
+         "/path/to/aertslab-pyscenic-scanpy-latest.sif",
          "ipython",
          "kernel",
          "-f",
@@ -258,12 +257,15 @@ There are two Nextflow implementations available:
 * `VSNPipelines`_: A Nextflow DSL2 implementation.
 
 
-.. _`Singularity Hub`: https://www.singularity-hub.org/collections/2033
 .. _`SCENICprotocol`: https://github.com/aertslab/SCENICprotocol
 .. _`VSNPipelines`: https://github.com/vib-singlecell-nf/vsn-pipelines
-.. _dask: https://dask.pydata.org/en/latest/
-.. _distributed: https://distributed.readthedocs.io/en/latest/
-.. _`Docker Hub`: https://hub.docker.com/r/aertslab/pyscenic
-.. _feather: https://github.com/wesm/feather
-.. _cisTargetDBs: https://resources.aertslab.org/cistarget/
 
+.. _`Docker Hub pySCENIC`: https://hub.docker.com/r/aertslab/pyscenic
+.. _`Docker Hub pySCENIC with scanpy`: https://hub.docker.com/r/aertslab/pyscenic_scanpy
+
+.. _feather: https://arrow.apache.org/docs/python/feather.html
+
+.. _`cistargetDBs website`: https://resources.aertslab.org/cistarget/
+.. _`Databases ranking the whole genome`: https://resources.aertslab.org/cistarget/databases/
+.. _`Motif to TF annotations`: https://resources.aertslab.org/cistarget/motif2tf/
+.. _`list of transcription factors`: https://resources.aertslab.org/cistarget/tf_lists/
