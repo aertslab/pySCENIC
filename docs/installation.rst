@@ -111,7 +111,7 @@ Docker/Podman
 
 Docker/Podman images are available at `Docker Hub pySCENIC`_ and `Docker Hub pySCENIC with scanpy`_ , and can be obtained by running:
 
-.. :code-block:: bash
+.. code-block:: bash
 
     # pySCENIC CLI version (recommended).
     docker pull aertslab/pyscenic:0.12.0
