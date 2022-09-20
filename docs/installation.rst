@@ -115,11 +115,11 @@ Docker/Podman images are available at `Docker Hub pySCENIC`_ and `Docker Hub pyS
 
     # pySCENIC CLI version (recommended).
     docker pull aertslab/pyscenic:0.12.0
-    podman pull aertslab/pyscenic:0.12.0
+    podman pull docker://aertslab/pyscenic:0.12.0
 
     # pySCENIC CLI version + ipython kernel + scanpy.
-    docker pull aertslab/pyscenic_scanpy:0.12.0-1.9.1
-    podman pull aertslab/pyscenic_scanpy:0.12.0-1.9.1
+    docker pull aertslab/pyscenic_scanpy:0.12.0_1.9.1
+    podman pull docker://aertslab/pyscenic_scanpy:0.12.0_1.9.1
 
 To run pySCENIC using Docker/Podman, use the following three steps.
 A mount point (or more than one) needs to be specified, which contains the input data and necessary resources).
@@ -166,8 +166,8 @@ Singularity/Apptainer images can be build from the Docker Hub image as source:
     apptainer build aertslab-pyscenic-0.12.0.sif docker://aertslab/pyscenic:0.12.0
 
     # pySCENIC CLI version + ipython kernel + scanpy.
-    singularity build aertslab-pyscenic-scanpy-0.12.0-1.9.1.sif docker://aertslab/pyscenic_scanpy:0.12.0-1.9.1
-    apptainer build aertslab-pyscenic-0.12.0-1.9.1.sif docker://aertslab/pyscenic_scanpy:0.12.0-1.9.1
+    singularity build aertslab-pyscenic-scanpy-0.12.0-1.9.1.sif docker://aertslab/pyscenic_scanpy:0.12.0_1.9.1
+    apptainer build aertslab-pyscenic-0.12.0-1.9.1.sif docker://aertslab/pyscenic_scanpy:0.12.0_1.9.1
 
 
 To run pySCENIC with Singularity/Apptainer, the usage is very similar to that of Docker/Podman.
