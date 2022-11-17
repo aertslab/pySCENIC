@@ -1,20 +1,19 @@
 # -*- coding: utf-8 -*-
 
+import logging
+from ctypes import c_uint32
+from math import ceil
+from multiprocessing import Array, Process, cpu_count
+from multiprocessing.sharedctypes import RawArray
+from operator import attrgetter, mul
+from typing import Sequence, Type
+
+import numpy as np
 import pandas as pd
+from boltons.iterutils import chunked
+from ctxcore.genesig import GeneSignature
 from ctxcore.recovery import enrichment4cells
 from tqdm import tqdm
-from typing import Sequence, Type
-from ctxcore.genesig import GeneSignature
-from multiprocessing import cpu_count, Process, Array
-from boltons.iterutils import chunked
-from multiprocessing.sharedctypes import RawArray
-from operator import mul
-import numpy as np
-import logging
-from math import ceil
-from ctypes import c_uint32
-from operator import attrgetter
-
 
 LOGGER = logging.getLogger(__name__)
 # To reduce the memory footprint of a ranking matrix we use unsigned 32bit integers which provides a range from 0
@@ -84,7 +83,7 @@ def _enrichment(shared_ro_memory_array, modules, genes, cells, auc_threshold, au
     for idx, module in enumerate(modules):
         result_mtx[offset + (idx * inc) : offset + ((idx + 1) * inc)] = enrichment4cells(
             df_rnk, module, auc_threshold
-        ).values.flatten(order="C")
+        ).values.ravel(order="C")
 
 
 def aucell4r(
@@ -126,7 +125,7 @@ def aucell4r(
         shared_ro_memory_array = RawArray(DTYPE_C, mul(*df_rnk.shape))
         array = np.frombuffer(shared_ro_memory_array, dtype=DTYPE)
         # Copy the contents of df_rank into this shared memory block using row-major ordering.
-        array[:] = df_rnk.values.flatten(order='C')
+        array[:] = df_rnk.values.ravel(order='C')
 
         # The resulting AUCs are returned via a synchronize array.
         auc_mtx = Array('d', len(cells) * len(signatures))  # Double precision floats.
