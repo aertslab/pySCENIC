@@ -1,32 +1,30 @@
 # -*- coding: utf-8 -*-
 
-from ctxcore.recovery import recovery, aucs as calc_aucs
 import logging
-import traceback
-import pandas as pd
-import numpy as np
-from .utils import (
-    COLUMN_NAME_MOTIF_SIMILARITY_QVALUE,
-    COLUMN_NAME_ORTHOLOGOUS_IDENTITY,
-    COLUMN_NAME_MOTIF_ID,
-    COLUMN_NAME_TF,
-    COLUMN_NAME_ANNOTATION,
-    ACTIVATING_MODULE,
-    REPRESSING_MODULE,
-)
-from itertools import repeat
-from ctxcore.rnkdb import RankingDatabase
-from functools import reduce
-from typing import Type, Sequence, Optional
-from ctxcore.genesig import Regulon
-from ctxcore.recovery import leading_edge4row
 import math
-from itertools import chain
-from functools import partial
-from cytoolz import first
+import traceback
+from functools import partial, reduce
+from itertools import chain, repeat
+from typing import Optional, Sequence, Type
+
 import numpy as np
+import pandas as pd
+from ctxcore.genesig import Regulon
+from ctxcore.recovery import aucs as calc_aucs
+from ctxcore.recovery import leading_edge4row, recovery
+from ctxcore.rnkdb import RankingDatabase
+from cytoolz import first
 from dask.dataframe.utils import make_meta
 
+from .utils import (
+    ACTIVATING_MODULE,
+    COLUMN_NAME_ANNOTATION,
+    COLUMN_NAME_MOTIF_ID,
+    COLUMN_NAME_MOTIF_SIMILARITY_QVALUE,
+    COLUMN_NAME_ORTHOLOGOUS_IDENTITY,
+    COLUMN_NAME_TF,
+    REPRESSING_MODULE,
+)
 
 COLUMN_NAME_NES = "NES"
 COLUMN_NAME_AUC = "AUC"

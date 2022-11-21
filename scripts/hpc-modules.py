@@ -1,11 +1,12 @@
 # coding=utf-8
 
-import pandas as pd
-import os
 import glob
+import os
 import pickle
-from pyscenic.utils import modules_from_adjacencies
 
+import pandas as pd
+
+from pyscenic.utils import modules_from_adjacencies
 
 RESOURCES_FOLDER="."
 RHO_THRESHOLDS = [0.03, 0.1, 0.3]

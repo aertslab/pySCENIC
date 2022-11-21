@@ -10,32 +10,35 @@ os.environ["MKL_NUM_THREADS"] = "1"
 
 import argparse
 import logging
-from shutil import copyfile
-from dask.diagnostics import ProgressBar
+import sys
 from multiprocessing import cpu_count
-from arboreto.algo import grnboost2, genie3
-from arboreto.utils import load_tf_names
+from pathlib import Path, PurePath
+from shutil import copyfile
+from typing import Sequence, Type
 
-from pyscenic.utils import modules_from_adjacencies, add_correlation
-from ctxcore.rnkdb import opendb, RankingDatabase
-from pyscenic.prune import prune2df, find_features, _prepare_client
+from arboreto.algo import genie3, grnboost2
+from arboreto.utils import load_tf_names
+from ctxcore.rnkdb import RankingDatabase, opendb
+from dask.diagnostics import ProgressBar
+
 from pyscenic.aucell import aucell
 from pyscenic.log import create_logging_handler
-import sys
-from typing import Type, Sequence
+from pyscenic.prune import _prepare_client, find_features, prune2df
+from pyscenic.utils import add_correlation, modules_from_adjacencies
+
 from .utils import (
-    load_exp_matrix,
-    load_signatures,
-    save_matrix,
-    save_enriched_motifs,
-    load_adjacencies,
-    load_modules,
-    append_auc_mtx,
     ATTRIBUTE_NAME_CELL_IDENTIFIER,
     ATTRIBUTE_NAME_GENE,
+    append_auc_mtx,
+    is_valid_suffix,
+    load_adjacencies,
+    load_exp_matrix,
+    load_modules,
+    load_signatures,
+    save_enriched_motifs,
+    save_matrix,
+    suffixes_to_separator,
 )
-from .utils import is_valid_suffix, suffixes_to_separator
-from pathlib import Path, PurePath
 
 try:
     from pyscenic._version import get_versions
@@ -283,8 +286,9 @@ def aucell_command(args):
             LOGGER.error("Expression matrix should be provided in the loom file format.")
             sys.exit(1)
     elif '.h5ad' in extension:
-        from pyscenic.export import add_scenic_metadata
         from anndata import read_h5ad
+
+        from pyscenic.export import add_scenic_metadata
 
         # check input file is also h5ad:
         if '.h5ad' in PurePath(args.expression_mtx_fname.name).suffixes:

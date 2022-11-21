@@ -1,8 +1,9 @@
+from math import ceil, floor
+
 import matplotlib.pyplot as plt
-import seaborn as sns
 import numpy as np
 import pandas as pd
-from math import ceil, floor
+import seaborn as sns
 
 
 def plot_binarization(auc_mtx: pd.DataFrame, regulon_name: str, threshold: float, bins: int = 200, ax=None) -> None:

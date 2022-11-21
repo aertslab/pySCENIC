@@ -1,8 +1,7 @@
 # -*- coding: utf-8 -*-
 
-from fabric.api import run, env, local, task, put
-from fabric.context_managers import lcd, cd
-
+from fabric.api import env, local, put, run, task
+from fabric.context_managers import cd, lcd
 
 # Use server names from ~/.ssh/config file.
 env.use_ssh_config = True

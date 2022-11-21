@@ -1,8 +1,8 @@
-import pandas as pd
-import numpy as np
-
-from scipy.spatial.distance import jensenshannon
 from math import sqrt
+
+import numpy as np
+import pandas as pd
+from scipy.spatial.distance import jensenshannon
 
 
 def regulon_specificity_scores(auc_mtx, cell_type_series):

@@ -1,12 +1,11 @@
 # coding=utf-8
 
-import pytest
-
 import pandas as pd
-
+import pytest
 from ctxcore.genesig import GeneSignature
-from pyscenic.aucell import derive_auc_threshold, aucell, create_rankings
 from pkg_resources import resource_filename
+
+from pyscenic.aucell import aucell, create_rankings, derive_auc_threshold
 
 NOMENCLATURE = "HGNC"
 TEST_EXPRESSION_MTX_FNAME = resource_filename('resources.tests', "GSE103322.em.hgnc.sample.cxg.csv")

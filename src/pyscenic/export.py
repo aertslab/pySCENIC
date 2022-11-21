@@ -1,24 +1,24 @@
 # coding=utf-8
 
-import os
-import numpy as np
-import pandas as pd
-import loompy as lp
-from sklearn.manifold import TSNE
-from .aucell import aucell
-from ctxcore.genesig import Regulon
-from typing import List, Mapping, Union, Sequence, Optional
-from operator import attrgetter
-from multiprocessing import cpu_count
-from .binarization import binarize
-from itertools import chain, repeat, islice
-import networkx as nx
-import zlib
 import base64
 import json
-
-from typing import Mapping
+import os
+import zlib
 from collections import OrderedDict
+from itertools import chain, islice, repeat
+from multiprocessing import cpu_count
+from operator import attrgetter
+from typing import List, Mapping, Optional, Sequence, Union
+
+import loompy as lp
+import networkx as nx
+import numpy as np
+import pandas as pd
+from ctxcore.genesig import Regulon
+from sklearn.manifold import TSNE
+
+from .aucell import aucell
+from .binarization import binarize
 
 
 def compress_encode(value):

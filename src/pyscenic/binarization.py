@@ -1,18 +1,16 @@
 # coding=utf-8
 
-from typing import Optional, Mapping
+from multiprocessing import Pool
+from typing import Mapping, Optional
 
 import numpy as np
 import pandas as pd
-
-from tqdm import tqdm
-
 from scipy import stats
 from scipy.optimize import minimize_scalar
 from sklearn import mixture
+from tqdm import tqdm
 
 from pyscenic.diptest import diptst
-from multiprocessing import Pool
 
 
 def derive_threshold(auc_mtx: pd.DataFrame, regulon_name: str, seed=None, method: str = 'hdt') -> float:

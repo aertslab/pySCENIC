@@ -1,21 +1,22 @@
 # -*- coding: utf-8 -*-
 
+import base64
+import json
 import os
 import pickle
-import json
 import zlib
-import base64
+from operator import attrgetter
+from pathlib import Path, PurePath
+from typing import Sequence, Type
+
+import loompy as lp
 import numpy as np
 import pandas as pd
-import loompy as lp
-from operator import attrgetter
-from typing import Type, Sequence
 from ctxcore.genesig import GeneSignature, openfile
-from pyscenic.transform import df2regulons
-from pyscenic.utils import load_motifs, load_from_yaml, save_to_yaml
-from pyscenic.binarization import binarize
-from pathlib import Path, PurePath
 
+from pyscenic.binarization import binarize
+from pyscenic.transform import df2regulons
+from pyscenic.utils import load_from_yaml, load_motifs, save_to_yaml
 
 __all__ = [
     'save_matrix',

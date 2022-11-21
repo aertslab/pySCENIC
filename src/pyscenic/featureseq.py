@@ -1,12 +1,13 @@
 # coding=utf-8
 
-from interlap import InterLap
-from itertools import chain
-from collections import defaultdict
-from typing import List, Optional, Union, Type
-import re
 import io
+import re
+from collections import defaultdict
+from itertools import chain
+from typing import List, Optional, Type, Union
+
 from cytoolz import memoize
+from interlap import InterLap
 
 
 class Feature:

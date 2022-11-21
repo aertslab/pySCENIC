@@ -1,19 +1,20 @@
 # -*- coding: utf-8 -*-
 
-import os
-import sys
+import argparse
 import glob
 import logging
-import argparse
+import os
 import pickle
+import sys
 from configparser import ConfigParser
-from pyscenic.utils import load_from_yaml
-from pyscenic.rnkdb import FeatherRankingDatabase as RankingDatabase
-from pyscenic.prune import prune2df
-from dask.diagnostics import ProgressBar
-from cytoolz import mapcat
 from multiprocessing import cpu_count
 
+from cytoolz import mapcat
+from dask.diagnostics import ProgressBar
+
+from pyscenic.prune import prune2df
+from pyscenic.rnkdb import FeatherRankingDatabase as RankingDatabase
+from pyscenic.utils import load_from_yaml
 
 CONFIG_FILENAME = os.path.join(os.path.dirname(__file__), "hpc-prune.ini")
 

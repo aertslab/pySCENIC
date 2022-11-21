@@ -11,9 +11,14 @@ import loompy as lp
 import pandas as pd
 import tqdm
 from arboreto.algo import _prepare_input, genie3, grnboost2
-from arboreto.core import (EARLY_STOP_WINDOW_LENGTH, RF_KWARGS, SGBM_KWARGS,
-                           infer_partial_network, target_gene_indices,
-                           to_tf_matrix)
+from arboreto.core import (
+    EARLY_STOP_WINDOW_LENGTH,
+    RF_KWARGS,
+    SGBM_KWARGS,
+    infer_partial_network,
+    target_gene_indices,
+    to_tf_matrix,
+)
 from arboreto.utils import load_tf_names
 
 from pyscenic.cli.utils import load_exp_matrix, suffixes_to_separator

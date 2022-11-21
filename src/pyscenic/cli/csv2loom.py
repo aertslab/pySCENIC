@@ -1,8 +1,9 @@
 # -*- coding: utf-8 -*-
 
-import os
 import argparse
-from pyscenic.cli.utils import save_df_as_loom, load_exp_matrix
+import os
+
+from pyscenic.cli.utils import load_exp_matrix, save_df_as_loom
 
 
 def create_argument_parser():

@@ -12,9 +12,11 @@ For more information, please see:
 import glob
 import io
 import os
-import setuptools
-import versioneer
 from os.path import join
+
+import setuptools
+
+import versioneer
 
 
 def read(*names, **kwargs):

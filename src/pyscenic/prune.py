@@ -1,36 +1,37 @@
 # -*- coding: utf-8 -*-
 
 import logging
-import re
-from math import ceil
-from functools import partial
-from operator import concat
-from typing import Type, Sequence, TypeVar, Callable
-import tempfile
-import pickle
 import os
-
-import pandas as pd
+import pickle
+import re
+import tempfile
+from functools import partial
+from math import ceil
 
 # Using multiprocessing using dill package for pickling to avoid strange bugs.
 from multiprocessing import cpu_count
+from operator import concat
+from typing import Callable, Sequence, Type, TypeVar
+
+import pandas as pd
+from boltons.iterutils import chunked_iter
+from ctxcore.genesig import GeneSignature, Regulon
+from ctxcore.rnkdb import MemoryDecorator, RankingDatabase
+from dask import delayed
+from dask.dataframe import from_delayed
+from dask.distributed import Client, LocalCluster
 from multiprocessing_on_dill.connection import Pipe
 from multiprocessing_on_dill.context import Process
 
-from boltons.iterutils import chunked_iter
-
-from dask import delayed
-from dask.dataframe import from_delayed
-
-from dask.distributed import LocalCluster, Client
-
 from .log import create_logging_handler
-from ctxcore.genesig import Regulon, GeneSignature
-from .utils import load_motif_annotations
-from ctxcore.rnkdb import RankingDatabase, MemoryDecorator
-from .utils import add_motif_url
-from .transform import module2features_auc1st_impl, modules2regulons, modules2df, df2regulons, DF_META_DATA
-
+from .transform import (
+    DF_META_DATA,
+    df2regulons,
+    module2features_auc1st_impl,
+    modules2df,
+    modules2regulons,
+)
+from .utils import add_motif_url, load_motif_annotations
 
 __all__ = ['prune2df', 'find_features', 'df2regulons']
 

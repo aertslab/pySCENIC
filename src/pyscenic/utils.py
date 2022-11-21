@@ -1,21 +1,24 @@
 # -*- coding: utf-8 -*-
 
-import pandas as pd
-from urllib.parse import urljoin
-from ctxcore.genesig import Regulon, GeneSignature, openfile
-from .math import masked_rho4pairs
-from itertools import chain
-import numpy as np
 from functools import partial
+from itertools import chain
 from typing import Sequence, Type
-from yaml import load, dump
+from urllib.parse import urljoin
+
+import numpy as np
+import pandas as pd
+from ctxcore.genesig import GeneSignature, Regulon, openfile
+from yaml import dump, load
+
+from .math import masked_rho4pairs
 
 try:
-    from yaml import CLoader as Loader, CDumper as Dumper
+    from yaml import CDumper as Dumper
+    from yaml import CLoader as Loader
 except ImportError:
     from yaml import Loader, Dumper
-import logging
 
+import logging
 
 LOGGER = logging.getLogger(__name__)
 
@@ -372,7 +375,7 @@ def load_motifs(fname: str, sep: str = ',') -> pd.DataFrame:
     :param sep:
     :return:
     """
-    from .transform import COLUMN_NAME_TARGET_GENES, COLUMN_NAME_CONTEXT
+    from .transform import COLUMN_NAME_CONTEXT, COLUMN_NAME_TARGET_GENES
 
     df = pd.read_csv(fname, sep=sep, index_col=[0, 1], header=[0, 1], skipinitialspace=True)
     df[('Enrichment', COLUMN_NAME_CONTEXT)] = df[('Enrichment', COLUMN_NAME_CONTEXT)].apply(lambda s: eval(s))
