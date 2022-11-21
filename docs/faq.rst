@@ -78,7 +78,7 @@ This can also be easily run using the Docker image, which already contains all o
 
 .. code-block:: bash
 
-    docker run -it --rm -v $PWD:$PWD -w $PWD aertslab/pyscenic:0.10.3 \
+    docker run -it --rm -v $PWD:$PWD -w $PWD aertslab/pyscenic:0.12.1 \
         python add_visualization.py \
             --loom_input auc_mtx.loom \
             --loom_output scenic_visualize.loom \

@@ -72,7 +72,7 @@ A command line version of the tool is included. This tool is available after pro
     $ pyscenic -h
     usage: pyscenic [-h] {grn,add_cor,ctx,aucell} ...
 
-    Single-Cell rEgulatory Network Inference and Clustering (0.12.0)
+    Single-Cell rEgulatory Network Inference and Clustering (0.12.1)
 
     positional arguments:
       {grn,add_cor,ctx,aucell}
@@ -114,12 +114,12 @@ Docker/Podman images are available at `Docker Hub pySCENIC`_ and `Docker Hub pyS
 .. code-block:: bash
 
     # pySCENIC CLI version (recommended).
-    docker pull aertslab/pyscenic:0.12.0
-    podman pull docker://aertslab/pyscenic:0.12.0
+    docker pull aertslab/pyscenic:0.12.1
+    podman pull docker://aertslab/pyscenic:0.12.1
 
     # pySCENIC CLI version + ipython kernel + scanpy.
-    docker pull aertslab/pyscenic_scanpy:0.12.0_1.9.1
-    podman pull docker://aertslab/pyscenic_scanpy:0.12.0_1.9.1
+    docker pull aertslab/pyscenic_scanpy:0.12.1_1.9.1
+    podman pull docker://aertslab/pyscenic_scanpy:0.12.1_1.9.1
 
 To run pySCENIC using Docker/Podman, use the following three steps.
 A mount point (or more than one) needs to be specified, which contains the input data and necessary resources).
@@ -128,7 +128,7 @@ A mount point (or more than one) needs to be specified, which contains the input
 
     docker run -it --rm \
         -v /data:/data \
-        aertslab/pyscenic:0.12.0 pyscenic grn \
+        aertslab/pyscenic:0.12.1 pyscenic grn \
             --num_workers 6 \
             -o /data/expr_mat.adjacencies.tsv \
             /data/expr_mat.tsv \
@@ -136,7 +136,7 @@ A mount point (or more than one) needs to be specified, which contains the input
 
     docker run -it --rm \
         -v /data:/data \
-        aertslab/pyscenic:0.12.0 pyscenic ctx \
+        aertslab/pyscenic:0.12.1 pyscenic ctx \
             /data/expr_mat.adjacencies.tsv \
             /data/hg19-tss-centered-5kb-7species.mc9nr.genes_vs_motifs.rankings.feather \
             /data/hg19-tss-centered-10kb-7species.mc9nr.genes_vs_motifs.rankings.feather \
@@ -148,7 +148,7 @@ A mount point (or more than one) needs to be specified, which contains the input
 
     docker run -it --rm \
         -v /data:/data \
-        aertslab/pyscenic:0.12.0 pyscenic aucell \
+        aertslab/pyscenic:0.12.1 pyscenic aucell \
             /data/expr_mat.tsv \
             /data/regulons.csv \
             -o /data/auc_mtx.csv \
@@ -162,19 +162,19 @@ Singularity/Apptainer images can be build from the Docker Hub image as source:
 .. code-block:: bash
 
     # pySCENIC CLI version.
-    singularity build aertslab-pyscenic-0.12.0.sif docker://aertslab/pyscenic:0.12.0
-    apptainer build aertslab-pyscenic-0.12.0.sif docker://aertslab/pyscenic:0.12.0
+    singularity build aertslab-pyscenic-0.12.1.sif docker://aertslab/pyscenic:0.12.1
+    apptainer build aertslab-pyscenic-0.12.1.sif docker://aertslab/pyscenic:0.12.1
 
     # pySCENIC CLI version + ipython kernel + scanpy.
-    singularity build aertslab-pyscenic-scanpy-0.12.0-1.9.1.sif docker://aertslab/pyscenic_scanpy:0.12.0_1.9.1
-    apptainer build aertslab-pyscenic-0.12.0-1.9.1.sif docker://aertslab/pyscenic_scanpy:0.12.0_1.9.1
+    singularity build aertslab-pyscenic-scanpy-0.12.1-1.9.1.sif docker://aertslab/pyscenic_scanpy:0.12.1_1.9.1
+    apptainer build aertslab-pyscenic-0.12.1-1.9.1.sif docker://aertslab/pyscenic_scanpy:0.12.1_1.9.1
 
 
 To run pySCENIC with Singularity/Apptainer, the usage is very similar to that of Docker/Podman.
 
 .. code-block:: bash
 
-    singularity run aertslab-pyscenic-0.12.0.sif \
+    singularity run aertslab-pyscenic-0.12.1.sif \
         pyscenic grn \
             -B /data:/data
             --num_workers 6 \

@@ -1,4 +1,4 @@
-FROM aertslab/pyscenic:0.12.0 AS compile-image
+FROM aertslab/pyscenic:0.12.1 AS compile-image
 
 ENV DEBIAN_FRONTEND=noninteractive
 
@@ -11,7 +11,7 @@ RUN apt-get update && \
 COPY requirements_docker_with_scanpy.txt /tmp/
 RUN pip install --no-cache-dir -r /tmp/requirements_docker_with_scanpy.txt
 
-FROM aertslab/pyscenic:0.12.0  AS build-image
+FROM aertslab/pyscenic:0.12.1 AS build-image
 
 RUN apt-get -y update && \
     apt-get -y --no-install-recommends install \
