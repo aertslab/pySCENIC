@@ -6,32 +6,32 @@ from fabric.context_managers import cd, lcd
 # Use server names from ~/.ssh/config file.
 env.use_ssh_config = True
 # List of remote serves.
-env.hosts = ['hpc2-big7']
+env.hosts = ["hpc2-big7"]
 
 
 @task
 def clean():
-    with lcd('..'):
-        local('rm -rf dist/*')
-    with cd('~/data/downloads/'):
-        run('rm -rf *')
+    with lcd(".."):
+        local("rm -rf dist/*")
+    with cd("~/data/downloads/"):
+        run("rm -rf *")
 
 
 @task
 def deploy(version):
     clean()
 
-    with lcd('..'):
-        local('git tag -a {0} -m \"version {0}\"'.format(version))
-        local('git push --tags')
+    with lcd(".."):
+        local('git tag -a {0} -m "version {0}"'.format(version))
+        local("git push --tags")
 
-        local('python setup.py sdist')
-        #local('python setup.py bdist_wheel')
-        put('./dist/pyscenic*', '~/data/downloads')
+        local("python setup.py sdist")
+        # local('python setup.py bdist_wheel')
+        put("./dist/pyscenic*", "~/data/downloads")
 
-    with cd('~/data/downloads/'):
-        run('. activate pyscenic')
-        run('pip install --upgrade pyscenic-*.tar.gz')
+    with cd("~/data/downloads/"):
+        run(". activate pyscenic")
+        run("pip install --upgrade pyscenic-*.tar.gz")
 
 
 @task
@@ -40,5 +40,3 @@ def install():
     # Create conda environment
     # Install python package pyscenic in environment
     pass
-
-
