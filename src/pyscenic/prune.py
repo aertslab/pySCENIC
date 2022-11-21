@@ -33,7 +33,7 @@ from .transform import (
 )
 from .utils import add_motif_url, load_motif_annotations
 
-__all__ = ['prune2df', 'find_features', 'df2regulons']
+__all__ = ["prune2df", "find_features", "df2regulons"]
 
 
 # Taken from: https://www.regular-expressions.info/ip.html
@@ -60,25 +60,25 @@ def _prepare_client(client_or_address, num_workers):
     # Credits to Thomas Moerman (arboreto package):
     # https://github.com/tmoerman/arboreto/blob/482ce8598da5385eb0e01a50362cb2b1e6f66a41/arboreto/algo.py#L145-L191
 
-    if client_or_address is None or str(client_or_address).lower() == 'local':
+    if client_or_address is None or str(client_or_address).lower() == "local":
         local_cluster = LocalCluster(n_workers=num_workers, threads_per_worker=1)
         client = Client(local_cluster)
 
         def close_client_and_local_cluster(verbose=False):
             if verbose:
-                LOGGER.info('shutting down client and local cluster')
+                LOGGER.info("shutting down client and local cluster")
 
             client.close()
             local_cluster.close()
 
         return client, close_client_and_local_cluster
 
-    elif isinstance(client_or_address, str) and client_or_address.lower() != 'local':
+    elif isinstance(client_or_address, str) and client_or_address.lower() != "local":
         client = Client(client_or_address)
 
         def close_client(verbose=False):
             if verbose:
-                LOGGER.info('shutting down client')
+                LOGGER.info("shutting down client")
 
             client.close()
 
@@ -88,7 +88,7 @@ def _prepare_client(client_or_address, num_workers):
 
         def close_dummy(verbose=False):
             if verbose:
-                LOGGER.info('not shutting down client, client was created externally')
+                LOGGER.info("not shutting down client, client was created externally")
 
             return None
 
@@ -133,13 +133,15 @@ class Worker(Process):
         LOGGER.info("Worker {}: motif annotations loaded in memory.".format(self.name))
 
         # Apply transformation on all modules.
-        output = self.transform_fnc(rnkdb, self.modules, motif_annotations=motif_annotations)
+        output = self.transform_fnc(
+            rnkdb, self.modules, motif_annotations=motif_annotations
+        )
         LOGGER.info("Worker {}: All regulons derived.".format(self.name))
 
         # Sending information back to parent process: to avoid overhead of pickling the data, the output is first written
         # to disk in binary pickle format to a temporary file. The name of that file is shared with the parent process.
         output_fname = tempfile.mktemp()
-        with open(output_fname, 'wb') as f:
+        with open(output_fname, "wb") as f:
             pickle.dump(output, f)
         del output
         self.sender.send(output_fname)
@@ -147,18 +149,20 @@ class Worker(Process):
         LOGGER.info("Worker {}: Done.".format(self.name))
 
 
-T = TypeVar('T')
+T = TypeVar("T")
 
 
 def _distributed_calc(
     rnkdbs: Sequence[Type[RankingDatabase]],
     modules: Sequence[Type[GeneSignature]],
     motif_annotations_fname: str,
-    transform_func: Callable[[Type[RankingDatabase], Sequence[Type[GeneSignature]], str], T],
+    transform_func: Callable[
+        [Type[RankingDatabase], Sequence[Type[GeneSignature]], str], T
+    ],
     aggregate_func: Callable[[Sequence[T]], T],
     motif_similarity_fdr: float = 0.001,
     orthologuous_identity_threshold: float = 0.0,
-    client_or_address='dask_multiprocessing',
+    client_or_address="dask_multiprocessing",
     num_workers=None,
     module_chunksize=100,
 ) -> T:
@@ -187,7 +191,10 @@ def _distributed_calc(
 
     def is_valid(client_or_address):
         if isinstance(client_or_address, str) and (
-            (client_or_address in {"custom_multiprocessing", "dask_multiprocessing", "local"})
+            (
+                client_or_address
+                in {"custom_multiprocessing", "dask_multiprocessing", "local"}
+            )
             or IP_PATTERN.fullmatch(client_or_address)
         ):
             return True
@@ -195,9 +202,11 @@ def _distributed_calc(
             return True
         return False
 
-    assert is_valid(client_or_address), "\"{}\"is not valid for parameter client_or_address.".format(client_or_address)
+    assert is_valid(
+        client_or_address
+    ), '"{}"is not valid for parameter client_or_address.'.format(client_or_address)
 
-    if client_or_address not in {'custom_multiprocessing', 'dask_multiprocessing'}:
+    if client_or_address not in {"custom_multiprocessing", "dask_multiprocessing"}:
         module_chunksize = 1
 
     # Make sure warnings and info are being logged.
@@ -206,7 +215,9 @@ def _distributed_calc(
         if LOGGER.getEffectiveLevel() > logging.INFO:
             LOGGER.setLevel(logging.INFO)
 
-    if client_or_address == 'custom_multiprocessing':  # CUSTOM parallelized implementation.
+    if (
+        client_or_address == "custom_multiprocessing"
+    ):  # CUSTOM parallelized implementation.
         # This implementation overcomes the I/O-bounded performance. Each worker (subprocess) loads a dedicated ranking
         # database and motif annotation table into its own memory space before consuming module. The implementation of
         # each worker uses the AUC-first numba JIT based implementation of the algorithm.
@@ -217,7 +228,9 @@ def _distributed_calc(
         LOGGER.info("Using {} workers.".format(len(rnkdbs) * amplifier))
         receivers = []
         for db in rnkdbs:
-            for idx, chunk in enumerate(chunked_iter(modules, ceil(len(modules) / float(amplifier)))):
+            for idx, chunk in enumerate(
+                chunked_iter(modules, ceil(len(modules) / float(amplifier)))
+            ):
                 sender, receiver = Pipe()
                 receivers.append(receiver)
                 Worker(
@@ -234,7 +247,7 @@ def _distributed_calc(
         fnames = [recv.recv() for recv in receivers]
         # Load all data from disk and concatenate.
         def load(fname):
-            with open(fname, 'rb') as f:
+            with open(fname, "rb") as f:
                 return pickle.load(f)
 
         try:
@@ -269,7 +282,11 @@ def _distributed_calc(
             # the motif annotations need to wrapped in a delayed() construct to avoid needless pickling and
             # unpicking between processes.
             def wrap(data):
-                return client.scatter(data, broadcast=True) if client else delayed(data, pure=True)
+                return (
+                    client.scatter(data, broadcast=True)
+                    if client
+                    else delayed(data, pure=True)
+                )
 
             delayed_or_future_annotations = wrap(motif_annotations)
             # 2. The databases: these database objects are typically proxies to the data on disk. They only have
@@ -332,12 +349,14 @@ def _distributed_calc(
         if client_or_address == "dask_multiprocessing":
             # ... via multiprocessing.
             return create_graph().compute(
-                scheduler='processes', num_workers=num_workers if num_workers else cpu_count()
+                scheduler="processes",
+                num_workers=num_workers if num_workers else cpu_count(),
             )
         else:
             # ... via dask.distributed framework.
             client, shutdown_callback = _prepare_client(
-                client_or_address, num_workers=num_workers if num_workers else cpu_count()
+                client_or_address,
+                num_workers=num_workers if num_workers else cpu_count(),
             )
             try:
                 return client.compute(create_graph(client), sync=True)
@@ -355,7 +374,7 @@ def prune2df(
     motif_similarity_fdr: float = 0.001,
     orthologuous_identity_threshold: float = 0.0,
     weighted_recovery=False,
-    client_or_address='dask_multiprocessing',
+    client_or_address="dask_multiprocessing",
     num_workers=None,
     module_chunksize=100,
     filter_for_annotation=True,
@@ -392,11 +411,15 @@ def prune2df(
         filter_for_annotation=filter_for_annotation,
     )
     transformation_func = partial(
-        modules2df, module2features_func=module2features_func, weighted_recovery=weighted_recovery
+        modules2df,
+        module2features_func=module2features_func,
+        weighted_recovery=weighted_recovery,
     )
     # Create a distributed dataframe from individual delayed objects to avoid out of memory problems.
     aggregation_func = (
-        partial(from_delayed, meta=DF_META_DATA) if client_or_address != 'custom_multiprocessing' else pd.concat
+        partial(from_delayed, meta=DF_META_DATA)
+        if client_or_address != "custom_multiprocessing"
+        else pd.concat
     )
     return _distributed_calc(
         rnkdbs,
@@ -442,6 +465,12 @@ def find_features(
     :return: A dataframe with the enriched features.
     """
     return add_motif_url(
-        prune2df(rnkdbs, signatures, motif_annotations_fname, filter_for_annotation=False, **kwargs),
+        prune2df(
+            rnkdbs,
+            signatures,
+            motif_annotations_fname,
+            filter_for_annotation=False,
+            **kwargs
+        ),
         base_url=motif_base_url,
     )
