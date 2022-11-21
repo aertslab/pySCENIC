@@ -18,7 +18,7 @@ from tqdm import tqdm
 LOGGER = logging.getLogger(__name__)
 # To reduce the memory footprint of a ranking matrix we use unsigned 32bit integers which provides a range from 0
 # through 4,294,967,295. This should be sufficient even for region-based approaches.
-DTYPE = 'uint32'
+DTYPE = "uint32"
 DTYPE_C = c_uint32
 
 
@@ -45,7 +45,7 @@ def create_rankings(ex_mtx: pd.DataFrame, seed=None) -> pd.DataFrame:
     #
     return (
         ex_mtx.sample(frac=1.0, replace=False, axis=1, random_state=seed)
-        .rank(axis=1, ascending=False, method='first', na_option='bottom')
+        .rank(axis=1, ascending=False, method="first", na_option="bottom")
         .astype(DTYPE)
         - 1
     )
@@ -64,26 +64,35 @@ def derive_auc_threshold(ex_mtx: pd.DataFrame) -> pd.DataFrame:
         that when using this value as the AUC threshold for 99% of the cells all ranked genes used for AUC calculation will
         have had a detected expression in the single-cell experiment.
     """
-    return pd.Series(np.count_nonzero(ex_mtx, axis=1)).quantile([0.01, 0.05, 0.10, 0.50, 1]) / ex_mtx.shape[1]
+    return (
+        pd.Series(np.count_nonzero(ex_mtx, axis=1)).quantile(
+            [0.01, 0.05, 0.10, 0.50, 1]
+        )
+        / ex_mtx.shape[1]
+    )
 
 
 enrichment = enrichment4cells
 
 
-def _enrichment(shared_ro_memory_array, modules, genes, cells, auc_threshold, auc_mtx, offset):
+def _enrichment(
+    shared_ro_memory_array, modules, genes, cells, auc_threshold, auc_mtx, offset
+):
     # The rankings dataframe is properly reconstructed (checked this).
     df_rnk = pd.DataFrame(
-        data=np.frombuffer(shared_ro_memory_array, dtype=DTYPE).reshape(len(cells), len(genes)),
+        data=np.frombuffer(shared_ro_memory_array, dtype=DTYPE).reshape(
+            len(cells), len(genes)
+        ),
         columns=genes,
         index=cells,
     )
     # To avoid additional memory burden de resulting AUCs are immediately stored in the output sync. array.
-    result_mtx = np.frombuffer(auc_mtx.get_obj(), dtype='d')
+    result_mtx = np.frombuffer(auc_mtx.get_obj(), dtype="d")
     inc = len(cells)
     for idx, module in enumerate(modules):
-        result_mtx[offset + (idx * inc) : offset + ((idx + 1) * inc)] = enrichment4cells(
-            df_rnk, module, auc_threshold
-        ).values.ravel(order="C")
+        result_mtx[
+            offset + (idx * inc) : offset + ((idx + 1) * inc)
+        ] = enrichment4cells(df_rnk, module, auc_threshold).values.ravel(order="C")
 
 
 def aucell4r(
@@ -110,7 +119,11 @@ def aucell4r(
         # Show progress bar ...
         aucs = pd.concat(
             [
-                enrichment4cells(df_rnk, module.noweights() if noweights else module, auc_threshold=auc_threshold)
+                enrichment4cells(
+                    df_rnk,
+                    module.noweights() if noweights else module,
+                    auc_threshold=auc_threshold,
+                )
                 for module in tqdm(signatures)
             ]
         ).unstack("Regulon")
@@ -125,10 +138,10 @@ def aucell4r(
         shared_ro_memory_array = RawArray(DTYPE_C, mul(*df_rnk.shape))
         array = np.frombuffer(shared_ro_memory_array, dtype=DTYPE)
         # Copy the contents of df_rank into this shared memory block using row-major ordering.
-        array[:] = df_rnk.values.ravel(order='C')
+        array[:] = df_rnk.values.ravel(order="C")
 
         # The resulting AUCs are returned via a synchronize array.
-        auc_mtx = Array('d', len(cells) * len(signatures))  # Double precision floats.
+        auc_mtx = Array("d", len(cells) * len(signatures))  # Double precision floats.
 
         # Convert the modules to modules with uniform weights if necessary.
         if noweights:
@@ -158,9 +171,13 @@ def aucell4r(
 
         # Reconstitute the results array. Using C or row-major ordering.
         aucs = pd.DataFrame(
-            data=np.ctypeslib.as_array(auc_mtx.get_obj()).reshape(len(signatures), len(cells)),
-            columns=pd.Index(data=cells, name='Cell'),
-            index=pd.Index(data=list(map(attrgetter("name"), signatures)), name='Regulon'),
+            data=np.ctypeslib.as_array(auc_mtx.get_obj()).reshape(
+                len(signatures), len(cells)
+            ),
+            columns=pd.Index(data=cells, name="Cell"),
+            index=pd.Index(
+                data=list(map(attrgetter("name"), signatures)), name="Regulon"
+            ),
         ).T
     return aucs / aucs.max(axis=0) if normalize else aucs
 
@@ -186,4 +203,11 @@ def aucell(
     :param num_workers: The number of cores to use.
     :return: A dataframe with the AUCs (n_cells x n_modules).
     """
-    return aucell4r(create_rankings(exp_mtx, seed), signatures, auc_threshold, noweights, normalize, num_workers)
+    return aucell4r(
+        create_rankings(exp_mtx, seed),
+        signatures,
+        auc_threshold,
+        noweights,
+        normalize,
+        num_workers,
+    )
