@@ -19,13 +19,13 @@ from pyscenic.transform import df2regulons
 from pyscenic.utils import load_from_yaml, load_motifs, save_to_yaml
 
 __all__ = [
-    'save_matrix',
-    'load_exp_matrix',
-    'load_signatures',
-    'save_enriched_motifs',
-    'load_adjacencies',
-    'load_modules',
-    'append_auc_mtx',
+    "save_matrix",
+    "load_exp_matrix",
+    "load_signatures",
+    "save_enriched_motifs",
+    "load_adjacencies",
+    "load_modules",
+    "append_auc_mtx",
 ]
 
 
@@ -49,12 +49,14 @@ def save_df_as_loom(df: pd.DataFrame, fname: str) -> None:
     #   - Columns represent cells or aggregates of cells
     # 	- Rows represent genes
     column_attrs = {
-        ATTRIBUTE_NAME_CELL_IDENTIFIER: df.index.values.astype('str'),
+        ATTRIBUTE_NAME_CELL_IDENTIFIER: df.index.values.astype("str"),
     }
     row_attrs = {
-        ATTRIBUTE_NAME_GENE: df.columns.values.astype('str'),
+        ATTRIBUTE_NAME_GENE: df.columns.values.astype("str"),
     }
-    lp.create(filename=fname, layers=df.T.values, row_attrs=row_attrs, col_attrs=column_attrs)
+    lp.create(
+        filename=fname, layers=df.T.values, row_attrs=row_attrs, col_attrs=column_attrs
+    )
 
 
 def load_exp_matrix_as_loom(
@@ -70,37 +72,39 @@ def load_exp_matrix_as_loom(
     :return: A 2-dimensional dataframe (rows = cells x columns = genes).
     """
     if return_sparse:
-        with lp.connect(fname, mode='r', validate=False) as ds:
-            ex_mtx = ds.layers[''].sparse().T.tocsc()
+        with lp.connect(fname, mode="r", validate=False) as ds:
+            ex_mtx = ds.layers[""].sparse().T.tocsc()
             genes = pd.Series(ds.ra[attribute_name_gene])
             cells = ds.ca[attribute_name_cell_id]
         return ex_mtx, genes, cells
 
     else:
-        with lp.connect(fname, mode='r', validate=False) as ds:
+        with lp.connect(fname, mode="r", validate=False) as ds:
             # The orientation of the loom file is always:
             #   - Columns represent cells or aggregates of cells
             # 	- Rows represent genes
             return pd.DataFrame(
-                data=ds[:, :], index=ds.ra[attribute_name_gene], columns=ds.ca[attribute_name_cell_id]
+                data=ds[:, :],
+                index=ds.ra[attribute_name_gene],
+                columns=ds.ca[attribute_name_cell_id],
             ).T
 
 
 def suffixes_to_separator(extension):
-    if '.csv' in extension:
-        return ','
-    if '.tsv' in extension:
-        return '\t'
+    if ".csv" in extension:
+        return ","
+    if ".tsv" in extension:
+        return "\t"
 
 
 def is_valid_suffix(extension, method):
     assert isinstance(extension, list), 'extension should be of type "list"'
-    if method in ['grn', 'aucell']:
-        valid_extensions = ['.csv', '.tsv', '.loom', '.h5ad']
-    elif method == 'ctx':
-        valid_extensions = ['.csv', '.tsv']
-    elif method == 'ctx_yaml':
-        valid_extensions = ['.yaml', '.yml']
+    if method in ["grn", "aucell"]:
+        valid_extensions = [".csv", ".tsv", ".loom", ".h5ad"]
+    elif method == "ctx":
+        valid_extensions = [".csv", ".tsv"]
+    elif method == "ctx_yaml":
+        valid_extensions = [".yaml", ".yml"]
     if len(set(extension).intersection(valid_extensions)) > 0:
         return True
     else:
@@ -125,26 +129,32 @@ def load_exp_matrix(
     :return: A 2-dimensional dataframe (rows = cells x columns = genes).
     """
     extension = PurePath(fname).suffixes
-    if is_valid_suffix(extension, 'grn'):
-        if '.loom' in extension:
-            return load_exp_matrix_as_loom(fname, return_sparse, attribute_name_cell_id, attribute_name_gene)
-        elif '.h5ad' in extension:
+    if is_valid_suffix(extension, "grn"):
+        if ".loom" in extension:
+            return load_exp_matrix_as_loom(
+                fname, return_sparse, attribute_name_cell_id, attribute_name_gene
+            )
+        elif ".h5ad" in extension:
             from anndata import read_h5ad
 
-            adata = read_h5ad(filename=fname, backed='r')
+            adata = read_h5ad(filename=fname, backed="r")
             if return_sparse:
                 # expr, gene, cell:
                 return adata.X.value, adata.var_names.values, adata.obs_names.values
             else:
                 return pd.DataFrame(
-                    adata.X.value.todense(), index=adata.obs_names.values, columns=adata.var_names.values
+                    adata.X.value.todense(),
+                    index=adata.obs_names.values,
+                    columns=adata.var_names.values,
                 )
 
         else:
-            df = pd.read_csv(fname, sep=suffixes_to_separator(extension), header=0, index_col=0)
+            df = pd.read_csv(
+                fname, sep=suffixes_to_separator(extension), header=0, index_col=0
+            )
             return df.T if transpose else df
     else:
-        raise ValueError("Unknown file format \"{}\".".format(fname))
+        raise ValueError('Unknown file format "{}".'.format(fname))
 
 
 def save_matrix(df: pd.DataFrame, fname: str, transpose: bool = False) -> None:
@@ -158,17 +168,19 @@ def save_matrix(df: pd.DataFrame, fname: str, transpose: bool = False) -> None:
     :param transpose: Should the expression matrix be stored as (rows = genes x columns = cells)?
     """
     extension = PurePath(fname).suffixes
-    if is_valid_suffix(extension, 'aucell'):
-        if '.loom' in extension:
+    if is_valid_suffix(extension, "aucell"):
+        if ".loom" in extension:
             return save_df_as_loom(df, fname)
         else:
-            (df.T if transpose else df).to_csv(fname, sep=suffixes_to_separator(extension))
+            (df.T if transpose else df).to_csv(
+                fname, sep=suffixes_to_separator(extension)
+            )
     else:
-        raise ValueError("Unknown file format \"{}\".".format(fname))
+        raise ValueError('Unknown file format "{}".'.format(fname))
 
 
 def guess_separator(fname: str) -> str:
-    with openfile(fname, 'r') as f:
+    with openfile(fname, "r") as f:
         lines = f.readlines()
 
     # decode if gzipped file:
@@ -177,13 +189,17 @@ def guess_separator(fname: str) -> str:
             lines[i] = x.decode()
 
     def count_columns(sep):
-        return [len(line.split(sep)) for line in lines if not line.strip().startswith('#') and line.strip()]
+        return [
+            len(line.split(sep))
+            for line in lines
+            if not line.strip().startswith("#") and line.strip()
+        ]
 
     # Check if '\t' is used:
-    for sep in ('\t', ';', ','):
+    for sep in ("\t", ";", ","):
         if min(count_columns(sep)) >= 3:
             return sep
-    raise ValueError("Unknown file format \"{}\".".format(fname))
+    raise ValueError('Unknown file format "{}".'.format(fname))
 
 
 def load_signatures(fname: str) -> Sequence[Type[GeneSignature]]:
@@ -196,19 +212,19 @@ def load_signatures(fname: str) -> Sequence[Type[GeneSignature]]:
     :return: A list of gene signatures.
     """
     extension = PurePath(fname).suffixes
-    if is_valid_suffix(extension, 'ctx'):
+    if is_valid_suffix(extension, "ctx"):
         # csv/tsv
         return df2regulons(load_motifs(fname, sep=suffixes_to_separator(extension)))
-    elif is_valid_suffix(extension, 'ctx_yaml'):
+    elif is_valid_suffix(extension, "ctx_yaml"):
         return load_from_yaml(fname)
-    elif '.gmt' in extension:
+    elif ".gmt" in extension:
         sep = guess_separator(fname)
         return GeneSignature.from_gmt(fname, field_separator=sep, gene_separator=sep)
-    elif '.dat' in extension:
-        with openfile(fname, 'rb') as f:
+    elif ".dat" in extension:
+        with openfile(fname, "rb") as f:
             return pickle.load(f)
     else:
-        raise ValueError("Unknown file format \"{}\".".format(fname))
+        raise ValueError('Unknown file format "{}".'.format(fname))
 
 
 def save_enriched_motifs(df, fname: str) -> None:
@@ -222,29 +238,32 @@ def save_enriched_motifs(df, fname: str) -> None:
     :return:
     """
     extension = PurePath(fname).suffixes
-    if is_valid_suffix(extension, 'ctx'):
+    if is_valid_suffix(extension, "ctx"):
         df.to_csv(fname, sep=suffixes_to_separator(extension))
     else:
         regulons = df2regulons(df)
-        if '.json' in extension:
+        if ".json" in extension:
             name2targets = {r.name: list(r.gene2weight.keys()) for r in regulons}
-            with openfile(fname, 'w') as f:
+            with openfile(fname, "w") as f:
                 f.write(json.dumps(name2targets))
-        elif '.dat' in extension:
-            with openfile(fname, 'wb') as f:
+        elif ".dat" in extension:
+            with openfile(fname, "wb") as f:
                 pickle.dump(regulons, f)
-        elif '.gmt' in extension:
+        elif ".gmt" in extension:
             GeneSignature.to_gmt(fname, regulons)
-        elif is_valid_suffix(extension, 'ctx_yaml'):
+        elif is_valid_suffix(extension, "ctx_yaml"):
             save_to_yaml(regulons, fname)
         else:
-            raise ValueError("Unknown file format \"{}\".".format(fname))
+            raise ValueError('Unknown file format "{}".'.format(fname))
 
 
 def load_adjacencies(fname: str) -> pd.DataFrame:
     extension = PurePath(fname).suffixes
     return pd.read_csv(
-        fname, sep=suffixes_to_separator(extension), dtype={0: str, 1: str, 2: np.float64}, keep_default_na=False
+        fname,
+        sep=suffixes_to_separator(extension),
+        dtype={0: str, 1: str, 2: np.float64},
+        keep_default_na=False,
     )
 
 
@@ -254,27 +273,31 @@ def load_modules(fname: str) -> Sequence[Type[GeneSignature]]:
     # https://stackoverflow.com/questions/27743711/can-i-speedup-yaml
     # The alternative for which was opted in the end is binary pickling.
     extension = PurePath(fname).suffixes
-    if is_valid_suffix(extension, 'ctx_yaml'):
+    if is_valid_suffix(extension, "ctx_yaml"):
         return load_from_yaml(fname)
-    elif '.dat' in extension:
-        with openfile(fname, 'rb') as f:
+    elif ".dat" in extension:
+        with openfile(fname, "rb") as f:
             return pickle.load(f)
-    elif '.gmt' in extension:
+    elif ".gmt" in extension:
         return GeneSignature.from_gmt(fname)
     else:
-        raise ValueError("Unknown file format for \"{}\".".format(fname))
+        raise ValueError('Unknown file format for "{}".'.format(fname))
 
 
 def decompress_meta(meta):
     try:
-        meta = meta.decode('ascii')
+        meta = meta.decode("ascii")
         return json.loads(zlib.decompress(base64.b64decode(meta)))
     except AttributeError:
-        return json.loads(zlib.decompress(base64.b64decode(meta.encode('ascii'))).decode('ascii'))
+        return json.loads(
+            zlib.decompress(base64.b64decode(meta.encode("ascii"))).decode("ascii")
+        )
 
 
 def compress_meta(meta):
-    return base64.b64encode(zlib.compress(json.dumps(meta).encode('ascii'))).decode('ascii')
+    return base64.b64encode(zlib.compress(json.dumps(meta).encode("ascii"))).decode(
+        "ascii"
+    )
 
 
 def append_auc_mtx(
@@ -296,7 +319,7 @@ def append_auc_mtx(
     # Fetch sequence logo from regulon's context.
     def fetch_logo(context):
         for elem in context:
-            if elem.endswith('.png'):
+            if elem.endswith(".png"):
                 return elem
         return ""
 
@@ -310,9 +333,15 @@ def append_auc_mtx(
     regulon_thresholds = [
         {
             "regulon": name,
-            "defaultThresholdValue": (threshold if isinstance(threshold, float) else threshold[0]),
+            "defaultThresholdValue": (
+                threshold if isinstance(threshold, float) else threshold[0]
+            ),
             "defaultThresholdName": "gaussian_mixture_split",
-            "allThresholds": {"gaussian_mixture_split": (threshold if isinstance(threshold, float) else threshold[0])},
+            "allThresholds": {
+                "gaussian_mixture_split": (
+                    threshold if isinstance(threshold, float) else threshold[0]
+                )
+            },
             "motifData": name2logo.get(name, ""),
         }
         for name, threshold in auc_thresholds.iteritems()
@@ -330,12 +359,17 @@ def append_auc_mtx(
     data = np.zeros(shape=(n_genes, n_regulons), dtype=int)
     for idx, regulon in enumerate(regulons):
         data[:, idx] = np.isin(genes, regulon.genes).astype(int)
-    regulon_assignment = pd.DataFrame(data=data, index=ex_mtx.columns, columns=list(map(attrgetter('name'), regulons)))
+    regulon_assignment = pd.DataFrame(
+        data=data, index=ex_mtx.columns, columns=list(map(attrgetter("name"), regulons))
+    )
 
     # Create meta-data structure.
     def create_structure_array(df):
         # Create a numpy structured array
-        return np.array([tuple(row) for row in df.values], dtype=np.dtype(list(zip(df.columns, df.dtypes))))
+        return np.array(
+            [tuple(row) for row in df.values],
+            dtype=np.dtype(list(zip(df.columns, df.dtypes))),
+        )
 
     with lp.connect(fname, validate=False) as ds:
         # The orientation of the loom file is always:

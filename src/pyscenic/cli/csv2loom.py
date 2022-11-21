@@ -13,19 +13,21 @@ def create_argument_parser():
         add_help=True,
     )
     parser.add_argument(
-        'csv_fname',
-        type=argparse.FileType('rt'),
-        help='The name of the expression matrix to read in csv format (rows=cells x columns=genes).',
+        "csv_fname",
+        type=argparse.FileType("rt"),
+        help="The name of the expression matrix to read in csv format (rows=cells x columns=genes).",
     )
     parser.add_argument(
-        'loom_fname', type=argparse.FileType('wb'), help='The name of the expression matrix to create (loom format).'
+        "loom_fname",
+        type=argparse.FileType("wb"),
+        help="The name of the expression matrix to create (loom format).",
     )
     parser.add_argument(
-        '-t',
-        '--transpose',
-        action='store_const',
-        const='yes',
-        help='Transpose the expression matrix (rows=genes x columns=cells).',
+        "-t",
+        "--transpose",
+        action="store_const",
+        const="yes",
+        help="Transpose the expression matrix (rows=genes x columns=cells).",
     )
     return parser
 
@@ -38,7 +40,7 @@ def convert(fname_csv, fname_loom, transpose):
 def main():
     parser = create_argument_parser()
     args = parser.parse_args()
-    convert(args.csv_fname.name, args.loom_fname.name, (args.transpose == 'yes'))
+    convert(args.csv_fname.name, args.loom_fname.name, (args.transpose == "yes"))
 
 
 if __name__ == "__main__":

@@ -25,76 +25,88 @@ from pyscenic.cli.utils import load_exp_matrix, suffixes_to_separator
 
 
 def create_argument_parser():
-    parser = argparse.ArgumentParser(description='Run Arboreto using a multiprocessing pool')
+    parser = argparse.ArgumentParser(
+        description="Run Arboreto using a multiprocessing pool"
+    )
 
     parser.add_argument(
-        'expression_mtx_fname',
+        "expression_mtx_fname",
         type=str,
-        help='The name of the file that contains the expression matrix for the single cell experiment.'
-             ' Two file formats are supported: csv (rows=cells x columns=genes) or loom (rows=genes x columns=cells).',
+        help="The name of the file that contains the expression matrix for the single cell experiment."
+        " Two file formats are supported: csv (rows=cells x columns=genes) or loom (rows=genes x columns=cells).",
     )
     parser.add_argument(
-        'tfs_fname',
+        "tfs_fname",
         type=str,
-        help='The name of the file that contains the list of transcription factors (TXT; one TF per line).',
+        help="The name of the file that contains the list of transcription factors (TXT; one TF per line).",
     )
     parser.add_argument(
-        '-m',
-        '--method',
-        choices=['genie3', 'grnboost2'],
-        default='grnboost2',
-        help='The algorithm for gene regulatory network reconstruction (default: grnboost2).',
+        "-m",
+        "--method",
+        choices=["genie3", "grnboost2"],
+        default="grnboost2",
+        help="The algorithm for gene regulatory network reconstruction (default: grnboost2).",
     )
     parser.add_argument(
-        '-o', '--output', type=str, default=sys.stdout,
-        help='Output file/stream, i.e. a table of TF-target genes (TSV).'
+        "-o",
+        "--output",
+        type=str,
+        default=sys.stdout,
+        help="Output file/stream, i.e. a table of TF-target genes (TSV).",
     )
     parser.add_argument(
-        '--num_workers',
+        "--num_workers",
         type=int,
         default=cpu_count(),
-        help='The number of workers to use. (default: {}).'.format(cpu_count()),
+        help="The number of workers to use. (default: {}).".format(cpu_count()),
     )
     parser.add_argument(
-        '--seed',
+        "--seed",
         type=int,
         required=False,
         default=None,
-        help='Seed value for regressor random state initialization (optional)',
+        help="Seed value for regressor random state initialization (optional)",
     )
 
     parser.add_argument(
-        '--cell_id_attribute',
+        "--cell_id_attribute",
         type=str,
-        default='CellID',
-        help='The name of the column attribute that specifies the identifiers of the cells in the loom file.',
+        default="CellID",
+        help="The name of the column attribute that specifies the identifiers of the cells in the loom file.",
     )
     parser.add_argument(
-        '--gene_attribute',
+        "--gene_attribute",
         type=str,
-        default='Gene',
-        help='The name of the row attribute that specifies the gene symbols in the loom file.',
+        default="Gene",
+        help="The name of the row attribute that specifies the gene symbols in the loom file.",
     )
     parser.add_argument(
-        '--sparse',
-        action='store_const',
+        "--sparse",
+        action="store_const",
         const=True,
         default=False,
-        help='If set, load the expression data as a sparse (CSC) matrix.',
+        help="If set, load the expression data as a sparse (CSC) matrix.",
     )
     parser.add_argument(
-        '-t',
-        '--transpose',
-        action='store_const',
-        const='yes',
-        help='Transpose the expression matrix (rows=genes x columns=cells).',
+        "-t",
+        "--transpose",
+        action="store_const",
+        const="yes",
+        help="Transpose the expression matrix (rows=genes x columns=cells).",
     )
 
     return parser
 
 
-def run_infer_partial_network(target_gene_index, gene_names, ex_matrix, tf_matrix, tf_matrix_gene_names, method_params,
-                              seed):
+def run_infer_partial_network(
+    target_gene_index,
+    gene_names,
+    ex_matrix,
+    tf_matrix,
+    tf_matrix_gene_names,
+    method_params,
+    seed,
+):
     target_gene_name = gene_names[target_gene_index]
     target_gene_expression = ex_matrix[:, target_gene_index]
 
@@ -116,14 +128,18 @@ def main():
     parser = create_argument_parser()
     args = parser.parse_args()
 
-    if args.method == 'grnboost2':
-        method_params = ['GBM', SGBM_KWARGS]  # regressor_type  # regressor_kwargs
-    elif args.method == 'genie3':
-        method_params = ['RF', RF_KWARGS]  # regressor_type  # regressor_kwargs
+    if args.method == "grnboost2":
+        method_params = ["GBM", SGBM_KWARGS]  # regressor_type  # regressor_kwargs
+    elif args.method == "genie3":
+        method_params = ["RF", RF_KWARGS]  # regressor_type  # regressor_kwargs
 
     start_time = time.time()
     ex_matrix = load_exp_matrix(
-        args.expression_mtx_fname, (args.transpose == 'yes'), args.sparse, args.cell_id_attribute, args.gene_attribute
+        args.expression_mtx_fname,
+        (args.transpose == "yes"),
+        args.sparse,
+        args.cell_id_attribute,
+        args.gene_attribute,
     )
 
     if args.sparse:
@@ -134,17 +150,19 @@ def main():
 
     end_time = time.time()
     print(
-        f'Loaded expression matrix of {ex_matrix.shape[0]} cells and {ex_matrix.shape[1]} genes in {end_time - start_time} seconds...',
+        f"Loaded expression matrix of {ex_matrix.shape[0]} cells and {ex_matrix.shape[1]} genes in {end_time - start_time} seconds...",
         file=sys.stdout,
     )
 
     tf_names = load_tf_names(args.tfs_fname)
-    print(f'Loaded {len(tf_names)} TFs...', file=sys.stdout)
+    print(f"Loaded {len(tf_names)} TFs...", file=sys.stdout)
 
     ex_matrix, gene_names, tf_names = _prepare_input(ex_matrix, gene_names, tf_names)
     tf_matrix, tf_matrix_gene_names = to_tf_matrix(ex_matrix, gene_names, tf_names)
 
-    print(f'starting {args.method} using {args.num_workers} processes...', file=sys.stdout)
+    print(
+        f"starting {args.method} using {args.num_workers} processes...", file=sys.stdout
+    )
     start_time = time.time()
 
     with Pool(args.num_workers) as p:
@@ -158,22 +176,23 @@ def main():
                         tf_matrix=tf_matrix,
                         tf_matrix_gene_names=tf_matrix_gene_names,
                         method_params=method_params,
-                        seed=args.seed),
-                    target_gene_indices(gene_names, target_genes='all'),
-                    chunksize=1
+                        seed=args.seed,
+                    ),
+                    target_gene_indices(gene_names, target_genes="all"),
+                    chunksize=1,
                 ),
-                total=len(gene_names)
+                total=len(gene_names),
             )
         )
 
-    adj = pd.concat(adjs).sort_values(by='importance', ascending=False)
+    adj = pd.concat(adjs).sort_values(by="importance", ascending=False)
 
     end_time = time.time()
-    print(f'Done in {end_time - start_time} seconds.', file=sys.stdout)
+    print(f"Done in {end_time - start_time} seconds.", file=sys.stdout)
 
     extension = PurePath(args.output).suffixes
     adj.to_csv(args.output, index=False, sep=suffixes_to_separator(extension))
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()
