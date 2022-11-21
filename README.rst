@@ -27,6 +27,13 @@ See the main `SCENIC website <https://scenic.aertslab.org/>`_ for additional inf
 News and releases
 -----------------
 
+0.12.1 | 2022-11-21
+^^^^^^^^^^^^^^^^^^^
+
+* Add support for running arboreto_with_multiprocessing.py with spawn instead of fork as multiprocessing method.Pool
+* Use ravel instead of flatten to avoid unnecessary memory copy in aucell
+* Update Docker image file and add separated Docker file for pySCENIC with scanpy.
+
 0.12.0 | 2022-08-16
 ^^^^^^^^^^^^^^^^^^^
 
