@@ -25,14 +25,20 @@ LOGGER = logging.getLogger(__name__)
 
 COLUMN_NAME_TF = "TF"
 COLUMN_NAME_MOTIF_ID = "MotifID"
-COLUMN_NAME_MOTIF_SIMILARITY_QVALUE = 'MotifSimilarityQvalue'
-COLUMN_NAME_ORTHOLOGOUS_IDENTITY = 'OrthologousIdentity'
-COLUMN_NAME_ANNOTATION = 'Annotation'
+COLUMN_NAME_MOTIF_SIMILARITY_QVALUE = "MotifSimilarityQvalue"
+COLUMN_NAME_ORTHOLOGOUS_IDENTITY = "OrthologousIdentity"
+COLUMN_NAME_ANNOTATION = "Annotation"
 
 
 def load_motif_annotations(
     fname: str,
-    column_names=('#motif_id', 'gene_name', 'motif_similarity_qvalue', 'orthologous_identity', 'description'),
+    column_names=(
+        "#motif_id",
+        "gene_name",
+        "motif_similarity_qvalue",
+        "orthologous_identity",
+        "description",
+    ),
     motif_similarity_fdr: float = 0.001,
     orthologous_identity_threshold: float = 0.0,
 ) -> pd.DataFrame:
@@ -48,13 +54,13 @@ def load_motif_annotations(
     """
     # Create a MultiIndex for the index combining unique gene name and motif ID. This should facilitate
     # later merging.
-    df = pd.read_csv(fname, sep='\t', index_col=[1, 0], usecols=column_names)
+    df = pd.read_csv(fname, sep="\t", index_col=[1, 0], usecols=column_names)
     df.index.names = [COLUMN_NAME_TF, COLUMN_NAME_MOTIF_ID]
     df.rename(
         columns={
-            'motif_similarity_qvalue': COLUMN_NAME_MOTIF_SIMILARITY_QVALUE,
-            'orthologous_identity': COLUMN_NAME_ORTHOLOGOUS_IDENTITY,
-            'description': COLUMN_NAME_ANNOTATION,
+            "motif_similarity_qvalue": COLUMN_NAME_MOTIF_SIMILARITY_QVALUE,
+            "orthologous_identity": COLUMN_NAME_ORTHOLOGOUS_IDENTITY,
+            "description": COLUMN_NAME_ANNOTATION,
         },
         inplace=True,
     )
@@ -86,14 +92,24 @@ def _create_idx_pairs(adjacencies: pd.DataFrame, exp_mtx: pd.DataFrame) -> np.nd
     # sorted as well as the list of link genes makes sure that we can map indexes back to genes! This only works if
     # all genes we are looking for are part of the expression matrix.
     assert len(set(exp_mtx.columns).intersection(genes)) == len(genes)
-    symbol2idx = dict(zip(sorted_genes, np.nonzero(exp_mtx.columns.isin(sorted_genes))[0]))
+    symbol2idx = dict(
+        zip(sorted_genes, np.nonzero(exp_mtx.columns.isin(sorted_genes))[0])
+    )
 
     # Create numpy array of idx pairs.
-    return np.array([[symbol2idx[s1], symbol2idx[s2]] for s1, s2 in zip(adjacencies.TF, adjacencies.target)])
+    return np.array(
+        [
+            [symbol2idx[s1], symbol2idx[s2]]
+            for s1, s2 in zip(adjacencies.TF, adjacencies.target)
+        ]
+    )
 
 
 def add_correlation(
-    adjacencies: pd.DataFrame, ex_mtx: pd.DataFrame, rho_threshold=RHO_THRESHOLD, mask_dropouts=False
+    adjacencies: pd.DataFrame,
+    ex_mtx: pd.DataFrame,
+    rho_threshold=RHO_THRESHOLD,
+    mask_dropouts=False,
 ) -> pd.DataFrame:
     """
     Add correlation in expression levels between target and factor.
@@ -142,12 +158,22 @@ def add_correlation(
         col_idx_pairs = _create_idx_pairs(adjacencies, ex_mtx)
         rhos = masked_rho4pairs(ex_mtx.values, col_idx_pairs, 0.0)
     else:
-        genes = list(set(adjacencies[COLUMN_NAME_TF]).union(set(adjacencies[COLUMN_NAME_TARGET])))
+        genes = list(
+            set(adjacencies[COLUMN_NAME_TF]).union(set(adjacencies[COLUMN_NAME_TARGET]))
+        )
         ex_mtx = ex_mtx[ex_mtx.columns[ex_mtx.columns.isin(genes)]]
-        corr_mtx = pd.DataFrame(index=ex_mtx.columns, columns=ex_mtx.columns, data=np.corrcoef(ex_mtx.values.T))
-        rhos = np.array([corr_mtx[s2][s1] for s1, s2 in zip(adjacencies.TF, adjacencies.target)])
+        corr_mtx = pd.DataFrame(
+            index=ex_mtx.columns,
+            columns=ex_mtx.columns,
+            data=np.corrcoef(ex_mtx.values.T),
+        )
+        rhos = np.array(
+            [corr_mtx[s2][s1] for s1, s2 in zip(adjacencies.TF, adjacencies.target)]
+        )
 
-    regulations = (rhos > rho_threshold).astype(int) - (rhos < -rho_threshold).astype(int)
+    regulations = (rhos > rho_threshold).astype(int) - (rhos < -rho_threshold).astype(
+        int
+    )
     return pd.DataFrame(
         data={
             COLUMN_NAME_TF: adjacencies[COLUMN_NAME_TF].values,
@@ -166,13 +192,20 @@ def modules4thr(adjacencies, threshold, context=frozenset(), pattern="weight>{:.
     :param threshold:
     :return:
     """
-    for tf_name, df_grp in adjacencies[adjacencies[COLUMN_NAME_WEIGHT] > threshold].groupby(by=COLUMN_NAME_TF):
+    for tf_name, df_grp in adjacencies[
+        adjacencies[COLUMN_NAME_WEIGHT] > threshold
+    ].groupby(by=COLUMN_NAME_TF):
         if len(df_grp) > 0:
             yield Regulon(
                 name="Regulon for {}".format(tf_name),
                 context=frozenset([pattern.format(threshold)]).union(context),
                 transcription_factor=tf_name,
-                gene2weight=list(zip(df_grp[COLUMN_NAME_TARGET].values, df_grp[COLUMN_NAME_WEIGHT].values)),
+                gene2weight=list(
+                    zip(
+                        df_grp[COLUMN_NAME_TARGET].values,
+                        df_grp[COLUMN_NAME_WEIGHT].values,
+                    )
+                ),
                 gene2occurrence=[],
             )
 
@@ -191,7 +224,12 @@ def modules4top_targets(adjacencies, n, context=frozenset()):
                 name="Regulon for {}".format(tf_name),
                 context=frozenset(["top{}".format(n)]).union(context),
                 transcription_factor=tf_name,
-                gene2weight=list(zip(module[COLUMN_NAME_TARGET].values, module[COLUMN_NAME_WEIGHT].values)),
+                gene2weight=list(
+                    zip(
+                        module[COLUMN_NAME_TARGET].values,
+                        module[COLUMN_NAME_WEIGHT].values,
+                    )
+                ),
                 gene2occurrence=[],
             )
 
@@ -203,14 +241,21 @@ def modules4top_factors(adjacencies, n, context=frozenset()):
     :param n:
     :return:
     """
-    df = adjacencies.groupby(by=COLUMN_NAME_TARGET).apply(lambda grp: grp.nlargest(n, COLUMN_NAME_WEIGHT))
+    df = adjacencies.groupby(by=COLUMN_NAME_TARGET).apply(
+        lambda grp: grp.nlargest(n, COLUMN_NAME_WEIGHT)
+    )
     for tf_name, df_grp in df.groupby(by=COLUMN_NAME_TF):
         if len(df_grp) > 0:
             yield Regulon(
                 name=tf_name,
                 context=frozenset(["top{}perTarget".format(n)]).union(context),
                 transcription_factor=tf_name,
-                gene2weight=list(zip(df_grp[COLUMN_NAME_TARGET].values, df_grp[COLUMN_NAME_WEIGHT].values)),
+                gene2weight=list(
+                    zip(
+                        df_grp[COLUMN_NAME_TARGET].values,
+                        df_grp[COLUMN_NAME_WEIGHT].values,
+                    )
+                ),
                 gene2occurrence=[],
             )
 
@@ -257,7 +302,7 @@ def modules_from_adjacencies(
     # matrix.
     # In addition, also make sure the expression matrix consists of floating point numbers. This requirement might
     # be violated when dealing with raw counts as input.
-    ex_mtx = ex_mtx.T[~ex_mtx.columns.duplicated(keep='first')].T.astype(float)
+    ex_mtx = ex_mtx.T[~ex_mtx.columns.duplicated(keep="first")].T.astype(float)
 
     # To make the pySCENIC code more robust to the selection of the network inference method in the first step of
     # the pipeline, it is better to use percentiles instead of absolute values for the weight thresholds.
@@ -266,20 +311,35 @@ def modules_from_adjacencies(
         def iter_modules(adjc, context):
             yield from chain(
                 chain.from_iterable(
-                    modules4thr(adjc, thr, context, pattern="weight>{}%".format(frac * 100))
-                    for thr, frac in zip(list(adjacencies[COLUMN_NAME_WEIGHT].quantile(thresholds)), thresholds)
+                    modules4thr(
+                        adjc, thr, context, pattern="weight>{}%".format(frac * 100)
+                    )
+                    for thr, frac in zip(
+                        list(adjacencies[COLUMN_NAME_WEIGHT].quantile(thresholds)),
+                        thresholds,
+                    )
                 ),
-                chain.from_iterable(modules4top_targets(adjc, n, context) for n in top_n_targets),
-                chain.from_iterable(modules4top_factors(adjc, n, context) for n in top_n_regulators),
+                chain.from_iterable(
+                    modules4top_targets(adjc, n, context) for n in top_n_targets
+                ),
+                chain.from_iterable(
+                    modules4top_factors(adjc, n, context) for n in top_n_regulators
+                ),
             )
 
     else:
 
         def iter_modules(adjc, context):
             yield from chain(
-                chain.from_iterable(modules4thr(adjc, thr, context) for thr in thresholds),
-                chain.from_iterable(modules4top_targets(adjc, n, context) for n in top_n_targets),
-                chain.from_iterable(modules4top_factors(adjc, n, context) for n in top_n_regulators),
+                chain.from_iterable(
+                    modules4thr(adjc, thr, context) for thr in thresholds
+                ),
+                chain.from_iterable(
+                    modules4top_targets(adjc, n, context) for n in top_n_targets
+                ),
+                chain.from_iterable(
+                    modules4top_factors(adjc, n, context) for n in top_n_regulators
+                ),
             )
 
     if not rho_dichotomize:
@@ -289,13 +349,13 @@ def modules_from_adjacencies(
         # Relationship between TF and its target, i.e. activator or repressor, is derived using the original expression
         # profiles. The Pearson product-moment correlation coefficient is used to derive this information.
 
-        if not {'regulation', 'rho'}.issubset(adjacencies.columns):
+        if not {"regulation", "rho"}.issubset(adjacencies.columns):
             # Add correlation column and create two disjoint set of adjacencies.
             LOGGER.info("Calculating Pearson correlations.")
             # test for genes present in the adjacencies but not present in the expression matrix:
-            unique_adj_genes = set(adjacencies[COLUMN_NAME_TF]).union(set(adjacencies[COLUMN_NAME_TARGET])) - set(
-                ex_mtx.columns
-            )
+            unique_adj_genes = set(adjacencies[COLUMN_NAME_TF]).union(
+                set(adjacencies[COLUMN_NAME_TARGET])
+            ) - set(ex_mtx.columns)
             assert (
                 len(unique_adj_genes) == 0
             ), f"Found {len(unique_adj_genes)} genes present in the network (adjacencies) output, but missing from the expression matrix. Is this a different gene expression matrix?"
@@ -303,14 +363,21 @@ def modules_from_adjacencies(
                 f"Note on correlation calculation: the default behaviour for calculating the correlations has changed after pySCENIC verion 0.9.16. Previously, the default was to calculate the correlation between a TF and target gene using only cells with non-zero expression values (mask_dropouts=True). The current default is now to use all cells to match the behavior of the R verision of SCENIC. The original settings can be retained by setting 'rho_mask_dropouts=True' in the modules_from_adjacencies function, or '--mask_dropouts' from the CLI.\n\tDropout masking is currently set to [{rho_mask_dropouts}]."
             )
             adjacencies = add_correlation(
-                adjacencies, ex_mtx, rho_threshold=rho_threshold, mask_dropouts=rho_mask_dropouts
+                adjacencies,
+                ex_mtx,
+                rho_threshold=rho_threshold,
+                mask_dropouts=rho_mask_dropouts,
             )
         else:
-            LOGGER.info("Using existing Pearson correlations from the adjacencies file.")
+            LOGGER.info(
+                "Using existing Pearson correlations from the adjacencies file."
+            )
 
         activating_modules = adjacencies[adjacencies[COLUMN_NAME_REGULATION] > 0.0]
         if keep_only_activating:
-            modules_iter = iter_modules(activating_modules, frozenset([ACTIVATING_MODULE]))
+            modules_iter = iter_modules(
+                activating_modules, frozenset([ACTIVATING_MODULE])
+            )
         else:
             repressing_modules = adjacencies[adjacencies[COLUMN_NAME_REGULATION] < 0.0]
             modules_iter = chain(
@@ -338,7 +405,7 @@ def save_to_yaml(signatures: Sequence[Type[GeneSignature]], fname: str):
     :param signatures:
     :return:
     """
-    with openfile(fname, 'w') as f:
+    with openfile(fname, "w") as f:
         f.write(dump(signatures, default_flow_style=False, Dumper=Dumper))
 
 
@@ -348,7 +415,7 @@ def load_from_yaml(fname: str) -> Sequence[Type[GeneSignature]]:
     :param fname:
     :return:
     """
-    with openfile(fname, 'r') as f:
+    with openfile(fname, "r") as f:
         return load(f.read(), Loader=Loader)
 
 
@@ -368,7 +435,7 @@ def add_motif_url(df: pd.DataFrame, base_url: str):
     return df
 
 
-def load_motifs(fname: str, sep: str = ',') -> pd.DataFrame:
+def load_motifs(fname: str, sep: str = ",") -> pd.DataFrame:
     """
 
     :param fname:
@@ -377,7 +444,13 @@ def load_motifs(fname: str, sep: str = ',') -> pd.DataFrame:
     """
     from .transform import COLUMN_NAME_CONTEXT, COLUMN_NAME_TARGET_GENES
 
-    df = pd.read_csv(fname, sep=sep, index_col=[0, 1], header=[0, 1], skipinitialspace=True)
-    df[('Enrichment', COLUMN_NAME_CONTEXT)] = df[('Enrichment', COLUMN_NAME_CONTEXT)].apply(lambda s: eval(s))
-    df[('Enrichment', COLUMN_NAME_TARGET_GENES)] = df[('Enrichment', COLUMN_NAME_TARGET_GENES)].apply(lambda s: eval(s))
+    df = pd.read_csv(
+        fname, sep=sep, index_col=[0, 1], header=[0, 1], skipinitialspace=True
+    )
+    df[("Enrichment", COLUMN_NAME_CONTEXT)] = df[
+        ("Enrichment", COLUMN_NAME_CONTEXT)
+    ].apply(lambda s: eval(s))
+    df[("Enrichment", COLUMN_NAME_TARGET_GENES)] = df[
+        ("Enrichment", COLUMN_NAME_TARGET_GENES)
+    ].apply(lambda s: eval(s))
     return df
