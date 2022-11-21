@@ -17,5 +17,7 @@ def create_logging_handler(debug: bool) -> logging.Handler:
     # to DEBUG, information will still be outputted. In addition, errors and warnings are more
     # severe than info and therefore will always be outputted to the log.
     ch.setLevel(logging.DEBUG if debug else logging.INFO)
-    ch.setFormatter(logging.Formatter('\n%(asctime)s - %(name)s - %(levelname)s - %(message)s'))
+    ch.setFormatter(
+        logging.Formatter("\n%(asctime)s - %(name)s - %(levelname)s - %(message)s")
+    )
     return ch
