@@ -32,12 +32,19 @@ def create_logging_handler(debug: bool) -> logging.Handler:
     # to DEBUG, information will still be outputted. In addition, errors and warnings are more
     # severe than info and therefore will always be outputted to the log.
     ch.setLevel(logging.DEBUG if debug else logging.INFO)
-    ch.setFormatter(logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s'))
+    ch.setFormatter(
+        logging.Formatter("%(asctime)s - %(name)s - %(levelname)s - %(message)s")
+    )
     return ch
 
 
 def process(mtx_fname, tfs, net_fname, client):
-    network = grnboost2(expression_data=pd.read_csv(mtx_fname, sep='\t', index_col=0).T, tf_names=tfs, verbose=True, client_or_address=client)
+    network = grnboost2(
+        expression_data=pd.read_csv(mtx_fname, sep="\t", index_col=0).T,
+        tf_names=tfs,
+        verbose=True,
+        client_or_address=client,
+    )
     network.to_csv(net_fname, index=False)
 
 
@@ -52,36 +59,45 @@ def run(cfg_fname):
     LOGGER.setLevel(logging.DEBUG)
 
     # Derive file names.
-    #mtx_fnames = list(mapcat(glob.glob, cfg['data']['mtx_fnames'].split(";")))
-    mtx_fnames = glob.glob(cfg['data']['mtx_fnames'])
-    tfs = load_tf_names(cfg['data']['tfs_fname'])
+    # mtx_fnames = list(mapcat(glob.glob, cfg['data']['mtx_fnames'].split(";")))
+    mtx_fnames = glob.glob(cfg["data"]["mtx_fnames"])
+    tfs = load_tf_names(cfg["data"]["tfs_fname"])
 
     # Derive cluster information.
-    not_cluster_ip = 'scheduler_ip' not in cfg['params']
+    not_cluster_ip = "scheduler_ip" not in cfg["params"]
     if not_cluster_ip:
-        local_cluster = LocalCluster(n_workers=int(cfg['params']['num_cores']),
-                                 threads_per_worker=1)
+        local_cluster = LocalCluster(
+            n_workers=int(cfg["params"]["num_cores"]), threads_per_worker=1
+        )
         client = Client(local_cluster)
     else:
+
         class DummyClient:
             def close(self):
                 pass
+
         local_cluster = DummyClient()
-        client = cfg['params']['scheduler_ip']
+        client = cfg["params"]["scheduler_ip"]
 
     # Remove fnames that already have a corresponding results file.
     def add_output(fname, out_folder):
         basename = os.path.splitext(os.path.basename(fname))[0]
         return fname, os.path.join(out_folder, "{}.net.csv".format(basename))
-    out_folder = cfg['data']['out_folder']
-    for in_fname, out_fname in filter(lambda t: not os.path.exists(t[1]),
-                                    map(partial(add_output, out_folder=out_folder),
-                                        mtx_fnames)):
+
+    out_folder = cfg["data"]["out_folder"]
+    for in_fname, out_fname in filter(
+        lambda t: not os.path.exists(t[1]),
+        map(partial(add_output, out_folder=out_folder), mtx_fnames),
+    ):
         LOGGER.info("Running GRNboost for {}.".format(in_fname))
         try:
             process(in_fname, tfs, out_fname, client)
         except ValueError as e:
-            LOGGER.error("Unable to process {} because of \"{}\". Stacktrace:".format(in_fname, str(e)))
+            LOGGER.error(
+                'Unable to process {} because of "{}". Stacktrace:'.format(
+                    in_fname, str(e)
+                )
+            )
             LOGGER.error(traceback.format_exc())
 
     if not_cluster_ip:
