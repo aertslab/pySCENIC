@@ -58,7 +58,11 @@ def diptst(dat, is_hist=False, numt=1000):
     unif_dips = np.apply_along_axis(dip_fn, 1, unifs, is_hist, True)
 
     # count dips greater or equal to d, add 1/1 to prevent a pvalue of 0
-    pval = None if unif_dips.sum() == 0 else (np.less(d, unif_dips).sum() + 1) / (np.float(numt) + 1)
+    pval = (
+        None
+        if unif_dips.sum() == 0
+        else (np.less(d, unif_dips).sum() + 1) / (np.float(numt) + 1)
+    )
 
     return (d, pval, (len(left) - 1, len(idxs) - len(right)))  # dip, pvalue  # indices
 
@@ -114,7 +118,10 @@ def dip_fn(dat, is_hist=False, just_dip=False):
         right_diff = np.abs(right_part[xr:] - work_cdf[xr:] + work_histogram[xr:]).max()
 
         if d <= D or xr == 0 or xl == len(work_cdf):
-            the_dip = max(np.abs(cdf[: len(left)] - left).max(), np.abs(cdf[-len(right) - 1 : -1] - right).max())
+            the_dip = max(
+                np.abs(cdf[: len(left)] - left).max(),
+                np.abs(cdf[-len(right) - 1 : -1] - right).max(),
+            )
             if just_dip:
                 return the_dip / 2
             else:
