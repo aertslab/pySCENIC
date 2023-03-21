@@ -232,6 +232,14 @@ def prune_targets_command(args):
     LOGGER.info("Calculating regulons.")
     motif_annotations_fname = args.annotations_fname.name
     calc_func = find_features if args.no_pruning == "yes" else prune2df
+    if args.mode == "dask_cluster":
+        if not args.client_or_address:
+            LOGGER.error('--mode "dask_cluster" requires --client_or_address argument.')
+            sys.exit(1)
+        else:
+            client_or_mode = args.client_or_address
+    else:
+        client_or_mode = args.mode
     with ProgressBar() if args.mode == "dask_multiprocessing" else NoProgressBar():
         df_motifs = calc_func(
             dbs,
@@ -240,7 +248,7 @@ def prune_targets_command(args):
             rank_threshold=args.rank_threshold,
             auc_threshold=args.auc_threshold,
             nes_threshold=args.nes_threshold,
-            client_or_address=args.mode,
+            client_or_address=client_or_mode,
             module_chunksize=args.chunk_size,
             num_workers=args.num_workers,
             motif_similarity_fdr=args.max_similarity_fdr,
