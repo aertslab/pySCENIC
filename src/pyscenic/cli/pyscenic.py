@@ -232,7 +232,11 @@ def prune_targets_command(args):
     LOGGER.info("Calculating regulons.")
     motif_annotations_fname = args.annotations_fname.name
     calc_func = find_features if args.no_pruning == "yes" else prune2df
-    client_or_mode = args.mode if args.mode in {"custom_multiprocessing", "dask_multiprocessing"} else args.client_or_address
+    try:
+        client_or_mode = args.mode if args.mode in {"custom_multiprocessing", "dask_multiprocessing"} else args.client_or_address
+    except NameError:
+        LOGGER.error("--mode or --client_or_address CLI arguments missing")
+        sys.exit(1)
     with ProgressBar() if args.mode == "dask_multiprocessing" else NoProgressBar():
         df_motifs = calc_func(
             dbs,
