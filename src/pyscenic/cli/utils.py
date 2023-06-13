@@ -344,7 +344,7 @@ def append_auc_mtx(
             },
             "motifData": name2logo.get(name, ""),
         }
-        for name, threshold in auc_thresholds.iteritems()
+        for name, threshold in auc_thresholds.items()
     ]
 
     # Calculate the number of genes per cell.

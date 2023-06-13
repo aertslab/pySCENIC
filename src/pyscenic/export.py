@@ -186,7 +186,7 @@ def export2loom(
             },
             "motifData": name2logo.get(name, ""),
         }
-        for name, threshold in auc_thresholds.iteritems()
+        for name, threshold in auc_thresholds.items()
     ]
 
     general_attrs = {
