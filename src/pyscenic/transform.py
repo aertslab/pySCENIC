@@ -39,9 +39,9 @@ DF_META_DATA = make_meta(
         ("Enrichment", COLUMN_NAME_NES): np.float64,
         ("Enrichment", COLUMN_NAME_MOTIF_SIMILARITY_QVALUE): np.float64,
         ("Enrichment", COLUMN_NAME_ORTHOLOGOUS_IDENTITY): np.float64,
-        ("Enrichment", COLUMN_NAME_ANNOTATION): np.object,
-        ("Enrichment", COLUMN_NAME_CONTEXT): np.object,
-        ("Enrichment", COLUMN_NAME_TARGET_GENES): np.object,
+        ("Enrichment", COLUMN_NAME_ANNOTATION): object,
+        ("Enrichment", COLUMN_NAME_CONTEXT): object,
+        ("Enrichment", COLUMN_NAME_TARGET_GENES): object,
         ("Enrichment", COLUMN_NAME_RANK_AT_MAX): np.int64,
     },
     index=pd.MultiIndex.from_arrays(
