@@ -12,7 +12,7 @@ Please follow the basic guidelines below and respect our [Code of conduct](https
 ## Code contribution guidelines
 
 * Please first discuss changes in an issue.
-* Pull requestes should be created against the `dev` branch.
+* Pull requestes should be created against the `master` branch.
 * The CI tests should pass before the PR will be merged.
 * Please document the changes (in `docs/`) if necessary (i.e. a feature addition), and use descriptive commit messages.
 
