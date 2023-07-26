@@ -61,7 +61,7 @@ def diptst(dat, is_hist=False, numt=1000):
     pval = (
         None
         if unif_dips.sum() == 0
-        else (np.less(d, unif_dips).sum() + 1) / (np.float(numt) + 1)
+        else (np.less(d, unif_dips).sum() + 1) / (float(numt) + 1.0)
     )
 
     return (d, pval, (len(left) - 1, len(idxs) - len(right)))  # dip, pvalue  # indices
