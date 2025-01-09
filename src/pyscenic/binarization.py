@@ -1,16 +1,12 @@
-# coding=utf-8
-
 from multiprocessing import Pool
 from typing import Mapping, Optional
 
 import numpy as np
 import pandas as pd
+from diptest import diptest as diptst
 from scipy import stats
 from scipy.optimize import minimize_scalar
 from sklearn import mixture
-from tqdm import tqdm
-
-from pyscenic.diptest import diptst
 
 
 def derive_threshold(
@@ -23,9 +19,9 @@ def derive_threshold(
     :param auc_mtx: The dataframe with the AUC values for all cells and regulons (n_cells x n_regulons).
     :param regulon_name: the name of the regulon for which to predict the threshold.
     :param method: The method to use to decide if the distribution of AUC values for the given regulon is not unimodel.
-        Can be either Hartigan's Dip Test (HDT) or Bayesian Information Content (BIC). The former method performs better
-        but takes considerable more time to execute (40min for 350 regulons). The BIC compares the BIC for two Gaussian
-        Mixture Models: single versus two components.
+        Can be either Hartigan's Dip Test (HDT) or Bayesian Information Content (BIC).
+        The former method performs better.
+        The BIC compares the BIC for two Gaussian Mixture Models: single versus two components.
     :return: The threshold on the AUC values.
     """
     assert auc_mtx is not None and not auc_mtx.empty
@@ -40,8 +36,13 @@ def derive_threshold(
     def isbimodal(data, method):
         if method == "hdt":
             # Use Hartigan's dip statistic to decide if distribution deviates from unimodality.
-            _, pval, _ = diptst(np.sort(data, axis=0))
-            return (pval is not None) and (pval <= 0.05)
+            _, pval = diptst(
+                np.sort(data, axis=0),
+                sort_x=False,
+                full_output=False,
+                allow_zero=False,
+            )
+            return pval <= 0.05
         else:
             # Compare Bayesian Information Content of two Gaussian Mixture Models.
             X = data.reshape(-1, 1)
