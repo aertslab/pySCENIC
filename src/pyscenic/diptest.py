@@ -77,7 +77,7 @@ def dip_fn(dat, is_hist=False, just_dip=False):
         idxs = np.arange(len(histogram))
     else:
         counts = collections.Counter(dat)
-        idxs = np.msort(list(counts.keys()))
+        idxs = np.sort(list(counts.keys()), axis=0)
         histogram = np.array([counts[i] for i in idxs])
 
     # check for case 1<N<4 or all identical values
