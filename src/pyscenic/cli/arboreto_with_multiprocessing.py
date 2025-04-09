@@ -161,7 +161,7 @@ def main():
     tf_matrix, tf_matrix_gene_names = to_tf_matrix(ex_matrix, gene_names, tf_names)
 
     print(
-        f"starting {args.method} using {args.num_workers} processes...", file=sys.stdout
+        f"starting {args.method} using {args.num_workers} processes and chunksize=100...", file=sys.stdout
     )
     start_time = time.time()
 
@@ -179,7 +179,7 @@ def main():
                         seed=args.seed,
                     ),
                     target_gene_indices(gene_names, target_genes="all"),
-                    chunksize=1,
+                    chunksize=100,
                 ),
                 total=len(gene_names),
             )
