@@ -140,7 +140,7 @@ def load_exp_matrix(
             adata = read_h5ad(filename=fname, backed="r")
             if return_sparse:
                 # expr, gene, cell:
-                return adata.X.value, adata.var_names.values, adata.obs_names.values
+                return adata.X.to_memory(), adata.var_names.values, adata.obs_names.values
             else:
                 return pd.DataFrame(
                     adata.X.value.todense(),
