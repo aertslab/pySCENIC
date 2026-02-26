@@ -230,6 +230,10 @@ def module2features_auc1st_impl(
     annotated_features = annotated_features[
         ~annotated_features.index.duplicated(keep="last")
     ]
+
+    # BUG FIX #635: Reindex back to original enriched feature order so the boolean mask                                                                                                                                                                                                  
+    # aligns with the rccs/rankings numpy arrays (which are in original feature order).                                                                                                                                                                                             
+    annotated_features = annotated_features.reindex(enriched_features.index)
     annotated_features_idx = (
         pd.notnull(annotated_features[COLUMN_NAME_ANNOTATION])
         if filter_for_annotation
