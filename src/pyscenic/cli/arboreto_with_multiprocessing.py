@@ -3,7 +3,6 @@
 import argparse
 import sys
 import time
-from functools import partial
 from multiprocessing import Pool, cpu_count
 from pathlib import PurePath
 
@@ -124,6 +123,25 @@ def run_infer_partial_network(
     return n
 
 
+def _init_worker(
+    gene_names, ex_matrix, tf_matrix, tf_matrix_gene_names, method_params, seed
+):
+    global _worker_args
+    # Keep the matrices in each worker instead of sending them with every target.
+    _worker_args = (
+        gene_names,
+        ex_matrix,
+        tf_matrix,
+        tf_matrix_gene_names,
+        method_params,
+        seed,
+    )
+
+
+def _run_infer_partial_network(target_gene_index):
+    return run_infer_partial_network(target_gene_index, *_worker_args)
+
+
 def main():
     parser = create_argument_parser()
     args = parser.parse_args()
@@ -165,19 +183,22 @@ def main():
     )
     start_time = time.time()
 
-    with Pool(args.num_workers) as p:
+    with Pool(
+        args.num_workers,
+        initializer=_init_worker,
+        initargs=(
+            gene_names,
+            ex_matrix,
+            tf_matrix,
+            tf_matrix_gene_names,
+            method_params,
+            args.seed,
+        ),
+    ) as p:
         adjs = list(
             tqdm.tqdm(
                 p.imap(
-                    partial(
-                        run_infer_partial_network,
-                        gene_names=gene_names,
-                        ex_matrix=ex_matrix,
-                        tf_matrix=tf_matrix,
-                        tf_matrix_gene_names=tf_matrix_gene_names,
-                        method_params=method_params,
-                        seed=args.seed,
-                    ),
+                    _run_infer_partial_network,
                     target_gene_indices(gene_names, target_genes="all"),
                     chunksize=1,
                 ),
